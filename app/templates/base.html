@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JKLU CareerOS - PS-06 Placement Agent</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-editorial: #F4F3EC;
+      --bg-card: #FFFFFF;
+      --bg-subtle: #FAF9F5;
+      --border-warm: #E5E3DC;
+      --border-strong: #D5D2C6;
+      --text-ink: #1C1E1B;
+      --text-muted: #5C5A52;
+      --text-soft: #7A776E;
+      --brand-green: #1D5C42;
+      --brand-green-hover: #154531;
+      --brand-green-tint: #E3F2EA;
+      --brand-green-text: #1B5E43;
+      --coral-tint: #FDECE9;
+      --coral-text: #9E2A20;
+      font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background-color: #F4F3EC;
+      color: #1C1E1B;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-serif-display, h1.editorial-title, .editorial-serif {
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+      letter-spacing: -0.02em;
+    }
+    .mono, code, kbd, .tabular {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .tabular, table, .metric { font-variant-numeric: tabular-nums; }
+    button, a.btn, [type="button"], [type="submit"] {
+      box-sizing: border-box;
+      max-width: 100%;
+    }
+    .btn-primary-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      background-color: #1D5C42;
+      color: #FFFFFF;
+      border: 1px solid #1D5C42;
+      border-radius: 9999px;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      line-height: 1.2;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-primary-pill:hover {
+      background-color: #154531;
+      border-color: #154531;
+    }
+    .btn-secondary-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      background-color: #FFFFFF;
+      color: #1C1E1B;
+      border: 1px solid #D5D2C6;
+      border-radius: 9999px;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      line-height: 1.2;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-secondary-pill:hover {
+      background-color: #F4F3EC;
+      border-color: #B8B4A6;
+    }
+    .editorial-card {
+      background-color: #FFFFFF;
+      border: 1px solid #E5E3DC;
+      border-radius: 1.25rem;
+      box-shadow: 0 2px 10px rgba(28, 30, 27, 0.03);
+    }
+    .pill-sage {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background-color: #E3F2EA;
+      color: #1B5E43;
+      border: 1px solid #C8E4D5;
+      border-radius: 9999px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    .pill-stone {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background-color: #EFECE4;
+      color: #4A483F;
+      border: 1px solid #E2DEC9;
+      border-radius: 9999px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    .pill-coral {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background-color: #FDECE9;
+      color: #9E2A20;
+      border: 1px solid #F6CEC8;
+      border-radius: 9999px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: .375rem;
+      background: #E3F2EA;
+      color: #1B5E43;
+      border: 1px solid #C8E4D5;
+      border-radius: 9999px;
+      padding: .25rem .75rem;
+      font-size: .8125rem;
+      font-weight: 500;
+      margin: .125rem .25rem .125rem 0;
+    }
+    .badge {
+      background: #1D5C42;
+      color: #fff;
+      border-radius: 9999px;
+      padding: 0.1rem .5rem;
+      font-size: .7rem;
+      font-weight: 600;
+    }
+    .err {
+      background: #FDF0ED;
+      color: #9E2A20;
+      border: 1px solid #F5D0C8;
+      border-radius: .75rem;
+      padding: .75rem 1rem;
+      margin-bottom: 1rem;
+      font-size: .875rem;
+    }
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      padding: .55rem .85rem;
+      border-radius: .65rem;
+      color: #C7D3CC;
+      font-size: .85rem;
+      font-weight: 500;
+      text-decoration: none;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .nav-link:hover {
+      background: #1B3025;
+      color: #FFFFFF;
+    }
+    .nav-link.active {
+      background: #1D5C42;
+      color: #FFFFFF;
+      border-color: #2A7A59;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    }
+    .nav-link svg { flex-shrink: 0; }
+    .nav-section {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #789083;
+      padding: 0.85rem 0.75rem 0.3rem;
+      font-weight: 700;
+    }
+    .role-opt.active-role {
+      background: #1D5C42;
+      border-color: #2A7A59;
+      color: #fff;
+      font-weight: 600;
+    }
+    #sidebar { width: 16.25rem; }
+    #agent-drawer { transform: translateX(100%); transition: transform .25s ease; }
+    #agent-drawer.open { transform: translateX(0); }
+    #toast-root {
+      position: fixed;
+      right: 1.25rem;
+      bottom: 1.25rem;
+      z-index: 60;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+      max-width: 24rem;
+    }
+    .toast {
+      background: #1C2B23;
+      color: #F4F3EC;
+      border: 1px solid #2D4538;
+      border-radius: .85rem;
+      padding: .75rem 1rem;
+      font-size: .85rem;
+      box-shadow: 0 10px 28px rgba(18, 32, 25, .25);
+      display: flex;
+      gap: .6rem;
+      align-items: flex-start;
+      animation: toast-in .18s ease;
+    }
+    .toast.success { background: #174934; border-color: #286E50; }
+    .toast.error { background: #7F231B; border-color: #A6362C; }
+    .toast.info { background: #1E382D; border-color: #315947; }
+    .toast button { color: #A3B8AD; font-weight: 700; }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    #agent-drawer .drawer-body { overflow-y: auto; }
+    .pulse-dot {
+      width: .5rem;
+      height: .5rem;
+      border-radius: 9999px;
+      background: #34D399;
+      box-shadow: 0 0 0 0 rgba(52, 211, 153, .5);
+      animation: pulse-dot 2s infinite;
+    }
+    @keyframes pulse-dot {
+      0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, .5); }
+      70% { box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+    }
+    @media (max-width: 900px) {
+      #sidebar { position: fixed; z-index: 40; left: 0; top: 0; bottom: 0; transform: translateX(-100%); transition: transform .2s ease; }
+      #sidebar.open { transform: translateX(0); }
+      main { padding-left: 1rem !important; padding-right: 1rem !important; }
+      #menu-btn { display: inline-flex !important; }
+    }
+    #menu-btn { display: none; }
+  </style>
+</head>
+<body class="bg-[#F4F3EC] text-[#1C1E1B] min-h-screen">
+  <div class="flex min-h-screen">
+    <nav id="sidebar" class="bg-[#122019] text-[#D5E0DA] border-r border-[#21362B] flex flex-col shrink-0">
+      <div class="px-4 py-4 border-b border-[#21362B] flex items-center gap-3">
+        <span class="bg-[#1D5C42]/40 border border-[#2E7D5B]/50 text-[#7CE2B3] rounded-xl p-2.5 flex items-center justify-center shrink-0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 2 4 7v10l8 5 8-5V7l-8-5Z" />
+            <path d="M12 7 8 9.5v5L12 17l4-2.5v-5L12 7Z" />
+          </svg>
+        </span>
+        <div class="min-w-0">
+          <p class="font-serif-display font-semibold text-white text-base leading-tight tracking-tight">JKLU CareerOS</p>
+          <p class="text-[11px] text-[#8FA89B] leading-snug">Autonomous Placement</p>
+          <span class="mono inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full border border-[#2B4638] bg-[#182B22] text-[#A5C0B2]">PS-06</span>
+        </div>
+      </div>
+
+      {% if role == 'student' %}
+      {% set target_sid = (current_user.student_id if current_user and current_user.student_id and current_user.student_id != 'demo-student' else '') or (user.student_id if user and user.student_id and user.student_id != 'demo-student' else '') or sid or (students[0].id if students and students|length > 0 else '') %}
+      <div class="px-3 py-3 border-b border-[#21362B]">
+        <span class="block text-[10px] uppercase tracking-wider text-[#789083] mb-1.5 font-semibold">Authenticated</span>
+        {% set ns = namespace(sname='') %}
+        {% if student and student.name %}
+          {% set ns.sname = student.name %}
+        {% endif %}
+        {% if not ns.sname and target_sid and students %}
+          {% for s in students %}{% if s.id == target_sid %}{% set ns.sname = s.name %}{% endif %}{% endfor %}
+        {% endif %}
+        {% if not ns.sname and student_name and student_name not in ['Student', 'demo-student'] %}
+          {% set ns.sname = student_name %}
+        {% endif %}
+        {% if not ns.sname and user_name and user_name not in ['Student', 'demo-student'] %}
+          {% set ns.sname = user_name %}
+        {% endif %}
+        {% if not ns.sname and current_user and current_user.name and current_user.name not in ['Student', 'demo-student'] %}
+          {% set ns.sname = current_user.name %}
+        {% endif %}
+        {% if not ns.sname and students and students|length > 0 %}
+          {% set ns.sname = students[0].name %}
+        {% endif %}
+        {% if not ns.sname %}{% set ns.sname = 'Student' %}{% endif %}
+        <div id="student-identity-badge" class="px-2.5 py-2 rounded-xl bg-[#182B22] border border-[#284235] text-xs text-[#D5E0DA] font-medium flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+            <span class="truncate">Logged in as: <strong class="text-white font-semibold">{{ ns.sname }}</strong></span>
+          </div>
+          <button type="button" id="switch-student-btn" class="shrink-0 inline-flex items-center justify-center text-[10px] px-2.5 py-1 rounded-full border border-[#345444] bg-[#21362B] hover:bg-[#2B4638] text-[#D5E0DA] hover:text-white transition-colors cursor-pointer whitespace-nowrap" title="Switch Student Persona">Switch Student</button>
+        </div>
+        {% if students and students|length > 0 %}
+        <div id="student-picker-dropdown" class="hidden mt-1.5 bg-[#182B22] border border-[#284235] rounded-xl shadow-lg p-1.5 space-y-1">
+          <p class="text-[10px] uppercase font-semibold text-[#8FA89B] px-2 py-0.5">Switch Student</p>
+          {% for s in students %}
+          <button type="button" class="switch-persona-item w-full text-left text-xs px-2.5 py-1.5 rounded-lg hover:bg-[#21362B] text-[#E2ECE6] flex items-center justify-between cursor-pointer"
+                  data-sid="{{ s.id }}" data-name="{{ s.name }}" data-branch="{{ s.branch }}">
+            <span class="truncate font-medium">{{ s.name }}</span>
+            <span class="mono text-[10px] text-[#8FA89B] shrink-0">{{ s.branch }}</span>
+          </button>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="px-3 py-3 border-b border-[#21362B]">
+        <label for="switch-student" class="block text-[10px] uppercase tracking-wider text-[#789083] mb-1.5 font-semibold">
+          {% if role == 'faculty_mentor' %}Department mentees{% else %}Active student{% endif %}
+        </label>
+        {% set fdept = user_department or department or (current_user.department if current_user and current_user.department else '') or 'CSE' %}
+        <select id="switch-student" class="w-full bg-[#182B22] border-[#284235] text-[#E2ECE6] text-xs rounded-xl px-2.5 py-2 border focus:outline-none focus:ring-2 focus:ring-[#2E7D5B]">
+          <option value="">{% if role == 'faculty_mentor' %}All {{ fdept }} mentees{% else %}All students{% endif %}</option>
+          {% for s in students %}
+            {% if role != 'faculty_mentor' or not s.branch or s.branch|upper == fdept|upper %}
+              <option value="/students/{{ s.id }}" {% if s.id == sid %}selected{% endif %}>{{ s.name }}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+        <span id="student-switcher" class="hidden" data-sid="{{ sid }}" data-count="{{ students|length }}"></span>
+      </div>
+      {% endif %}
+
+      <div class="flex-1 px-3 py-3 space-y-1">
+        <a href="/" class="nav-link {% if active == 'home' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Home
+        </a>
+
+        {% if role == 'student' %}
+        {% set target_sid = (current_user.student_id if current_user and current_user.student_id and current_user.student_id != 'demo-student' else '') or (user.student_id if user and user.student_id and user.student_id != 'demo-student' else '') or sid or (students[0].id if students and students|length > 0 else '') %}
+        {% if target_sid %}
+        <p class="nav-section">Student workspace</p>
+        <a href="/students/{{ target_sid }}" class="nav-link {% if active == 'profile' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Profile
+        </a>
+        <a href="/students/{{ target_sid }}/matches" class="nav-link {% if active == 'matches' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+          Matches
+        </a>
+        <a href="/students/{{ target_sid }}/plan" class="nav-link {% if active == 'plan' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          Plan
+        </a>
+        <a href="/students/{{ target_sid }}/progress" class="nav-link {% if active == 'progress' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg>
+          Progress
+        </a>
+        <a href="/students/{{ target_sid }}/interviews" class="nav-link {% if active == 'interviews' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
+          Mock Interview
+        </a>
+        <a href="/copilot" class="nav-link {% if active == 'copilot' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3Z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/></svg>
+          Placement Copilot
+        </a>
+        {% else %}
+        <p class="nav-section">Student workspace</p>
+        <a href="/copilot" class="nav-link {% if active == 'copilot' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3Z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/></svg>
+          Placement Copilot
+        </a>
+        {% endif %}
+
+        {% else %}
+        {% if sid %}
+        <p class="nav-section">Student workspace</p>
+        <a href="/students/{{ sid }}" class="nav-link {% if active == 'profile' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Profile
+        </a>
+        <a href="/students/{{ sid }}/matches" class="nav-link {% if active == 'matches' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+          Matches
+        </a>
+        <a href="/students/{{ sid }}/plan" class="nav-link {% if active == 'plan' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          Plan
+        </a>
+        <a href="/students/{{ sid }}/progress" class="nav-link {% if active == 'progress' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg>
+          Progress
+        </a>
+        <a href="/students/{{ sid }}/interviews" class="nav-link {% if active == 'interviews' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
+          Mock Interview
+        </a>
+        {% endif %}
+
+        <p class="nav-section">Platform</p>
+        <a href="/copilot" class="nav-link {% if active == 'copilot' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3Z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/></svg>
+          Placement Copilot
+        </a>
+        <a href="/admin" class="nav-link {% if active == 'admin' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15v-4"/><path d="M12 17V8"/><path d="M17 17v-7"/></svg>
+          {% if role == 'faculty_mentor' %}Department Analytics{% else %}Analytics{% endif %}
+        </a>
+        <a href="/admin/approvals" class="nav-link {% if active == 'approvals' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 4 6v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-4Z"/><path d="m9 12 2 2 4-4"/></svg>
+          Approvals
+        </a>
+        {% if role == 'tpo_admin' %}
+        <a href="/admin/audit" class="nav-link {% if active == 'audit' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3"/><path d="M13 15h4"/></svg>
+          Audit trail
+        </a>
+        {% set scrape_target = ('/students/' ~ sid ~ '/matches#scrape') if sid else (('/students/' ~ students[0].id ~ '/matches#scrape') if students and students|length > 0 else '/admin#scraper') %}
+        <a href="{{ scrape_target }}" id="nav-scraper-controls" class="nav-link {% if active == 'scraper' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/></svg>
+          Scraper Controls
+        </a>
+        {% endif %}
+        {% endif %}
+      </div>
+
+      <div class="px-3 py-2 border-t border-[#21362B] space-y-1">
+        <a href="/login" class="nav-link text-xs py-1.5" title="JKLU Institutional Portal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          JKLU Portal
+        </a>
+        <form method="POST" action="/auth/logout" class="block w-full">
+          <button type="submit" class="nav-link text-xs py-1.5 w-full text-left cursor-pointer border-none bg-transparent" title="Sign out of institutional session">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sign Out
+          </button>
+        </form>
+      </div>
+
+      <div class="px-3 py-3 border-t border-[#21362B]">
+        <label class="block text-[10px] uppercase tracking-wider text-[#789083] mb-1.5 font-semibold">Demo role</label>
+        <div id="role-pill" class="flex gap-1" data-role="{{ role|default('tpo_admin') }}">
+          {% set active_role = role|default('tpo_admin') %}
+          <button type="button" data-role-value="student" class="role-opt flex-1 inline-flex items-center justify-center text-xs rounded-lg px-2 py-1.5 border border-[#2B4638] hover:bg-[#1B3025] whitespace-nowrap {% if active_role == 'student' %}active-role{% endif %}">Student</button>
+          <button type="button" data-role-value="faculty_mentor" class="role-opt flex-1 inline-flex items-center justify-center text-xs rounded-lg px-2 py-1.5 border border-[#2B4638] hover:bg-[#1B3025] whitespace-nowrap {% if active_role == 'faculty_mentor' %}active-role{% endif %}">Faculty</button>
+          <button type="button" data-role-value="tpo_admin" class="role-opt flex-1 inline-flex items-center justify-center text-xs rounded-lg px-2 py-1.5 border border-[#2B4638] hover:bg-[#1B3025] whitespace-nowrap {% if active_role == 'tpo_admin' %}active-role{% endif %}">TPO</button>
+        </div>
+        <span id="role-badge" class="mono inline-block mt-2 text-[11px] px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white border border-[#2E7D5B]">{{ role|default('tpo_admin') }}</span>
+      </div>
+    </nav>
+
+    <div class="flex-1 flex flex-col min-w-0">
+      <header id="topbar" class="bg-[#FAF9F5]/90 backdrop-blur-md border-b border-[#E5E3DC] px-5 py-3 flex items-center gap-3 sticky top-0 z-30">
+        <button id="menu-btn" class="hidden text-sm px-2.5 py-1.5 rounded-lg border border-[#D5D2C6] bg-white text-[#1C1E1B]" aria-label="Toggle navigation">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
+        </button>
+        <div id="command-bar" class="flex-1 flex items-center gap-2 relative">
+          <svg class="absolute left-3.5 text-[#7A776E]" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="command-input" type="text" placeholder="Jump to a student, page or action&hellip;"
+                 class="w-full max-w-xl text-xs sm:text-sm rounded-full border border-[#D5D2C6] bg-white pl-9 pr-16 py-2 text-[#1C1E1B] placeholder-[#7A776E] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/25 focus:border-[#1D5C42] transition-all" />
+          <kbd class="mono absolute right-3.5 text-[10px] px-2 py-0.5 rounded-full border border-[#D5D2C6] bg-[#F4F3EC] text-[#5C5A52]">Ctrl K</kbd>
+        </div>
+        <div id="demo-role-bar" class="hidden sm:flex items-center gap-1 bg-[#EFECE4] p-1 rounded-full border border-[#E2DEC9] shrink-0">
+          <span class="text-[10px] uppercase font-bold text-[#6E6C64] px-2">Role:</span>
+          {% set active_role = role|default('tpo_admin') %}
+          <button type="button" data-role-value="student" class="demo-role-btn inline-flex items-center justify-center text-xs px-3 py-1 rounded-full font-medium transition-colors cursor-pointer whitespace-nowrap {% if active_role == 'student' %}bg-[#1D5C42] text-white shadow-xs{% else %}text-[#4A483F] hover:text-[#1C1E1B] hover:bg-[#E5E1D6]{% endif %}">Student</button>
+          <button type="button" data-role-value="faculty_mentor" class="demo-role-btn inline-flex items-center justify-center text-xs px-3 py-1 rounded-full font-medium transition-colors cursor-pointer whitespace-nowrap {% if active_role == 'faculty_mentor' %}bg-[#1D5C42] text-white shadow-xs{% else %}text-[#4A483F] hover:text-[#1C1E1B] hover:bg-[#E5E1D6]{% endif %}">Faculty</button>
+          <button type="button" data-role-value="tpo_admin" class="demo-role-btn inline-flex items-center justify-center text-xs px-3 py-1 rounded-full font-medium transition-colors cursor-pointer whitespace-nowrap {% if active_role == 'tpo_admin' %}bg-[#1D5C42] text-white shadow-xs{% else %}text-[#4A483F] hover:text-[#1C1E1B] hover:bg-[#E5E1D6]{% endif %}">TPO Admin</button>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <a href="/login" class="inline-flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] transition-colors whitespace-nowrap" title="JKLU Institutional Login Portal">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            <span class="hidden md:inline">JKLU Portal</span>
+          </a>
+          <form method="POST" action="/auth/logout" class="inline">
+            <button type="submit" class="inline-flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] transition-colors cursor-pointer whitespace-nowrap" title="Sign out of current institutional session">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              <span>Sign Out</span>
+            </button>
+          </form>
+        </div>
+        <button id="open-drawer" type="button"
+                class="inline-flex items-center justify-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-full bg-[#1D5C42] hover:bg-[#154531] text-white transition-colors whitespace-nowrap shrink-0 cursor-pointer">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2"/><path d="M15 2v2"/><path d="M9 20v2"/><path d="M15 20v2"/><path d="M2 9h2"/><path d="M2 15h2"/><path d="M20 9h2"/><path d="M20 15h2"/></svg>
+          <span>Agent Brain</span>
+          <span class="pulse-dot" aria-hidden="true"></span>
+        </button>
+      </header>
+
+      <main class="flex-1 px-5 py-6 max-w-7xl w-full mx-auto">
+        {% if error %}<div class="err">{{ error }}</div>{% endif %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <aside id="agent-drawer" class="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[#122019] border-l border-[#21362B] shadow-2xl z-50 flex flex-col text-[#D5E0DA]">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-[#21362B]">
+      <div>
+        <h2 class="font-serif-display font-semibold text-white text-lg">Agent Brain &amp; Reasoning Trace</h2>
+        <p class="text-xs text-[#8FA89B]">Latest autonomous run: plan &rarr; execute &rarr; verify &rarr; recover</p>
+      </div>
+      <button id="close-drawer" type="button" class="text-[#8FA89B] hover:text-white p-1.5 rounded-full hover:bg-[#1B3025]" aria-label="Close drawer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="drawer-body flex-1 p-5 space-y-3">
+      <div class="flex items-center gap-2 text-xs text-[#8FA89B]">
+        <span class="w-2 h-2 rounded-full bg-emerald-400" aria-hidden="true"></span>
+        Pipeline: plan &rarr; execute &rarr; verify &rarr; recover
+      </div>
+      <div id="drawer-run" class="mono text-xs text-[#A5C0B2]">Loading latest agent run&hellip;</div>
+      <div id="drawer-trace" class="mono mt-3 space-y-2"></div>
+    </div>
+    <div class="px-5 py-3.5 border-t border-[#21362B] flex items-center justify-between gap-2">
+      <button id="drawer-run-btn" type="button" class="inline-flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2 rounded-full bg-[#1D5C42] hover:bg-[#154531] text-white border border-[#2E7D5B] whitespace-nowrap cursor-pointer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 4 14 8-14 8V4Z"/></svg>
+        <span>Run full pipeline</span>
+      </button>
+      <span class="text-[11px] text-[#8FA89B] mono">PS-06 executor</span>
+    </div>
+  </aside>
+
+  <div id="toast-root" role="status" aria-live="polite"></div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    (function () {
+      function qs(id) { return document.getElementById(id); }
+      function esc(s) {
+        return String(s == null ? "" : s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+      var sidebar = qs("sidebar");
+      var drawer = qs("agent-drawer");
+
+      var menu = qs("menu-btn");
+      if (menu) menu.addEventListener("click", function () { sidebar.classList.toggle("open"); });
+
+      var openD = qs("open-drawer"), closeD = qs("close-drawer");
+      if (openD) openD.addEventListener("click", function () { drawer.classList.add("open"); loadAgentBrain(); });
+      if (closeD) closeD.addEventListener("click", function () { drawer.classList.remove("open"); });
+
+      var sw = qs("switch-student");
+      if (sw) sw.addEventListener("change", function () { location.href = sw.value || "/"; });
+
+      function switchDemoRole(role) {
+        fetch("/api/auth/switch-role", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role: role })
+        }).then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          var path = window.location.pathname;
+          if (role === "student" && path.indexOf("/admin") === 0) {
+            window.location.href = "/";
+          } else if (role === "faculty_mentor" && path.indexOf("/admin/audit") === 0) {
+            window.location.href = "/admin";
+          } else {
+            window.location.reload();
+          }
+        }).catch(function (e) {
+          if (window.toast) window.toast("Could not switch role: " + e.message, "error");
+        });
+      }
+
+      document.querySelectorAll("#role-pill .role-opt, #demo-role-bar .demo-role-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var role = btn.getAttribute("data-role-value");
+          switchDemoRole(role);
+        });
+      });
+
+      var switchBtn = qs("switch-student-btn");
+      var pickerMenu = qs("student-picker-dropdown");
+      if (switchBtn) {
+        switchBtn.addEventListener("click", function () {
+          if (pickerMenu) {
+            pickerMenu.classList.toggle("hidden");
+          } else {
+            window.location.href = "/login";
+          }
+        });
+      }
+      document.querySelectorAll(".switch-persona-item").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var sid = btn.getAttribute("data-sid");
+          var sname = btn.getAttribute("data-name");
+          var sbranch = btn.getAttribute("data-branch");
+          fetch("/api/auth/switch-role", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ role: "student", student_id: sid, name: sname, department: sbranch })
+          }).then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            var path = window.location.pathname;
+            if (path.indexOf("/students/") === 0) {
+              var parts = path.split("/");
+              parts[2] = sid;
+              window.location.href = parts.join("/");
+            } else {
+              window.location.reload();
+            }
+          }).catch(function (e) {
+            if (window.toast) window.toast("Could not switch student: " + e.message, "error");
+          });
+        });
+      });
+
+      var scNav = qs("nav-scraper-controls");
+      if (scNav) {
+        scNav.addEventListener("click", function (e) {
+          var modalBtn = qs("open-scrape-modal");
+          if (modalBtn) {
+            e.preventDefault();
+            modalBtn.click();
+          }
+        });
+      }
+
+      var cmd = qs("command-input");
+      if (cmd) cmd.addEventListener("keydown", function (e) {
+        if (e.key !== "Enter") return;
+        var v = (cmd.value || "").trim().toLowerCase();
+        if (!v) return;
+        if (v.indexOf("copilot") >= 0) { location.href = "/copilot"; return; }
+        if (v.indexOf("approval") >= 0) { location.href = "/admin/approvals"; return; }
+        if (v.indexOf("audit") >= 0) { location.href = "/admin/audit"; return; }
+        if (v.indexOf("admin") >= 0 || v.indexOf("analytic") >= 0) { location.href = "/admin"; return; }
+        if (v.indexOf("home") >= 0) { location.href = "/"; return; }
+        var opt = Array.prototype.slice.call(sw ? sw.options : []).filter(function (o) {
+          return o.value && o.text.toLowerCase().indexOf(v) >= 0;
+        })[0];
+        if (opt && opt.value) { location.href = opt.value; return; }
+        if (window.toast) window.toast("No match for '" + cmd.value + "'. Try a student name or page (copilot, approvals, audit).", "info");
+      });
+      window.addEventListener("keydown", function (e) {
+        if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
+          e.preventDefault();
+          if (cmd) cmd.focus();
+        }
+      });
+
+      function loadAgentBrain() {
+        var run = qs("drawer-run"), trace = qs("drawer-trace");
+        fetch("/api/agent/runs").then(function (r) { return r.json(); }).then(function (runs) {
+          if (!runs || !runs.length) { run.textContent = "No agent runs yet - ask the copilot or generate a plan."; trace.innerHTML = ""; return; }
+          var r0 = runs[0];
+          run.innerHTML = "<p class='font-medium text-white'>" + esc(r0.goal || "") + "</p>" +
+            "<p class='text-xs text-[#8FA89B] mt-1'>" + esc(r0.status) + " &middot; " + esc(r0.provider_used || "mock") +
+            " &middot; " + Number(r0.total_latency_ms || 0) + " ms" + (r0.fallback_triggered ? " &middot; fallback used" : "") + "</p>" +
+            (r0.final_answer ? "<p class='mt-2 text-sm text-[#D5E0DA]'>" + esc(r0.final_answer) + "</p>" : "");
+          trace.innerHTML = "";
+          (r0.steps || []).forEach(function (s, i) {
+            var div = document.createElement("div");
+            div.className = "rounded-xl border border-[#284235] bg-[#182B22] p-3 text-xs";
+            div.innerHTML = "<p class='text-[#8FA89B]'>Step " + (i + 1) + " &middot; " + esc(s.tool_name || "") + "</p>" +
+              "<p class='mt-1 text-[#E2ECE6]'>" + esc(s.thought || "") + "</p>" +
+              "<p class='mt-1 text-[#789083]'>" + esc(JSON.stringify(s.tool_input || {}).slice(0, 220)) + "</p>";
+            trace.appendChild(div);
+          });
+        }).catch(function () {
+          run.textContent = "Agent Brain unavailable (offline).";
+        });
+      }
+
+      // M17: live progressive rendering via SSE (POST /api/agent/run/stream).
+      function runPipelineStreaming() {
+        var run = qs("drawer-run"), trace = qs("drawer-trace");
+        trace.innerHTML = "";
+        run.innerHTML = "<p class='font-medium text-white'>Starting pipeline&hellip;</p>";
+        var stepCount = 0;
+        fetch("/api/agent/run/stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ goal: "Rank my top job matches" })
+        }).then(function (resp) {
+          if (!resp.ok || !resp.body) throw new Error("stream unavailable");
+          var reader = resp.body.getReader();
+          var decoder = new TextDecoder();
+          var buf = "";
+          function handleEvent(name, data) {
+            if (name === "run_started") {
+              run.innerHTML = "<p class='font-medium text-white'>" + esc(data.goal || "") + "</p>" +
+                "<p class='text-xs text-[#8FA89B] mt-1'>running &middot; " + esc(data.run_id || "") + "</p>";
+            } else if (name === "plan_created") {
+              var p = document.createElement("div");
+              p.className = "rounded-xl border border-[#284235] bg-[#182B22] p-3 text-xs mb-1";
+              p.innerHTML = "<p class='text-[#8FA89B]'>Plan (" + (data.plan || []).length + " steps)</p>";
+              trace.appendChild(p);
+            } else if (name === "step_started") {
+              stepCount = data.step_order || stepCount + 1;
+              var d = document.createElement("div");
+              d.className = "rounded-xl border border-[#2E7D5B] bg-[#1D5C42]/25 p-3 text-xs mb-1";
+              d.innerHTML = "<p class='text-[#8FA89B]'>Step " + data.step_order + " &middot; " + esc(data.tool_name || "") + " (running)</p>" +
+                "<p class='mt-1 text-[#E2ECE6]'>" + esc(data.thought || "") + "</p>";
+              trace.appendChild(d);
+            } else if (name === "step_completed") {
+              var last = trace.lastElementChild;
+              if (last) {
+                last.className = "rounded-xl border border-[#284235] bg-[#182B22] p-3 text-xs mb-1";
+                last.innerHTML = "<p class='text-[#8FA89B]'>Step " + data.step_order + " &middot; " + esc(data.tool_name || "") +
+                  (data.verification_passed ? " &middot; ok" : " &middot; recovered") + "</p>";
+              }
+            } else if (name === "verification_done") {
+              var v = document.createElement("div");
+              v.className = "rounded-xl border border-emerald-500/30 bg-emerald-950/30 p-3 text-xs mt-1";
+              var cs = (data.citations && data.citations.verified) || [];
+              v.innerHTML = "<p class='text-emerald-400'>Verified " + cs.length + " citation(s) &middot; score " +
+                (data.citations && data.citations.grounding_score) + "</p>";
+              trace.appendChild(v);
+            } else if (name === "complete") {
+              run.innerHTML = "<p class='font-medium text-white'>" + esc(data.goal || "") + "</p>" +
+                "<p class='text-xs text-[#8FA89B] mt-1'>" + esc(data.status) + " &middot; " +
+                Number(data.total_latency_ms || 0) + " ms</p>" +
+                (data.final_answer ? "<p class='mt-2 text-sm text-[#D5E0DA]'>" + esc(data.final_answer) + "</p>" : "");
+            } else if (name === "awaiting_input") {
+              run.innerHTML = "<p class='font-medium text-white'>Awaiting your input</p>" +
+                "<p class='mt-2 text-sm text-[#D5E0DA]'>" + esc(data.question || "") + "</p>";
+            }
+          }
+          function pump() {
+            return reader.read().then(function (res) {
+              if (res.done) return;
+              buf += decoder.decode(res.value, { stream: true });
+              var chunks = buf.split("\n\n");
+              buf = chunks.pop();
+              chunks.forEach(function (chunk) {
+                if (!chunk.trim()) return;
+                var name = "", payload = "";
+                chunk.split("\n").forEach(function (line) {
+                  if (line.indexOf("event: ") === 0) name = line.slice(7).trim();
+                  if (line.indexOf("data: ") === 0) payload = line.slice(6);
+                });
+                if (name) {
+                  try { handleEvent(name, JSON.parse(payload)); } catch (e) { /* skip bad frame */ }
+                }
+              });
+              return pump();
+            });
+          }
+          return pump();
+        }).catch(function (e) {
+          run.textContent = "Streaming unavailable: " + e.message + " - loading last run.";
+          loadAgentBrain();
+        });
+      }
+
+      var runBtn = qs("drawer-run-btn");
+      if (runBtn) runBtn.addEventListener("click", function () {
+        if (window.toast) window.toast("Streaming pipeline - watch live steps.", "info");
+        runPipelineStreaming();
+      });
+    })();
+  </script>
+</body>
+</html>

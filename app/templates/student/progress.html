@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-6">
+  <!-- Page Header -->
+  <div class="flex flex-wrap items-end justify-between gap-4 pb-3 border-b border-[#E5E3DC]">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[#1B5E43] text-xs font-semibold mb-2">
+        <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
+        Continuous Competency Analytics
+      </div>
+      <h1 class="font-serif-display text-2xl sm:text-3xl font-semibold tracking-tight text-[#1C1E1B]">Readiness Trajectory &amp; Activity Ledger</h1>
+      <p class="text-sm text-[#5C5A52] mt-1">Predictive placement readiness modeling calculated from assessment scores, curriculum completions, and verified skill depth.</p>
+    </div>
+  </div>
+
+  <!-- Executive Summary Strip -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+    <div class="editorial-card p-6 relative overflow-hidden">
+      <div class="absolute top-0 left-0 right-0 h-1 bg-[#1D5C42]"></div>
+      <p class="text-xs uppercase tracking-wider text-[#6E6C64] font-semibold font-mono">Current Readiness Score</p>
+      <div class="flex items-baseline gap-2 mt-1.5">
+        <span class="font-serif-display text-3xl font-semibold text-[#1C1E1B] tabular-nums">
+          {{ series[-1].readiness if series else '—' }}
+        </span>
+        <span class="text-xs text-[#7A776E] font-mono">/ 100</span>
+      </div>
+      <p class="text-[11px] text-[#5C5A52] mt-1">Aggregated placement competency index</p>
+    </div>
+
+    <div class="editorial-card p-6 relative overflow-hidden">
+      <div class="absolute top-0 left-0 right-0 h-1 bg-[#2E7D5B]"></div>
+      <p class="text-xs uppercase tracking-wider text-[#6E6C64] font-semibold font-mono">Best Matched Role</p>
+      <div class="flex items-baseline gap-2.5 mt-1.5">
+        {% if best_match %}
+        <span class="font-serif-display text-3xl font-semibold text-[#1C1E1B] tabular-nums">{{ best_match.score }}</span>
+        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold uppercase tracking-wider {% if best_match.band == 'strong' %}bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]{% elif best_match.band == 'moderate' %}bg-[#EFECE4] text-[#4A483F] border border-[#E2DEC9]{% else %}bg-[#FDECE9] text-[#9E2A20] border border-[#F5D0C8]{% endif %}">
+          {{ best_match.band }}
+        </span>
+        {% else %}
+        <span class="text-lg font-bold text-[#7A776E] font-mono">None yet</span>
+        {% endif %}
+      </div>
+      <p class="text-[11px] text-[#5C5A52] mt-1">Highest ranking placement opportunity</p>
+    </div>
+
+    <div class="editorial-card p-6 relative overflow-hidden">
+      <div class="absolute top-0 left-0 right-0 h-1 bg-[#4A483F]"></div>
+      <p class="text-xs uppercase tracking-wider text-[#6E6C64] font-semibold font-mono">Logged Milestones</p>
+      <div class="flex items-baseline gap-2 mt-1.5">
+        <span class="font-serif-display text-3xl font-semibold text-[#1C1E1B] tabular-nums">{{ events|length }}</span>
+        <span class="text-xs text-[#7A776E] font-mono">events</span>
+      </div>
+      <p class="text-[11px] text-[#5C5A52] mt-1">Audited learning and assessment achievements</p>
+    </div>
+  </div>
+
+  <!-- Readiness Curve Card -->
+  <div class="editorial-card p-6 md:p-7">
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-[#ECEAE2]">
+      <div>
+        <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Readiness Trajectory Curve</h2>
+        <p class="text-xs text-[#5C5A52] mt-0.5">Chronological score progression across resume upgrades, mock interviews, and module completions</p>
+      </div>
+      <span class="text-xs font-mono px-2.5 py-1 rounded-full bg-[#EFECE4] text-[#4A483F]">Scale 0–100</span>
+    </div>
+
+    <div class="relative w-full">
+      <canvas id="readinessChart" height="90"></canvas>
+      <p id="chart-empty" class="hidden text-[#7A776E] text-xs mt-3 text-center py-10 font-mono">
+        No progress events recorded yet. Complete an interview or upskilling module to populate your curve.
+      </p>
+    </div>
+  </div>
+
+  <!-- Activity Ledger Table -->
+  <div class="editorial-card overflow-hidden">
+    <div class="px-6 py-4 border-b border-[#ECEAE2] flex items-center justify-between">
+      <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Activity Ledger</h2>
+      <span class="text-xs font-mono text-[#7A776E]">{{ events|length }} recorded milestones</span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-[#FAF9F5] text-[#5C5A52] text-xs font-semibold uppercase tracking-wider border-b border-[#ECEAE2]">
+          <tr>
+            <th class="px-6 py-3.5">Event Type</th>
+            <th class="px-6 py-3.5">Readiness Score</th>
+            <th class="px-6 py-3.5">Timestamp</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#ECEAE2]">
+          {% for e in events %}
+          <tr class="hover:bg-[#FAF9F5] transition-colors">
+            <td class="px-6 py-3.5">
+              <span class="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-mono font-medium {% if 'interview' in e.kind %}bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]{% elif 'plan' in e.kind %}bg-[#F2F7F4] text-[#1D5C42] border border-[#DCE8E1]{% else %}bg-[#EFECE4] text-[#4A483F] border border-[#E2DEC9]{% endif %}">
+                {{ e.kind }}
+              </span>
+            </td>
+            <td class="px-6 py-3.5 font-mono font-bold text-[#1C1E1B] tabular-nums">
+              {{ e.readiness }}
+            </td>
+            <td class="px-6 py-3.5 text-xs font-mono text-[#5C5A52] tabular-nums">
+              {{ e.at }}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td class="px-6 py-8 text-center text-[#7A776E] text-xs font-mono" colspan="3">
+              No progress events logged yet.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+fetch("/api/students/{{ sid }}/progress")
+  .then(function (r) { return r.json(); })
+  .then(function (data) {
+    var points = data.readiness || [];
+    if (points.length < 1) {
+      document.getElementById("chart-empty").classList.remove("hidden");
+      return;
+    }
+    new Chart(document.getElementById("readinessChart"), {
+      type: "line",
+      data: {
+        labels: points.map(function (p) { return p.at.slice(11, 16); }),
+        datasets: [{
+          label: "Readiness",
+          data: points.map(function (p) { return p.readiness; }),
+          borderColor: "#1D5C42",
+          backgroundColor: "rgba(29, 92, 66, 0.10)",
+          fill: true,
+          tension: 0.25,
+          borderWidth: 2,
+          pointBackgroundColor: "#1D5C42",
+          pointRadius: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: { min: 0, max: 100, grid: { color: "#ECEAE2" } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

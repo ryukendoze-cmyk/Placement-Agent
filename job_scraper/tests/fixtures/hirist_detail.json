@@ -1,0 +1,144 @@
+{
+ "data": {
+  "id": 1681166,
+  "title": "Python Developer - FastAPI ",
+  "introText": "<p><b>Job Description :</b></p><p><br/></p><p>We are looking for a hands-on Python Developer with strong backend development skills and a keen interest in Artificial Intelligence to join our growing team in Bangalore. The ideal candidate will have 4 - 7 years of overall software development experience, including at least 4 years of coding experience in Python and 2+ years working in a startup environment. </p><p><br/></p><p>You should be comfortable building backend services, developing APIs, and working in a fast-paced environment where you can take ownership of features from development to deployment. This role is suited for someone who enjoys solving complex technical problems, experimenting with emerging AI technologies, and building practical applications that deliver real value to users.<br/><br/><b>Responsibilities :</b><br/><br/>- Backend Development : Design, develop, and maintain scalable backend applications and services using Python.<br/><br/>- API Development : Build, integrate, and maintain RESTful APIs using FastAPI, ensuring performance, reliability, and maintainability.<br/><br/>- AI Integration : Explore and integrate AI/LLM capabilities into backend applications, including AI-powered workflows, automation, and intelligent features.<br/><br/>- Product Development : Collaborate with product managers, designers, and other engineers to understand requirements and translate them into effective technical solutions.<br/><br/>- Code Quality : Write clean, reusable, and efficient code while following software development best practices, testing standards, and code review processes.<br/><br/>- Problem-Solving : Identify technical challenges, troubleshoot issues, and improve the performance and reliability of existing systems.<br/><br/>- Startup Execution : Work in a fast-paced startup environment, taking ownership of deliverables and adapting to evolving product requirements.<br/><br/><b>Requirements :</b><br/><br/>- Currently based in Bangalore and comfortable working from the Bangalore office.<br/><br/>- 4 - 7 years of overall professional experience in software development.<br/><br/>- At least 4 years of hands-on Python coding experience.<br/><br/>- Minimum 2 years of experience working in a startup environment.<br/><br/>- Familiarity with FastAPI and backend API development.<br/><br/>- Strong problem-solving and analytical skills.<br/><br/>- A genuine interest in Artificial Intelligence, including AI-powered applications, LLMs, and emerging AI technologies.<br/><br/>- Ability to work independently, take ownership of tasks, and collaborate effectively with a cross-functional team.</p>",
+  "jobdesignation": "Python Developer",
+  "min": 4,
+  "max": 8,
+  "createdBy": 282554,
+  "creatorDomainName": "qrata.co",
+  "categoryId": 1,
+  "status": 1,
+  "categoryIds": null,
+  "jobDetailUrl": "https://www.hirist.tech/j/python-developer-fastapi-1681166",
+  "femaleCandidate": 0,
+  "differentlyAbled": 0,
+  "exDefence": 0,
+  "workFromHome": 0,
+  "femaleBackWorkForce": 0,
+  "confidential": 0,
+  "premium": 1,
+  "brandedJd": 0,
+  "star": 0,
+  "applyStatus": 1,
+  "applyCount": "*****",
+  "createdTimeMs": 1793272234687,
+  "createdTime": 1793212200000,
+  "createdTimeNoMillis": null,
+  "tagIdString": "9 49472 2594 164971 242304",
+  "tags": [
+   {
+    "id": 9,
+    "name": "Python",
+    "isMandatory": true
+   },
+   {
+    "id": 49472,
+    "name": "Backend Architecture",
+    "isMandatory": false
+   },
+   {
+    "id": 2594,
+    "name": "RESTful API",
+    "isMandatory": true
+   },
+   {
+    "id": 164971,
+    "name": "FastAPI",
+    "isMandatory": true
+   },
+   {
+    "id": 242304,
+    "name": "AI Integration",
+    "isMandatory": false
+   }
+  ],
+  "locations": [
+   {
+    "id": 100000,
+    "name": "Others"
+   }
+  ],
+  "showcase": null,
+  "diversity": null,
+  "companyStatus": 1,
+  "createdByAlias": "Bangalore",
+  "applyUrl": "",
+  "videoUrl": "",
+  "assessmentFlags": 0,
+  "mediaResume": 0,
+  "industry": "",
+  "functionalArea": 16,
+  "minSal": 0,
+  "maxSal": 0,
+  "hideSal": 1,
+  "hits": "*****",
+  "otherLocation": "Bangalore",
+  "minBatch": null,
+  "maxBatch": null,
+  "brandJobFlag": 0,
+  "companyDomain": null,
+  "lableId": null,
+  "companyData": {
+   "companyId": 0,
+   "companyName": "Techmatters Technologies",
+   "companyNameNotAnalyzed": "Techmatters Technologies",
+   "companyStatus": 1,
+   "logo": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-27698.webp",
+   "logoPath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-27698.webp",
+   "companyLogoFilePath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-27698.webp",
+   "ambitionBoxInfo": null,
+   "cluster": [],
+   "subCluster": [],
+   "clustersDetail": [],
+   "subClustersDetail": []
+  },
+  "recruiter": {
+   "recruiterId": 282554,
+   "recruiterName": "*****",
+   "designation": "NA",
+   "profilePicUrl": "",
+   "recruiterActions": "*****",
+   "logoPath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-27698.webp",
+   "companyLogoFilePath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-27698.webp",
+   "recruiterCompanyId": 27698,
+   "centralizedCompanyId": 27698,
+   "firstRecrTime": 7
+  },
+  "jobStatusInfo": null,
+  "jobJdContent": null,
+  "refreshStatus": 0,
+  "jobCount": 1,
+  "showRecruiterProfile": 999,
+  "applicationCount": 114,
+  "recruiterActionCount": 0,
+  "marker": null,
+  "preferedIndustry": [],
+  "industryArray": [],
+  "jobCompanyLogo": null,
+  "jobCompanyId": null,
+  "showCompanyLogoFlag": 0,
+  "ats": 1,
+  "crawled": 1,
+  "latitude": null,
+  "longitude": null,
+  "address": null,
+  "location": [
+   {
+    "id": 100000,
+    "name": "Others"
+   }
+  ],
+  "pendingApply": 0,
+  "state": 1,
+  "active": 1,
+  "careerCompanyName": "",
+  "hasExpired": false,
+  "minRatingAb": 3.8,
+  "permanentlyRemoved": false,
+  "brandedS3": "",
+  "isEvaluationGated": true,
+  "isAppActiveWithinLastYear": false
+ }
+}

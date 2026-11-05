@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .citation-pill {
+    display: inline-flex;
+    align-items: center;
+    background: #E3F2EA;
+    color: #1B5E43;
+    border: 1px solid #C8E4D5;
+    border-radius: 9999px;
+    padding: 0.15rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    margin: 0 0.15rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .citation-pill:hover {
+    background: #1D5C42;
+    border-color: #1D5C42;
+    color: #FFFFFF;
+  }
+</style>
+
+<div class="space-y-6">
+  <!-- Page Header -->
+  <div class="flex flex-wrap items-end justify-between gap-4 pb-3 border-b border-[#E5E3DC]">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[#1B5E43] text-xs font-semibold mb-2">
+        <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
+        Grounded Institutional Policy RAG
+      </div>
+      <h1 class="font-serif-display text-2xl sm:text-3xl font-semibold tracking-tight text-[#1C1E1B]">Placement Policy Copilot</h1>
+      <p class="text-sm text-[#5C5A52] mt-1">Ask questions about placement policies, drive eligibility, offer rules, and backlogs. Every response cites verified SOP clauses.</p>
+    </div>
+  </div>
+
+  <!-- Quick Prompts Toolbar -->
+  <div class="space-y-2">
+    <div class="flex items-center justify-between">
+      <span class="text-xs font-semibold uppercase tracking-wider text-[#6E6C64] font-mono">Suggested Questions</span>
+      <span class="text-xs text-[#7A776E]">Click to run immediately</span>
+    </div>
+    <div id="quick-prompts" class="flex flex-wrap gap-2">
+      {% for p in quick_prompts %}
+      <button type="button" class="quick-prompt inline-flex items-center justify-center text-xs px-4 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#E3F2EA] hover:border-[#1D5C42] hover:text-[#1B5E43] text-[#1C1E1B] font-medium transition-colors cursor-pointer" data-prompt="{{ p }}">{{ p }}</button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Citation Policy Banner -->
+  <div class="flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-[#F2F7F4] border border-[#DCE8E1] text-xs text-[#1B5E43]">
+    <svg class="w-4 h-4 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>
+    <span>Grounded citations appear inline as <span class="citation-pill" data-sop="SOP-01" title="Example SOP clause">[SOP-01]</span> or <span class="citation-pill" data-sop="JOB-01">[JOB-01]</span>. Click any pill to inspect that specific policy rule.</span>
+  </div>
+
+  <!-- Two-Column AI Copilot Workbench -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <!-- Left Column: Chat Workbench (8 cols) -->
+    <div class="lg:col-span-8 editorial-card flex flex-col overflow-hidden">
+      <!-- Chat Header -->
+      <div class="px-5 py-3.5 border-b border-[#ECEAE2] flex items-center justify-between bg-[#FAF9F5]">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-[#1D5C42]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.502 49.188 49.188 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"/></svg>
+          <span class="text-xs font-bold uppercase tracking-wider text-[#1C1E1B]">Policy Conversation Stream</span>
+        </div>
+        <span class="text-xs font-mono px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] font-medium">SOP RAG Active</span>
+      </div>
+
+      <!-- Chat Log Surface -->
+      <div id="chat-log" class="p-5 space-y-4 min-h-[18rem] max-h-[30rem] overflow-y-auto">
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] text-xs text-[#4A483F] leading-relaxed">
+          <p class="font-bold text-[#1C1E1B] mb-1">Welcome to the JKLU Placement Policy Copilot</p>
+          Ask questions regarding placement tier thresholds (Standard, Dream, Super Dream), GPA eligibility waivers, active backlog policies, PII standards, or resume integrity rules.
+        </div>
+      </div>
+
+      <!-- Composer Bar -->
+      <div class="p-4 border-t border-[#ECEAE2] bg-[#FAF9F5]">
+        <div class="flex flex-wrap sm:flex-nowrap gap-2.5 items-center">
+          {% if role == 'student' %}
+            {% set locked_sid = (current_user.student_id if current_user and current_user.student_id and current_user.student_id != 'demo-student' else '') or (user.student_id if user and user.student_id and user.student_id != 'demo-student' else '') or (students[0].id if students and students|length > 0 else '') %}
+            {% set locked_name = '' %}
+            {% if student_name and student_name not in ['Student', 'demo-student'] %}
+              {% set locked_name = student_name %}
+            {% elif current_user and current_user.name and current_user.name not in ['Student', 'demo-student'] %}
+              {% set locked_name = current_user.name %}
+            {% elif user and user.name and user.name not in ['Student', 'demo-student'] %}
+              {% set locked_name = user.name %}
+            {% elif students %}
+              {% for s in students %}{% if s.id == locked_sid %}{% set locked_name = s.name %}{% endif %}{% endfor %}
+            {% endif %}
+            {% if not locked_name and students and students|length > 0 %}{% set locked_name = students[0].name %}{% endif %}
+            {% if not locked_name %}{% set locked_name = 'Student' %}{% endif %}
+            <div id="copilot-student-badge" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-xs font-medium text-[#1B5E43] shrink-0 whitespace-nowrap">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42] shrink-0"></span>
+              <span>Locked Student Context: <strong class="font-bold">{{ locked_name }}</strong></span>
+            </div>
+            <input type="hidden" id="copilot-student" value="{{ locked_sid }}">
+          {% elif role == 'faculty_mentor' %}
+            {% set fdept = user_department or department or (current_user.department if current_user and current_user.department else '') or 'CSE' %}
+            <select id="copilot-student" class="text-xs rounded-full border border-[#D5D2C6] bg-white px-3.5 py-2 text-[#1C1E1B] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] font-medium max-w-full sm:max-w-[13rem] shrink-0">
+              <option value="">No student context</option>
+              {% for s in students %}
+                {% if not s.branch or s.branch|upper == fdept|upper %}
+                <option value="{{ s.id }}">{{ s.name }} ({{ s.branch }})</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          {% else %}
+            <select id="copilot-student" class="text-xs rounded-full border border-[#D5D2C6] bg-white px-3.5 py-2 text-[#1C1E1B] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] font-medium max-w-full sm:max-w-[13rem] shrink-0">
+              <option value="">No student context</option>
+              {% for s in students %}
+              <option value="{{ s.id }}">{{ s.name }} ({{ s.branch }})</option>
+              {% endfor %}
+            </select>
+          {% endif %}
+          <input id="copilot-input" type="text" placeholder="Ask about placement policy, rules, or eligibility..."
+                 class="flex-1 min-w-[14rem] text-sm rounded-full border border-[#D5D2C6] px-4 py-2 bg-white text-[#1C1E1B] placeholder:text-[#7A776E] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] transition-all" />
+          <button id="copilot-send" type="button"
+                  class="btn-primary-pill px-5 py-2 text-xs shrink-0">
+            <span>Ask</span>
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Sidebar (4 cols) -->
+    <div class="lg:col-span-4 space-y-6">
+      <!-- Agent Step Trace Card -->
+      <div class="editorial-card overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-[#ECEAE2] flex items-center justify-between bg-[#FAF9F5]">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-[#1D5C42]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 6.75v10.5a2.25 2.25 0 0 0 2.25 2.25Zm.75-12h9v9h-9v-9Z"/></svg>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-[#1C1E1B]">Agent Step Trace</h3>
+          </div>
+          <span class="text-xs font-mono text-[#7A776E]">Execution Log</span>
+        </div>
+        <div class="p-4">
+          <div id="copilot-trace" class="text-xs text-[#4A483F] font-mono space-y-1.5 bg-[#FAF9F5] rounded-xl p-3.5 border border-[#E5E3DC] min-h-[6rem] max-h-[14rem] overflow-y-auto">
+            Runs appear here after you ask a question.
+          </div>
+        </div>
+      </div>
+
+      <!-- Verified Policy Registry Card -->
+      <div class="editorial-card p-5">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-[#6E6C64] mb-3 font-mono">Known SOP Documents</h3>
+        <div class="flex flex-wrap gap-1.5">
+          {% for id in sop_ids %}
+          <span class="citation-pill" data-sop="{{ id }}">{{ id }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var log = document.getElementById("chat-log");
+  var input = document.getElementById("copilot-input");
+  var traceBox = document.getElementById("copilot-trace");
+
+  function pillify(text) {
+    var esc = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return esc.replace(/\[((?:SOP|JOB)-[A-Z0-9]+)\]/gi,
+      '<span class="citation-pill" data-sop="$1" title="Open the policy clause">$1</span>');
+  }
+
+  function addBubble(side, html) {
+    var wrap = document.createElement("div");
+    wrap.className = "flex " + (side === "user" ? "justify-end" : "justify-start");
+    var b = document.createElement("div");
+    b.className = "max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed " +
+      (side === "user"
+        ? "bg-[#1D5C42] text-white"
+        : "bg-[#FAF9F5] text-[#1C1E1B] border border-[#E5E3DC]");
+    b.innerHTML = html;
+    wrap.appendChild(b);
+    log.appendChild(wrap);
+    log.scrollTop = log.scrollHeight;
+    return b;
+  }
+
+  function renderTrace(t) {
+    traceBox.innerHTML = "";
+    (t || []).forEach(function (s, i) {
+      var div = document.createElement("div");
+      div.className = "py-0.5 border-b border-[#ECEAE2] last:border-b-0";
+      div.textContent = (i + 1) + ". " + (s.thought || s.tool || "");
+      traceBox.appendChild(div);
+    });
+    if (!(t || []).length) traceBox.textContent = "No trace returned.";
+  }
+
+  function ask(q) {
+    if (!q) return;
+    addBubble("user", q.replace(/</g, "&lt;"));
+    input.value = "";
+    var bubble = addBubble("bot", "Checking policy database...");
+    var sid = document.getElementById("copilot-student").value;
+    // M17: stream the answer progressively via SSE, fall back to the JSON endpoint.
+    if (window.ReadableStream && window.TextDecoder) {
+      var text = "";
+      var verified = [];
+      fetch("/api/copilot/ask/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q, student_id: sid || null })
+      }).then(function (resp) {
+        if (!resp.ok || !resp.body) throw new Error("stream unavailable");
+        var reader = resp.body.getReader();
+        var decoder = new TextDecoder();
+        var buf = "";
+        function pump() {
+          return reader.read().then(function (res) {
+            if (res.done) return;
+            buf += decoder.decode(res.value, { stream: true });
+            var frames = buf.split("\n\n");
+            buf = frames.pop();
+            frames.forEach(function (frame) {
+              if (!frame.trim()) return;
+              var name = "", payload = "";
+              frame.split("\n").forEach(function (line) {
+                if (line.indexOf("event: ") === 0) name = line.slice(7).trim();
+                if (line.indexOf("data: ") === 0) payload = line.slice(6);
+              });
+              if (!name) return;
+              var data;
+              try { data = JSON.parse(payload); } catch (e) { return; }
+              if (name === "retrieval") {
+                renderTrace(data.trace);
+              } else if (name === "token") {
+                text += (data.delta || "");
+                bubble.innerHTML = pillify(text || "...");
+                log.scrollTop = log.scrollHeight;
+              } else if (name === "complete") {
+                verified = (data.citations && data.citations.verified) || [];
+                bubble.innerHTML = pillify(data.answer || text || "(no answer)") +
+                  (verified.length
+                    ? '<div class="mt-2.5 pt-2 border-t border-[#E5E3DC] text-xs font-mono text-[#5C5A52]">Cited: ' + verified.join(", ") + "</div>"
+                    : "");
+                if (data.trace) renderTrace(data.trace);
+                log.scrollTop = log.scrollHeight;
+              }
+            });
+            return pump();
+          });
+        }
+        return pump();
+      }).catch(function () { askFallback(q, sid, bubble); });
+    } else {
+      askFallback(q, sid, bubble);
+    }
+  }
+
+  function askFallback(q, sid, bubble) {
+    fetch("/api/copilot/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: q, student_id: sid || null })
+    }).then(function (r) {
+      return r.json();
+    }).then(function (d) {
+      bubble.innerHTML = pillify(d.answer || "(no answer)") +
+        (d.citations && d.citations.verified && d.citations.verified.length
+          ? '<div class="mt-2.5 pt-2 border-t border-[#E5E3DC] text-xs font-mono text-[#5C5A52]">Cited: ' + d.citations.verified.join(", ") + "</div>"
+          : "");
+      renderTrace(d.trace);
+    }).catch(function (e) {
+      bubble.textContent = "Copilot unavailable: " + e.message;
+      bubble.className = "max-w-[85%] rounded-2xl px-4 py-3 text-sm bg-[#FDF0ED] border border-[#F5D0C8] text-[#9E2A20]";
+    });
+  }
+
+  document.getElementById("copilot-send").addEventListener("click", function () { ask(input.value.trim()); });
+  input.addEventListener("keydown", function (e) { if (e.key === "Enter") ask(input.value.trim()); });
+  document.querySelectorAll(".quick-prompt").forEach(function (b) {
+    b.addEventListener("click", function () { ask(b.getAttribute("data-prompt")); });
+  });
+
+  document.addEventListener("click", function (e) {
+    var pill = e.target.closest ? e.target.closest(".citation-pill") : null;
+    if (!pill || !pill.dataset.sop) return;
+    var sop = pill.dataset.sop;
+    if (sop === "SOP-XX" || sop === "JOB-XX") {
+      if (window.toast) window.toast("Example pill — real citations appear inside answers.", "info");
+      return;
+    }
+    input.value = "What does " + sop + " say?";
+    ask(input.value);
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,971 @@
+[
+ {
+  "id": 1681166,
+  "title": "Python Developer - FastAPI",
+  "min": 4,
+  "max": 8,
+  "createdBy": 282554,
+  "creatorDomainName": "qrata.co",
+  "categoryId": 1,
+  "jobdesignation": "Python Developer",
+  "status": 1,
+  "jobDetailUrl": "https://www.hirist.tech/j/python-developer-fastapi-1681166",
+  "femaleCandidate": 0,
+  "differentlyAbled": 0,
+  "exDefence": 0,
+  "workFromHome": 0,
+  "femaleBackWorkForce": 0,
+  "confidential": 0,
+  "premium": 1,
+  "brandedJd": 0,
+  "star": 0,
+  "applyStatus": 1,
+  "applyCount": 114,
+  "createdTimeMs": 1793272234687,
+  "createdTime": 1793212200000,
+  "tagIdString": "9 49472 2594 164971 242304",
+  "tags": [
+   {
+    "id": 9,
+    "name": "Python",
+    "isMandatory": true
+   },
+   {
+    "id": 49472,
+    "name": "Backend Architecture",
+    "isMandatory": false
+   },
+   {
+    "id": 2594,
+    "name": "RESTful API",
+    "isMandatory": true
+   },
+   {
+    "id": 164971,
+    "name": "FastAPI",
+    "isMandatory": true
+   },
+   {
+    "id": 242304,
+    "name": "AI Integration",
+    "isMandatory": false
+   }
+  ],
+  "locations": [
+   {
+    "id": 100000,
+    "name": "Others"
+   }
+  ],
+  "companyStatus": 1,
+  "createdByAlias": "Bangalore",
+  "applyUrl": "",
+  "videoUrl": "",
+  "assessmentFlags": 0,
+  "mediaResume": 0,
+  "industry": "",
+  "functionalArea": 16,
+  "minSal": 0,
+  "maxSal": 0,
+  "hideSal": 1,
+  "hits": 216,
+  "otherLocation": "Bangalore",
+  "brandJobFlag": 0,
+  "companyData": {
+   "companyId": 0,
+   "companyName": "Techmatters Technologies",
+   "companyNameNotAnalyzed": "Techmatters Technologies",
+   "companyStatus": 1,
+   "logo": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-27698.webp",
+   "logoPath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-27698.webp",
+   "companyLogoFilePath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-27698.webp",
+   "cluster": [],
+   "subCluster": [],
+   "clustersDetail": [],
+   "subClustersDetail": []
+  },
+  "recruiter": {
+   "recruiterId": 282554,
+   "recruiterName": "JamilaSakerwala",
+   "designation": "NA",
+   "profilePicUrl": "",
+   "recruiterActions": 0,
+   "logoPath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-27698.webp",
+   "companyLogoFilePath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-27698.webp",
+   "recruiterCompanyId": 27698,
+   "centralizedCompanyId": 27698
+  },
+  "refCode": "sp_prm",
+  "preferedIndustry": [],
+  "industryArray": [],
+  "showCompanyLogoFlag": 0,
+  "latitude": null,
+  "longitude": null,
+  "refJobId": 1681166,
+  "location": [
+   {
+    "id": 100000,
+    "name": "Others"
+   }
+  ],
+  "minRatingAb": 3.8
+ },
+ {
+  "id": 1679291,
+  "title": "Python Developer",
+  "min": 5,
+  "max": 7,
+  "createdBy": 173434,
+  "creatorDomainName": "tccomputerservices.com",
+  "categoryId": 1,
+  "jobdesignation": "Python Developer",
+  "status": 1,
+  "jobDetailUrl": "https://www.hirist.tech/j/python-developer-5-7-yrs-1679291",
+  "femaleCandidate": 0,
+  "differentlyAbled": 0,
+  "exDefence": 0,
+  "workFromHome": 0,
+  "femaleBackWorkForce": 0,
+  "confidential": 0,
+  "premium": 1,
+  "brandedJd": 0,
+  "star": 0,
+  "applyStatus": 1,
+  "applyCount": 614,
+  "createdTimeMs": 1792554692666,
+  "createdTime": 1792521000000,
+  "tagIdString": "9 2944 2472 82 617 2926 111860",
+  "tags": [
+   {
+    "id": 9,
+    "name": "Python",
+    "isMandatory": true
+   },
+   {
+    "id": 2944,
+    "name": "System Design",
+    "isMandatory": true
+   },
+   {
+    "id": 2472,
+    "name": "System Integration",
+    "isMandatory": false
+   },
+   {
+    "id": 82,
+    "name": "Unix",
+    "isMandatory": true
+   },
+   {
+    "id": 617,
+    "name": "Shell Scripting",
+    "isMandatory": true
+   },
+   {
+    "id": 2926,
+    "name": "Version Control System",
+    "isMandatory": false
+   },
+   {
+    "id": 111860,
+    "name": "PyTest",
+    "isMandatory": false
+   }
+  ],
+  "locations": [
+   {
+    "id": 3,
+    "name": "Bangalore"
+   }
+  ],
+  "companyStatus": 1,
+  "createdByAlias": "Bangalore",
+  "applyUrl": "",
+  "videoUrl": "",
+  "assessmentFlags": 0,
+  "mediaResume": 0,
+  "industry": "",
+  "functionalArea": 16,
+  "minSal": 0,
+  "maxSal": 0,
+  "hideSal": 1,
+  "hits": 1470,
+  "otherLocation": "",
+  "brandJobFlag": 0,
+  "companyData": {
+   "companyId": 6008,
+   "companyName": "Techno Comp",
+   "companyNameNotAnalyzed": "Techno Comp",
+   "companyStatus": 1,
+   "logo": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-5149.webp",
+   "logoPath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-5149.webp",
+   "companyLogoFilePath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-5149.webp",
+   "ambitionBoxInfo": {
+    "ambitionBoxCompanyId": 21314,
+    "companyName": "Techno Comp",
+    "reviewsCount": 37,
+    "companyLogo": "https://static.ambitionbox.com/assets/v2/images/rs:fit:200:200:false:false/aHR0cHM6Ly9tZWRpYS5uYXVrcmkuY29tL21lZGlhL2FiY29tcGxvZ28vdGVjaG5vLWNvbXAuanBn.webp",
+    "companyType": "Corporate",
+    "primaryIndustry": "IT Services & Consulting",
+    "hq": "Somerset",
+    "otherTags": [
+     "IT Services & Consulting"
+    ],
+    "title": "Techno Comp Reviews by Employees",
+    "url": "https://www.ambitionbox.com/reviews/techno-comp-reviews",
+    "aggregateRating": 2.8,
+    "aggregateRatingOneDecimal": 2.8,
+    "benefitsUrl": "https://www.ambitionbox.com/benefits/techno-comp-benefits",
+    "totalBenefits": 0,
+    "usersReportedBenefits": 0,
+    "seo": {
+     "metaKeywords": [
+      "techno comp careers",
+      "techno comp Jobs",
+      "techno comp career"
+     ],
+     "hiristMetaDescription": "Apply to %%jobsCount%% Techno Comp jobs on Hirist.tech, India's No.1 IT job portal. Explore IT job in Techno Comp Now!",
+     "hiristPageTitle": "Techno Comp Careers, %%jobsCount%% Techno Comp Job Vacancies, IT Jobs in Techno Comp|Hirist",
+     "iimjobsMetaDescription": "Apply to %%jobsCount%% Techno Comp jobs on iimjobs.com, India's No.1 Management job portal. Explore Management job in Techno Comp Now!",
+     "iimjobsPageTitle": "Techno Comp Careers, %%jobsCount%% Techno Comp Job Vacancies, Management Jobs in Techno Comp|iimjobs",
+     "refCode": "clp_k",
+     "slug": "techno-comp",
+     "source": "Techno Comp Jobs"
+    }
+   },
+   "cluster": [],
+   "subCluster": [],
+   "clustersDetail": [],
+   "subClustersDetail": []
+  },
+  "recruiter": {
+   "recruiterId": 173434,
+   "recruiterName": "Vijaya Bhaskar S",
+   "designation": "Talent Acquisition Manger ",
+   "profilePicUrl": "",
+   "recruiterActions": 30,
+   "logoPath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-5149.webp",
+   "companyLogoFilePath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-5149.webp",
+   "recruiterCompanyId": 5149,
+   "centralizedCompanyId": 5149
+  },
+  "refCode": "sp_prm",
+  "preferedIndustry": [],
+  "industryArray": [],
+  "showCompanyLogoFlag": 0,
+  "latitude": null,
+  "longitude": null,
+  "refJobId": 1679291,
+  "location": [
+   {
+    "id": 3,
+    "name": "Bangalore"
+   }
+  ],
+  "minRatingAb": 3.8
+ },
+ {
+  "id": 1680781,
+  "title": "LatentBridge - Senior Backend Python Engineer",
+  "min": 10,
+  "max": 15,
+  "createdBy": 126069,
+  "creatorDomainName": "latentbridge.com",
+  "categoryId": 1,
+  "jobdesignation": "Senior Backend Python Engineer",
+  "status": 1,
+  "jobDetailUrl": "https://www.hirist.tech/j/latentbridge-senior-backend-python-engineer-1680781",
+  "femaleCandidate": 0,
+  "differentlyAbled": 0,
+  "exDefence": 0,
+  "workFromHome": 0,
+  "femaleBackWorkForce": 0,
+  "confidential": 0,
+  "premium": 1,
+  "brandedJd": 0,
+  "star": 0,
+  "applyStatus": 1,
+  "applyCount": 39,
+  "createdTimeMs": 1793176172440,
+  "createdTime": 1793125800000,
+  "tagIdString": "49472 9 50 1895 164971 465 43 2349 2496 519",
+  "tags": [
+   {
+    "id": 49472,
+    "name": "Backend Architecture",
+    "isMandatory": true
+   },
+   {
+    "id": 9,
+    "name": "Python",
+    "isMandatory": true
+   },
+   {
+    "id": 50,
+    "name": "Django",
+    "isMandatory": true
+   },
+   {
+    "id": 1895,
+    "name": "Flask",
+    "isMandatory": true
+   },
+   {
+    "id": 164971,
+    "name": "FastAPI",
+    "isMandatory": false
+   },
+   {
+    "id": 465,
+    "name": "SQL",
+    "isMandatory": false
+   },
+   {
+    "id": 43,
+    "name": "NoSQL",
+    "isMandatory": false
+   },
+   {
+    "id": 2349,
+    "name": "Microservices Architecture",
+    "isMandatory": true
+   },
+   {
+    "id": 2496,
+    "name": "REST API",
+    "isMandatory": false
+   },
+   {
+    "id": 519,
+    "name": "Cloud",
+    "isMandatory": false
+   }
+  ],
+  "locations": [
+   {
+    "id": 7,
+    "name": "Pune"
+   },
+   {
+    "id": 3,
+    "name": "Bangalore"
+   },
+   {
+    "id": 121,
+    "name": "Bhopal"
+   }
+  ],
+  "companyStatus": 1,
+  "createdByAlias": "Pune/Bangalore/Bhopal",
+  "applyUrl": "",
+  "videoUrl": "",
+  "assessmentFlags": 1,
+  "mediaResume": 0,
+  "industry": "",
+  "functionalArea": 16,
+  "minSal": 25,
+  "maxSal": 40,
+  "hideSal": 0,
+  "hits": 518,
+  "otherLocation": "",
+  "brandJobFlag": 0,
+  "companyData": {
+   "companyId": 0,
+   "companyName": "LatentBridge",
+   "companyNameNotAnalyzed": "LatentBridge",
+   "companyStatus": 1,
+   "logo": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-13620.webp",
+   "logoPath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-13620.webp",
+   "companyLogoFilePath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-13620.webp",
+   "ambitionBoxInfo": {
+    "ambitionBoxCompanyId": 907333,
+    "companyName": "LatentBridge",
+    "reviewsCount": 105,
+    "companyLogo": "https://static.ambitionbox.com/assets/v2/images/rs:fit:200:200:false:false/aHR0cHM6Ly9tZWRpYS5uYXVrcmkuY29tL21lZGlhL2FiY29tcGxvZ28vbGF0ZW50YnJpZGdlLW9yaWdpbmFsLmpwZw.webp",
+    "aboutCompany": "<p>LatentBridge harnesses the power of AI, data intelligence, and automation to revolutionize how businesses access essential information, optimize operations, and achieve greater results with reduced effort.</p>",
+    "foundedYear": "2018",
+    "totalEmployeesIndia": "51-200",
+    "companyType": "Startup",
+    "primaryIndustry": "IT Services & Consulting",
+    "natureOfBusiness": [
+     "Product",
+     "Service",
+     "R&D/Development Center",
+     "B2B"
+    ],
+    "hq": "London, England",
+    "officeLocations": [
+     {
+      "cityName": "London"
+     }
+    ],
+    "otherTags": [
+     "IT Services & Consulting",
+     "Software Product"
+    ],
+    "title": "LatentBridge Reviews by Employees",
+    "url": "https://www.ambitionbox.com/reviews/latentbridge-reviews",
+    "aggregateRating": 3.7,
+    "aggregateRatingOneDecimal": 3.7,
+    "benefits": [
+     {
+      "name": "Learning & Development Support",
+      "iconUrl": "https://static.ambitionbox.com/static/benefits/degree.svg",
+      "count": 22,
+      "totalCount": 22
+     },
+     {
+      "name": "Health Insurance",
+      "iconUrl": "https://static.ambitionbox.com/static/benefits/healthInsurance.svg",
+      "count": 16,
+      "totalCount": 16
+     },
+     {
+      "name": "Performance Bonus",
+      "iconUrl": "https://static.ambitionbox.com/static/benefits/performance.svg",
+      "count": 2,
+      "totalCount": 2
+     },
+     {
+      "name": "Free Meal",
+      "iconUrl": "https://static.ambitionbox.com/static/benefits/freemeal.svg",
+      "count": 1,
+      "totalCount": 1
+     }
+    ],
+    "topJobProfilesEntities": [
+     {
+      "name": "Technology Specialist",
+      "url": "https://www.ambitionbox.com/reviews/latentbridge-reviews/technology-specialist",
+      "count": 17,
+      "rating": 4.4
+     },
+     {
+      "name": "Software Developer",
+      "url": "https://www.ambitionbox.com/reviews/latentbridge-reviews/software-developer",
+      "count": 5,
+      "rating": 3
+     }
+    ],
+    "benefitsUrl": "https://www.ambitionbox.com/benefits/latentbridge-benefits",
+    "topJobProfilesUrl": "https://www.ambitionbox.com/reviews/latentbridge-reviews",
+    "totalBenefits": 4,
+    "usersReportedBenefits": 28,
+    "seo": {
+     "metaKeywords": [
+      "latentbridge careers",
+      "latentbridge Jobs",
+      "latentbridge career"
+     ],
+     "hiristMetaDescription": "Apply to %%jobsCount%% LatentBridge jobs on Hirist.tech, India's No.1 IT job portal. Explore IT job in LatentBridge Now!",
+     "hiristPageTitle": "LatentBridge Careers, %%jobsCount%% LatentBridge Job Vacancies, IT Jobs in LatentBridge|Hirist",
+     "iimjobsMetaDescription": "Apply to %%jobsCount%% LatentBridge jobs on iimjobs.com, India's No.1 Management job portal. Explore Management job in LatentBridge Now!",
+     "iimjobsPageTitle": "LatentBridge Careers, %%jobsCount%% LatentBridge Job Vacancies, Management Jobs in LatentBridge|iimjobs",
+     "refCode": "clp_k",
+     "slug": "latentbridge",
+     "source": "LatentBridge Jobs"
+    }
+   },
+   "cluster": [
+    "3"
+   ],
+   "subCluster": [
+    "22"
+   ],
+   "clustersDetail": [
+    "Consulting Companies"
+   ],
+   "subClustersDetail": [
+    "Other Consulting Companies"
+   ]
+  },
+  "recruiter": {
+   "recruiterId": 126069,
+   "recruiterName": "Danish Hasan",
+   "designation": "Manager",
+   "profilePicUrl": "",
+   "recruiterActions": 14,
+   "logoPath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-13620.webp",
+   "companyLogoFilePath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-13620.webp",
+   "recruiterCompanyId": 13620,
+   "centralizedCompanyId": 13620
+  },
+  "refCode": "sp_prm",
+  "preferedIndustry": [],
+  "industryArray": [],
+  "showCompanyLogoFlag": 0,
+  "latitude": 12.9040375,
+  "longitude": 77.6012124,
+  "refJobId": 1680781,
+  "address": "91 Springboard Business Hub Private Limited, 5th Floor, 5th floor, Bannerghatta Rd, Dollars Colony, Phase 4, J. P. Nagar, Bengaluru, Karnataka 560078, India",
+  "location": [
+   {
+    "id": 7,
+    "name": "Pune"
+   },
+   {
+    "id": 3,
+    "name": "Bangalore"
+   },
+   {
+    "id": 121,
+    "name": "Bhopal"
+   }
+  ],
+  "minRatingAb": 3.8
+ },
+ {
+  "id": 1681068,
+  "title": "Sigmoid Analytics - Lead Data Scientist - Python",
+  "min": 8,
+  "max": 12,
+  "createdBy": 117304,
+  "creatorDomainName": "sigmoidanalytics.com",
+  "categoryId": 14,
+  "jobdesignation": "Lead Data Scientist",
+  "status": 1,
+  "jobDetailUrl": "https://www.hirist.tech/j/sigmoid-analytics-lead-data-scientist-python-1681068",
+  "femaleCandidate": 0,
+  "differentlyAbled": 0,
+  "exDefence": 0,
+  "workFromHome": 0,
+  "femaleBackWorkForce": 0,
+  "confidential": 0,
+  "premium": 1,
+  "brandedJd": 1,
+  "star": 0,
+  "applyStatus": 1,
+  "applyCount": 74,
+  "createdTimeMs": 1793259301302,
+  "createdTime": 1793212200000,
+  "tagIdString": "2183 2023 9 989 465 203 58 898",
+  "tags": [
+   {
+    "id": 2183,
+    "name": "Data Science",
+    "isMandatory": true
+   },
+   {
+    "id": 2023,
+    "name": "Data Scientist",
+    "isMandatory": true
+   },
+   {
+    "id": 9,
+    "name": "Python",
+    "isMandatory": true
+   },
+   {
+    "id": 989,
+    "name": "R",
+    "isMandatory": false
+   },
+   {
+    "id": 465,
+    "name": "SQL",
+    "isMandatory": false
+   },
+   {
+    "id": 203,
+    "name": "Machine Learning",
+    "isMandatory": true
+   },
+   {
+    "id": 58,
+    "name": "AWS",
+    "isMandatory": false
+   },
+   {
+    "id": 898,
+    "name": "Artificial Intelligence",
+    "isMandatory": true
+   }
+  ],
+  "locations": [
+   {
+    "id": 3,
+    "name": "Bangalore"
+   }
+  ],
+  "companyStatus": 1,
+  "createdByAlias": "Bangalore",
+  "applyUrl": "",
+  "videoUrl": "",
+  "assessmentFlags": 0,
+  "mediaResume": 0,
+  "industry": "",
+  "functionalArea": 27,
+  "minSal": 0,
+  "maxSal": 0,
+  "hideSal": 1,
+  "hits": 189,
+  "otherLocation": "",
+  "brandJobFlag": 1,
+  "companyData": {
+   "companyId": 5920,
+   "companyName": "Sigmoid",
+   "companyNameNotAnalyzed": "Sigmoid",
+   "companyStatus": 1,
+   "logo": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-4756.webp",
+   "logoPath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-4756.webp",
+   "companyLogoFilePath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-4756.webp",
+   "cluster": [
+    "3"
+   ],
+   "subCluster": [
+    "16",
+    "18"
+   ],
+   "clustersDetail": [
+    "Consulting Companies"
+   ],
+   "subClustersDetail": [
+    "Data and Analytics Consulting",
+    "IT and Technology Consulting"
+   ]
+  },
+  "recruiter": {
+   "recruiterId": 117304,
+   "recruiterName": "Ramya",
+   "designation": "Senior TA Specialist",
+   "profilePicUrl": "https://edgar.hirist.com/media/recruiterpics/2023/11/15/2023-11-15-18-11-55-117304.jpg",
+   "recruiterActions": 0,
+   "logoPath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-4756.webp",
+   "companyLogoFilePath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-4756.webp",
+   "recruiterCompanyId": 4756,
+   "centralizedCompanyId": 4756
+  },
+  "refCode": "sp_br_prm",
+  "preferedIndustry": [],
+  "industryArray": [],
+  "showCompanyLogoFlag": 0,
+  "latitude": null,
+  "longitude": null,
+  "refJobId": 1681068,
+  "location": [
+   {
+    "id": 3,
+    "name": "Bangalore"
+   }
+  ],
+  "minRatingAb": 3.8
+ },
+ {
+  "id": 1679727,
+  "title": "DAZN - Data Platform Architect - Python",
+  "min": 10,
+  "max": 15,
+  "createdBy": 189438,
+  "creatorDomainName": "dazn.com",
+  "categoryId": 8,
+  "jobdesignation": "Data Platform Architect",
+  "status": 1,
+  "jobDetailUrl": "https://www.hirist.tech/j/dazn-data-platform-architect-python-1679727",
+  "femaleCandidate": 0,
+  "differentlyAbled": 0,
+  "exDefence": 0,
+  "workFromHome": 0,
+  "femaleBackWorkForce": 0,
+  "confidential": 0,
+  "premium": 1,
+  "brandedJd": 1,
+  "star": 0,
+  "applyStatus": 1,
+  "applyCount": 48,
+  "createdTimeMs": 1792731179753,
+  "createdTime": 1792693800000,
+  "tagIdString": "785 9 58 133311 95562 10282 8670 78591",
+  "tags": [
+   {
+    "id": 785,
+    "name": "Data Architect",
+    "isMandatory": true
+   },
+   {
+    "id": 9,
+    "name": "Python",
+    "isMandatory": true
+   },
+   {
+    "id": 58,
+    "name": "AWS",
+    "isMandatory": true
+   },
+   {
+    "id": 133311,
+    "name": "IAC Terraform",
+    "isMandatory": true
+   },
+   {
+    "id": 95562,
+    "name": "Elastic Kubernetes Service",
+    "isMandatory": true
+   },
+   {
+    "id": 10282,
+    "name": "CI/CD Pipeline",
+    "isMandatory": true
+   },
+   {
+    "id": 8670,
+    "name": "Monitoring Tools",
+    "isMandatory": false
+   },
+   {
+    "id": 78591,
+    "name": "Log Management Tools",
+    "isMandatory": false
+   }
+  ],
+  "locations": [
+   {
+    "id": 4,
+    "name": "Hyderabad"
+   }
+  ],
+  "companyStatus": 1,
+  "createdByAlias": "Hyderabad",
+  "applyUrl": "",
+  "videoUrl": "",
+  "assessmentFlags": 0,
+  "mediaResume": 0,
+  "industry": "",
+  "functionalArea": 29,
+  "minSal": 0,
+  "maxSal": 0,
+  "hideSal": 1,
+  "hits": 199,
+  "otherLocation": "",
+  "brandJobFlag": 0,
+  "companyData": {
+   "companyId": 0,
+   "companyName": "DAZN",
+   "companyNameNotAnalyzed": "DAZN",
+   "companyStatus": 1,
+   "logo": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-20290.webp",
+   "logoPath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-20290.webp",
+   "companyLogoFilePath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-20290.webp",
+   "ambitionBoxInfo": {
+    "ambitionBoxCompanyId": 1368511,
+    "companyName": "DAZN",
+    "reviewsCount": 304,
+    "companyLogo": "https://static.ambitionbox.com/assets/v2/images/rs:fit:200:200:false:false/aHR0cHM6Ly9tZWRpYS5uYXVrcmkuY29tL21lZGlhL2FiY29tcGxvZ28vZGF6bi1zb2Z0d2FyZS1vcmlnaW5hbC5qcGc.webp",
+    "aboutCompany": "<p>DAZN is a technology-led sports streaming platform that is redefining the way fans engage with live sports. With a global footprint spanning over 200 countries and territories and a subscriber base exceeding 20 million, DAZN delivers a broad portfolio of live and on-demand sports content, including football, boxing, motorsports, and basketball. Our platform features premier rights such as the FIFA Club World Cup, NFL Game Pass, and the National League.</p><span><br></span><p>In the first half of 2024 alone, DAZN broadcast over 30,000 unique live events, reaching more than 1.4 billion connected devices worldwide. Leveraging a robust, cloud-native architecture, we are able to provide a seamless and scalable streaming experience to millions of concurrent users across a diverse ecosystem of platforms and devices.</p>",
+    "foundedYear": "2015",
+    "totalEmployeesIndia": "1001-5000",
+    "companyType": "Startup",
+    "primaryIndustry": "Media & Entertainment",
+    "natureOfBusiness": [
+     "B2C"
+    ],
+    "hq": "London, England",
+    "officeLocations": [
+     {
+      "cityName": "London, England"
+     },
+     {
+      "cityName": "Hyderabad / Secunderabad, Telangana"
+     }
+    ],
+    "otherTags": [
+     "Media & Entertainment"
+    ],
+    "title": "DAZN Reviews by Employees",
+    "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews",
+    "aggregateRating": 2.5,
+    "aggregateRatingOneDecimal": 2.5,
+    "benefits": [
+     {
+      "name": "Health Insurance",
+      "iconUrl": "https://static.ambitionbox.com/static/benefits/healthInsurance.svg",
+      "count": 6,
+      "totalCount": 6
+     },
+     {
+      "name": "Free Meal",
+      "iconUrl": "https://static.ambitionbox.com/static/benefits/freemeal.svg",
+      "count": 3,
+      "totalCount": 3
+     },
+     {
+      "name": "Performance Bonus",
+      "iconUrl": "https://static.ambitionbox.com/static/benefits/performance.svg",
+      "count": 2,
+      "totalCount": 2
+     },
+     {
+      "name": "Learning & Development Support",
+      "iconUrl": "https://static.ambitionbox.com/static/benefits/degree.svg",
+      "count": 2,
+      "totalCount": 2
+     },
+     {
+      "name": "Transport / Travel Support",
+      "iconUrl": "https://static.ambitionbox.com/static/benefits/cab.svg",
+      "count": 1,
+      "totalCount": 1
+     }
+    ],
+    "topJobProfilesEntities": [
+     {
+      "name": "Software Engineer",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/software-engineer",
+      "count": 24,
+      "rating": 2.6
+     },
+     {
+      "name": "Customer Service Associate",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/customer-service-associate",
+      "count": 18,
+      "rating": 2.2
+     },
+     {
+      "name": "Senior Software Engineer",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/senior-soft-engineer",
+      "count": 17,
+      "rating": 2.5
+     },
+     {
+      "name": "Senior Customer Service Agent",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/senior-customer-service-agent",
+      "count": 7,
+      "rating": 3.6
+     },
+     {
+      "name": "Associate Software Engineer",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/associate-software-engineer",
+      "count": 6,
+      "rating": 3.4
+     },
+     {
+      "name": "Customer Service Agent",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/customer-service-agent",
+      "count": 6,
+      "rating": 1.8
+     },
+     {
+      "name": "Software Developer",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/software-developer",
+      "count": 6,
+      "rating": 1.6
+     },
+     {
+      "name": "Customer Service Executive",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/customer-service-executive",
+      "count": 6,
+      "rating": 2.3
+     },
+     {
+      "name": "Senior System Analyst",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/senior-system-analyst",
+      "count": 5,
+      "rating": 2.9
+     },
+     {
+      "name": "Associate Test Engineer",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/associate-test-engineer",
+      "count": 5,
+      "rating": 1.4
+     },
+     {
+      "name": "System Analyst",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/system-analyst",
+      "count": 5,
+      "rating": 1.1
+     },
+     {
+      "name": "Business Analyst",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/business-analyst",
+      "count": 5,
+      "rating": 1.8
+     },
+     {
+      "name": "Customer Service Agent 1",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/customer-service-agent-1",
+      "count": 5,
+      "rating": 4.3
+     },
+     {
+      "name": "QA Engineer",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/qa-engineer",
+      "count": 4,
+      "rating": 3.4
+     },
+     {
+      "name": "Customer Support",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/customer-support",
+      "count": 4,
+      "rating": 2.5
+     },
+     {
+      "name": "Senior Customer Support Associate",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/senior-customer-support-associate",
+      "count": 4,
+      "rating": 2.6
+     },
+     {
+      "name": "Senior Test Engineer",
+      "url": "https://www.ambitionbox.com/reviews/dazn-software-reviews/senior-test-engineer",
+      "count": 4,
+      "rating": 1.2
+     }
+    ],
+    "benefitsUrl": "https://www.ambitionbox.com/benefits/dazn-software-benefits",
+    "topJobProfilesUrl": "https://www.ambitionbox.com/reviews/dazn-software-reviews",
+    "totalBenefits": 5,
+    "usersReportedBenefits": 7,
+    "seo": {
+     "metaKeywords": [
+      "dazn careers",
+      "dazn Jobs",
+      "dazn career"
+     ],
+     "hiristMetaDescription": "Apply to %%jobsCount%% DAZN jobs on Hirist.tech, India's No.1 IT job portal. Explore IT job in DAZN Now!",
+     "hiristPageTitle": "DAZN Careers, %%jobsCount%% DAZN Job Vacancies, IT Jobs in DAZN|Hirist",
+     "iimjobsMetaDescription": "Apply to %%jobsCount%% DAZN jobs on iimjobs.com, India's No.1 Management job portal. Explore Management job in DAZN Now!",
+     "iimjobsPageTitle": "DAZN Careers, %%jobsCount%% DAZN Job Vacancies, Management Jobs in DAZN|iimjobs",
+     "refCode": "clp_k",
+     "slug": "dazn",
+     "source": "DAZN Jobs"
+    }
+   },
+   "cluster": [
+    "13"
+   ],
+   "subCluster": [
+    "68"
+   ],
+   "clustersDetail": [
+    "Global Capability Centers"
+   ],
+   "subClustersDetail": [
+    "Global Capability Centers"
+   ]
+  },
+  "recruiter": {
+   "recruiterId": 189438,
+   "recruiterName": "Srinivas",
+   "designation": "TA Partner",
+   "profilePicUrl": "",
+   "recruiterActions": 0,
+   "logoPath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-20290.webp",
+   "companyLogoFilePath": "https://recruiter-static-content.s3.ap-south-1.amazonaws.com/CompanyLogos/centralised-20290.webp",
+   "recruiterCompanyId": 20290,
+   "centralizedCompanyId": 20290
+  },
+  "refCode": "sp_prm",
+  "preferedIndustry": [],
+  "industryArray": [],
+  "showCompanyLogoFlag": 0,
+  "latitude": null,
+  "longitude": null,
+  "refJobId": 1679727,
+  "location": [
+   {
+    "id": 4,
+    "name": "Hyderabad"
+   }
+  ],
+  "minRatingAb": 3.8
+ }
+]

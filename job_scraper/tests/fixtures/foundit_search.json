@@ -1,0 +1,2740 @@
+{
+ "data": [
+  {
+   "id": "69580841",
+   "score": 10019637.0,
+   "jobId": 69580841,
+   "kiwiJobId": "156214777",
+   "kiwiCompanyId": "332466",
+   "kiwiRecruiterId": "1183900",
+   "title": "Senior Python Developer",
+   "company": {
+    "companyId": 332041,
+    "name": "Tata Consultancy Services"
+   },
+   "locations": [
+    {
+     "country": "India",
+     "latLon": "20.593684,78.962880",
+     "uuid": "fc71fff2-b98a-4cd8-a482-2e197cb4fc34",
+     "isoCode": "IN",
+     "isdCode": 91,
+     "stdCode": 0
+    },
+    {
+     "city": "Cochin / Kochi / Ernakulam",
+     "country": "India",
+     "state": "Kerala",
+     "latLon": "9.931233,76.267304",
+     "uuid": "2d4187c2-12f9-4e00-8828-da7c4aee2b25",
+     "isoCode": "IN",
+     "isdCode": 91,
+     "stdCode": 484
+    }
+   ],
+   "minimumExperience": {
+    "years": 7
+   },
+   "maximumExperience": {
+    "years": 12
+   },
+   "minimumSalary": {
+    "currency": "INR",
+    "absoluteValue": 0,
+    "absoluteMonthlyValue": 0
+   },
+   "maximumSalary": {
+    "currency": "INR",
+    "absoluteValue": 0,
+    "absoluteMonthlyValue": 0
+   },
+   "postedAt": 1793060168000,
+   "createdAt": 1793060168000,
+   "updatedAt": 1793060167000,
+   "applicants": [
+    {
+     "profileId": 120503554,
+     "seekerId": 104346380,
+     "uuid": "29ac9a03-5ff8-4b04-a650-79ef95de4c4c",
+     "appliedAt": 1793214283314
+    },
+    {
+     "profileId": 116728538,
+     "seekerId": 100656621,
+     "uuid": "38feca95-d838-4c3f-9e16-f9f24a569e58",
+     "appliedAt": 1793091513315
+    },
+    {
+     "profileId": 115328820,
+     "seekerId": 99248000,
+     "uuid": "5bdb130d-d762-4707-926c-294a6fd6ae8b",
+     "appliedAt": 1793197924393
+    },
+    {
+     "profileId": 124488359,
+     "seekerId": 108244077,
+     "uuid": "6be22a3a-9a50-46b5-a803-8f7beae11f07",
+     "appliedAt": 1793076514993
+    },
+    {
+     "profileId": 109415743,
+     "seekerId": 93449632,
+     "uuid": "7e1e9c87-35be-46ca-b158-be8c71b875c3",
+     "appliedAt": 1793072673936
+    },
+    {
+     "profileId": 111981218,
+     "seekerId": 95939641,
+     "uuid": "83462e0f-3523-4b81-8383-c4e921cea6e2",
+     "appliedAt": 1793156600151
+    },
+    {
+     "profileId": 29409698,
+     "seekerId": 4603795,
+     "uuid": "9a7cf49a-0d4d-11e9-beca-70106fbef802",
+     "appliedAt": 1793278918096
+    },
+    {
+     "profileId": 97515837,
+     "seekerId": 82204472,
+     "uuid": "9f270e16-5347-4436-aa3e-5a93b034a034",
+     "appliedAt": 1793083911838
+    },
+    {
+     "profileId": 95554005,
+     "seekerId": 80832966,
+     "uuid": "b2f28888-571e-4163-913d-59fa443a53c0",
+     "appliedAt": 1793078788376
+    },
+    {
+     "profileId": 38516365,
+     "seekerId": 38279775,
+     "uuid": "bac70d32-0d56-11e9-beca-70106fbef802",
+     "appliedAt": 1793085414114
+    },
+    {
+     "profileId": 5901349,
+     "seekerId": 17634768,
+     "uuid": "cb95c692-0d7a-11e9-beca-70106fbef802",
+     "appliedAt": 1793081736684
+    }
+   ],
+   "industries": [
+    "Other"
+   ],
+   "functions": [
+    "Information Technology"
+   ],
+   "description": "<p><strong>Exp Must 7++ Location Kochi--Virtual Drive</strong></p><p><strong>16-Oct </strong></p><p></p><p><strong>About the Role</strong></p><p></p><p></p><p><strong>Job Summary </strong></p><p></p><p>We are looking for a Senior Python Developer to design, develop, test, and support enterprise applications, REST APIs, microservices, automation solutions, and data-processing frameworks. The role will support the SAP IS-U Edge System transformation program and involve integration with enterprise, cloud, utility, and customer-service platforms.</p><p></p><p></p><p><strong>Responsibilities</strong></p><p></p><p></p><ul><li>Develop scalable enterprise applications using Python.</li><li>Design and develop REST APIs and microservices using frameworks such as FastAPI, Flask, or Django.</li><li>Build ETL/ELT pipelines, data-ingestion processes, transformation frameworks, and validation solutions.</li><li>Develop integrations with SAP IS-U, MDM, Salesforce, GIS, customer portals, reporting platforms, and middleware systems.</li><li>Create automation scripts for deployment, monitoring, environment management, and business workflows.</li><li>Develop cloud-native, containerized, and serverless applications.</li><li>Perform unit testing, integration testing, SIT, UAT, defect resolution, and regression testing.</li><li>Build and maintain CI/CD pipelines and support automated deployments.</li><li>Optimize application, API, database, and data-processing performance.</li><li>Provide L2/L3 production support, root-cause analysis, deployment, cutover, and hypercare support.</li><li>Follow secure coding, authentication, authorization, and enterprise security standards. </li></ul><p></p><p></p><p><strong>Qualifications</strong></p><p></p><p></p><p>Qualification bachelor's degree in computer science, Information Technology, Software Engineering, Data Engineering, or a related field. </p><p></p><p></p><p>Experience Range7\u201312+ years, with strong expertise in Python, APIs, cloud-native development, data engineering, automation, and enterprise integrations.</p><p></p><p></p><p><strong>Required Skills</strong></p><p></p><p></p><ul><li>Mandatory Skills7+ years of software development experience.</li><li>5+ years of hands-on Python development experience.</li><li>Strong experience in enterprise application and API development.</li><li>Hands-on experience with REST APIs, microservices, databases, and system integrations.</li><li>Good knowledge of Python frameworks such as FastAPI, Flask, or Django.</li><li>Experience with data processing and ETL/ELT development.</li></ul><p>Strong analytical, troubleshooting, and problem-solving skills.</p><p></p><p><strong>Preferred Skills</strong></p><p></p><p></p><ul><li>Data: Pandas, NumPy, PySpark, Databricks, Apache Spark.</li><li>Integration: GraphQL, JSON, XML, OAuth 2.0, JWT, Kafka, IBM MQ.</li><li>Databases: Oracle, SQL Server, PostgreSQL, MongoDB, Redis.</li><li>Cloud and DevOps: Microsoft Azure, Azure Functions, Azure App Services, AKS, Docker, Kubernetes, Git, Azure DevOps, Jenkins, Terraform.</li><li>Reporting: Power BI and reporting automation.</li></ul><p>Knowledge of SAP IS-U, utility billing, Meter Data Management, AMI, CIS, or meter-to-cash processes will be advantageous.</p><p></p><p></p><p></p>",
+   "jobTypes": [
+    "Permanent Job"
+   ],
+   "employmentTypes": [
+    "Full time"
+   ],
+   "itSkills": [
+    {
+     "id": "c97c7aaf-e01c-46ce-a148-897d319a1cbf",
+     "text": "PostgreSQL"
+    },
+    {
+     "id": "18dea694-457e-11e9-a89e-70106fbef856",
+     "text": "Microservices"
+    },
+    {
+     "id": "ca14ede2-6a40-4600-8d73-24e37e6b4117",
+     "text": "ELT"
+    },
+    {
+     "id": "31b9419a-1268-4121-843f-65fdb62c7fcd",
+     "text": "Azure Functions"
+    },
+    {
+     "id": "18a19f8a-457e-11e9-a89e-70106fbef856",
+     "text": "Docker"
+    },
+    {
+     "id": "1b73089b-457e-11e9-a89e-70106fbef856",
+     "text": "Terraform"
+    },
+    {
+     "id": "1ad330bf-457e-11e9-a89e-70106fbef856",
+     "text": "Flask"
+    },
+    {
+     "id": "18be3130-457e-11e9-a89e-70106fbef856",
+     "text": "Microsoft Azure"
+    },
+    {
+     "id": "a98a50c7-bdb9-44c1-a6a3-04d229fb8897",
+     "text": "automation"
+    },
+    {
+     "id": "ac2816ed-5538-4528-a99b-0367bd96e6b9",
+     "text": "Oracle"
+    },
+    {
+     "id": "eb81df54-a693-4ef7-b44f-ded7e12e1d7c",
+     "text": "Python"
+    },
+    {
+     "id": "d0658ee0-78a8-4aa0-b5f8-b6ba57dbca26",
+     "text": "Azure DevOps"
+    },
+    {
+     "id": "18bf37b3-457e-11e9-a89e-70106fbef856",
+     "text": "Power Bi"
+    },
+    {
+     "id": "eef3d259-78c3-44c4-85b1-23a69f52ff4b",
+     "text": "SQL Server"
+    },
+    {
+     "id": "8fec51b6-9c6e-4c42-9625-54dc353d73d6",
+     "text": "Redis"
+    },
+    {
+     "id": "c3fb2149-1744-4226-9795-d7f45786f1c8",
+     "text": "Django"
+    },
+    {
+     "id": "1895ffa2-457e-11e9-a89e-70106fbef856",
+     "text": "Jenkins"
+    },
+    {
+     "id": "18969cd8-457e-11e9-a89e-70106fbef856",
+     "text": "Git"
+    },
+    {
+     "id": "21378a90-05c9-4e24-abcb-07355368b9a5",
+     "text": "FastAPI"
+    },
+    {
+     "id": "a493c1ce-6bdc-43af-83bd-ae72d5f9f3b4",
+     "text": "MongoDB"
+    },
+    {
+     "id": "1d21eca6-457e-11e9-a89e-70106fbef856",
+     "text": "Rest Apis"
+    },
+    {
+     "id": "1ab0c387-457e-11e9-a89e-70106fbef856",
+     "text": "Kubernetes"
+    },
+    {
+     "id": "18a6563c-457e-11e9-a89e-70106fbef856",
+     "text": "Etl"
+    }
+   ],
+   "skills": [
+    {
+     "text": "SAP IS-U"
+    },
+    {
+     "id": "b509138b-df7b-45db-982e-f0e5964c65cd",
+     "text": "MDM"
+    },
+    {
+     "id": "be74e1cf-07f5-43f5-8e65-9692f0415ea4",
+     "text": "Salesforce"
+    },
+    {
+     "id": "65a43f23-4a0b-11e9-a89e-70106fbef856",
+     "text": "Data Processing"
+    },
+    {
+     "text": "Azure App Services"
+    },
+    {
+     "text": "AKS"
+    },
+    {
+     "id": "647de108-4a0b-11e9-a89e-70106fbef856",
+     "text": "Gis"
+    },
+    {
+     "text": "CI/CD"
+    },
+    {
+     "text": "cloud-native development"
+    }
+   ],
+   "skillsWithSynonyms": [
+    {
+     "synonyms": [
+      "PostgreSQL",
+      "Postgres",
+      "Postgre SQL",
+      "PostgreSQL DB",
+      "Postgres DB",
+      "pgSQL",
+      "PostgresSQL",
+      "Postgres Database",
+      "Postgres SQL",
+      "PostgreSQL Database",
+      "Postgre",
+      "PSQL",
+      "Postgress",
+      "Postresql",
+      "PostgreSQL / SQL",
+      "SQL",
+      "Structured Query Language"
+     ],
+     "value": "postgresql"
+    },
+    {
+     "synonyms": [
+      "Microservices",
+      "Microservices Architecture",
+      "Microservice Architecture",
+      "Micro-service Architecture",
+      "Micro-service",
+      "MSA",
+      "Microservice",
+      "Micro Services",
+      "Micro Service",
+      "Micro-services",
+      "Microservices-based Architecture",
+      "Microservice-based Architecture",
+      "Micro-services Architecture",
+      "Micro services architecture",
+      "Mircoservices",
+      "Microservice-Based Development",
+      "Micro-services Development",
+      "Micro Service Architecture",
+      "Microservice Based Architecture"
+     ],
+     "value": "microservices"
+    },
+    {
+     "synonyms": [
+      "SAP IS-U",
+      "SAP ISU",
+      "IS-U",
+      "ISU",
+      "SAP for Utilities",
+      "SAP Utilities",
+      "SAP Industry Solution for Utilities",
+      "SAP Industry Solutions for Utilities",
+      "SAP IS U",
+      "SAP Industry Solution Utilities",
+      "SAP IS-U/CCS",
+      "IS-U CCS",
+      "SAP IS-Utilities",
+      "SAP Utility",
+      "SAP IS Utilities",
+      "IS Utilities",
+      "SAP IS for Utilities"
+     ],
+     "value": "sap is-u"
+    },
+    {
+     "synonyms": [
+      "ELT",
+      "Extract Load Transform",
+      "Extract-Load-Transform",
+      "ETL/ELT",
+      "ETL",
+      "Extract Transform Load",
+      "ETL-ELT",
+      "ETL & ELT",
+      "ETL ELT"
+     ],
+     "value": "elt"
+    },
+    {
+     "synonyms": [
+      "Azure Functions",
+      "Microsoft Azure Functions",
+      "Azure Function",
+      "MS Azure Functions",
+      "Azure Serverless Functions",
+      "Azure Function Apps",
+      "Azure Function App",
+      "Function Apps",
+      "Function App",
+      "AzureFunctions",
+      "Azure Functions App"
+     ],
+     "value": "azure functions"
+    },
+    {
+     "synonyms": [
+      "Docker",
+      "Docker Engine",
+      "Docker CE",
+      "Docker Community Edition",
+      "Docker EE",
+      "Docker Enterprise Edition",
+      "Docker Desktop",
+      "dockers"
+     ],
+     "value": "docker"
+    },
+    {
+     "synonyms": [
+      "HashiCorp Terraform",
+      "Teraform",
+      "Terra Form",
+      "Terraform",
+      "Terraform CLI",
+      "Terraform IaC",
+      "Terraform Infrastructure as Code",
+      "Terraform OSS",
+      "Terraform tool",
+      "erraform",
+      "tera form",
+      "terraforms",
+      "terrafrom"
+     ],
+     "value": "terraform"
+    },
+    {
+     "synonyms": [
+      "MDM",
+      "Master Data Management",
+      "Master Data Mgmt",
+      "Enterprise MDM",
+      "Multi-Domain MDM",
+      "Masterdata Management",
+      "Master Data Management (MDM)",
+      "Enterprise Master Data Management",
+      "Meter Data Management",
+      "Meter Data Mgmt",
+      "Meter Data Management System",
+      "MDMS",
+      "Utility Meter Data Management",
+      "Smart Meter Data Management",
+      "Data Mastering",
+      "Master Data",
+      "Mobile Device Management",
+      "Mobile Device Mgmt",
+      "Mobile Devices Management",
+      "Mobile devise management",
+      "Mobile Device Managment"
+     ],
+     "value": "mdm"
+    },
+    {
+     "synonyms": [
+      "Flask",
+      "Flask Framework",
+      "Flask Python",
+      "Flask Web Framework",
+      "Pallets Flask",
+      "Python Flask",
+      "falsk"
+     ],
+     "value": "flask"
+    },
+    {
+     "synonyms": [
+      "Azure",
+      "Azure Cloud",
+      "Azure Cloud Ecosystem",
+      "Azure Cloud Platform",
+      "Azure Cloud Services",
+      "Azure Ecosystem",
+      "Azure Platform",
+      "Azure Service",
+      "Azure Services",
+      "MS Azure",
+      "MS Azure Services",
+      "Microsoft Azure",
+      "Microsoft Azure Cloud",
+      "Microsoft Azure Ecosystem",
+      "Microsoft Azure Platform",
+      "Microsoft Azure Services",
+      "Windows Azure",
+      "azure developer",
+      "azure engineer",
+      "azure programmer",
+      "ms azure developer",
+      "ms azure engineer",
+      "ms azure programmer"
+     ],
+     "value": "microsoft azure"
+    },
+    {
+     "synonyms": [
+      "Automatation",
+      "Automate",
+      "Automated",
+      "Automated Testing",
+      "Automated Workflows",
+      "Automating",
+      "Automation",
+      "Automation Testing",
+      "Automations",
+      "Automatisation",
+      "Business Process Automation",
+      "Process Automation",
+      "QA Automation",
+      "Software Automation",
+      "Task Automation",
+      "Test Automation",
+      "Workflow Automation",
+      "automation_it@yopmail.com"
+     ],
+     "value": "automation"
+    },
+    {
+     "synonyms": [
+      "Oracle",
+      "Oracle Corporation",
+      "Oracle Corp",
+      "Oracle Database",
+      "Oracle DB",
+      "Oracle RDBMS",
+      "orcale"
+     ],
+     "value": "oracle"
+    },
+    {
+     "synonyms": [
+      "Python",
+      "Python Programming",
+      "Core Python",
+      "Python Language",
+      "Python 3",
+      "Python 2",
+      "Python Scripting",
+      "CPython",
+      "Py",
+      "Python3",
+      "Phython",
+      "Phyton",
+      "pyhton",
+      "Python Coding",
+      "Python 2.7",
+      "Python Programming Language",
+      "Python2",
+      "Python Development",
+      "Python Fundamentals",
+      "Basic Python",
+      "Python Application Development",
+      "Python Software Development",
+      "Advanced Python",
+      "Advanced Python Programming",
+      "Basic Python Scripting",
+      "Python Script",
+      "Python Automation Scripting",
+      "pyhon",
+      "Python Code"
+     ],
+     "value": "python"
+    },
+    {
+     "synonyms": [
+      "Azure DevOps",
+      "Microsoft Azure DevOps",
+      "Azure DevOps Services",
+      "Azure DevOps Server",
+      "VSTS",
+      "Visual Studio Team Services",
+      "TFS",
+      "Team Foundation Server",
+      "ADO",
+      "AzDO",
+      "Microsoft TFS",
+      "Visual Studio Team Foundation Server",
+      "MS TFS",
+      "Microsoft VSTS",
+      "Visual Studio Online",
+      "Microsoft Azure DevOps Services",
+      "MS Azure DevOps",
+      "Azure ADO",
+      "Azure Dev Ops",
+      "MS DevOps",
+      "Microsoft DevOps",
+      "Azure Ops"
+     ],
+     "value": "azure devops"
+    },
+    {
+     "synonyms": [
+      "Force.com",
+      "SF",
+      "SFDC",
+      "SFDC CRM",
+      "Saleforce",
+      "Sales Force",
+      "Sales Force Dot Com",
+      "Sales Force.com",
+      "Salesforce",
+      "Salesforce CRM",
+      "Salesforce CRM Cloud",
+      "Salesforce Cloud",
+      "Salesforce Dot Com",
+      "Salesforce Dotcom",
+      "Salesforce Platform",
+      "Salesforce.com",
+      "Salesforce.com CRM",
+      "Salesforces",
+      "Salesfroce",
+      "Salse Force",
+      "Salseforce",
+      "sales-force",
+      "sfdc admin"
+     ],
+     "value": "salesforce"
+    },
+    {
+     "synonyms": [
+      "Data Entry",
+      "Data Entry Operation",
+      "Data Entry Operations",
+      "Data Entry Work",
+      "Data Handling",
+      "Data Input",
+      "Data Management",
+      "Data Manipulation",
+      "Data Operations",
+      "Data Proc",
+      "Data Proc.",
+      "Data Processing",
+      "Data Processing Operations",
+      "Data Processing Work",
+      "Data process",
+      "Data-processing",
+      "Handling Data",
+      "Information Processing",
+      "info management"
+     ],
+     "value": "data processing"
+    },
+    {
+     "synonyms": [
+      "MS Power BI",
+      "MS PowerBI",
+      "Microsoft Power BI",
+      "Microsoft PowerBI",
+      "PBI",
+      "Power BI",
+      "Power BI Dashboard Development",
+      "Power BI Dev",
+      "Power BI Development",
+      "Power BI Report Development",
+      "Power-BI",
+      "PowerBI",
+      "power business intelligence"
+     ],
+     "value": "power bi"
+    },
+    {
+     "synonyms": [
+      "MS SQL",
+      "MS SQL Server",
+      "MS-SQL",
+      "MSSQL",
+      "MSSQL Server",
+      "Microsoft SQL",
+      "Microsoft SQL Server",
+      "SQL Server",
+      "SQL Server DB",
+      "SQL Server Database",
+      "SQLServer",
+      "db sql server"
+     ],
+     "value": "sql server"
+    },
+    {
+     "synonyms": [
+      "Azure App Services",
+      "Azure App Service",
+      "App Service",
+      "App Services",
+      "Microsoft Azure App Service",
+      "Microsoft Azure App Services",
+      "MS Azure App Service",
+      "Azure AppService",
+      "App Service on Azure",
+      "Azure Web App",
+      "Azure Web Apps",
+      "Azure cloud app service"
+     ],
+     "value": "azure app services"
+    },
+    {
+     "synonyms": [
+      "AKS",
+      "AKS Cluster",
+      "Azure AKS",
+      "Azure K8s",
+      "Azure K8s Service",
+      "Azure Kubernetes",
+      "Azure Kubernetes Service",
+      "Azure Kubernetes Service (AKS)",
+      "Azure Kubernetes Service AKS",
+      "Azure Kubernetes Services",
+      "Kubernetes on Azure",
+      "Microsoft Azure Kubernetes Service",
+      "aks clusters",
+      "aks k8s",
+      "go",
+      "go language",
+      "go programming language",
+      "golan",
+      "golang",
+      "golang0",
+      "golanguage",
+      "golong",
+      "k8s",
+      "kubernetes",
+      "operator framework"
+     ],
+     "value": "aks"
+    },
+    {
+     "synonyms": [
+      "Redis",
+      "Remote Dictionary Server",
+      "Redis DB",
+      "Redis Database",
+      "Redis Cache",
+      "Redis OSS",
+      "Open Source Redis",
+      "Redis Server",
+      "Redis Caching",
+      "Redis Cache Server",
+      "Redis in-memory cache",
+      "Redis in-memory data store"
+     ],
+     "value": "redis"
+    },
+    {
+     "synonyms": [
+      "Django",
+      "Django Framework",
+      "Python Django",
+      "Django Web Framework",
+      "d jango",
+      "Jango"
+     ],
+     "value": "django"
+    },
+    {
+     "synonyms": [
+      "Jenkins",
+      "Jenkins CI",
+      "Jenkins CI/CD",
+      "Jenkins Automation Server",
+      "Jenkins Server",
+      "Jenkin",
+      "Jenkis",
+      "Jenkins Pipeline"
+     ],
+     "value": "jenkins"
+    },
+    {
+     "synonyms": [
+      "Git",
+      "Git / GitHub",
+      "Git SCM",
+      "Git Source Control",
+      "Git VCS",
+      "Git Version Control",
+      "Git Versioning",
+      "Git/GitHub",
+      "GitHub",
+      "git-scm",
+      "gitlab",
+      "gitlab repo",
+      "gitlab runner",
+      "version control system"
+     ],
+     "value": "git"
+    },
+    {
+     "synonyms": [
+      "GIS",
+      "Geographic Information System",
+      "Geographical Information System",
+      "Geo Information System",
+      "Geospatial Information System",
+      "GIS Mapping",
+      "Geographic Information System Mapping",
+      "Geographical Information System Mapping",
+      "Geospatial Mapping",
+      "Geo Mapping",
+      "Geo-spatial Mapping",
+      "Geographic Information Systems",
+      "Geo-Information System",
+      "Spatial Information System",
+      "Geographical Information Systems",
+      "GIS Substation",
+      "Gas Insulated Substation",
+      "Gas Insulated Switchgear Substation",
+      "SF6 GIS Substation",
+      "SF6 Gas Insulated Substation",
+      "GIS Switchyard",
+      "Gas Insulated Switchyard",
+      "Geo Information Systems",
+      "Geo-Information Systems",
+      "Geospatial Information Systems",
+      "Spatial Information Systems"
+     ],
+     "value": "gis"
+    },
+    {
+     "synonyms": [
+      "CI/CD",
+      "CI CD",
+      "CICD",
+      "CI-CD",
+      "Continuous Integration/Continuous Delivery",
+      "Continuous Integration/Continuous Deployment",
+      "Continuous Integration and Continuous Delivery",
+      "Continuous Integration and Continuous Deployment",
+      "Continuous Integration & Continuous Delivery",
+      "Continuous Integration / Continuous Delivery",
+      "Continuous Integration / Continuous Deployment",
+      "Continuous Integration & Continuous Deployment",
+      "CI/CD Pipeline",
+      "CI CD Pipeline",
+      "CI-CD Pipeline",
+      "Continuous Integration/Continuous Delivery Pipeline",
+      "Continuous Integration/Continuous Deployment Pipeline",
+      "Continuous Integration and Continuous Delivery Pipeline",
+      "Continuous Integration and Continuous Deployment Pipeline",
+      "Continuous Delivery Pipeline",
+      "Continuous Deployment Pipeline",
+      "CI/CD Pipelines",
+      "CI CD Pipelines",
+      "CI-CD Pipelines",
+      "CICD Pipelines",
+      "Continuous Integration and Continuous Delivery Pipelines",
+      "Continuous Integration and Continuous Deployment Pipelines",
+      "Continuous Integration/Continuous Delivery Pipelines",
+      "Continuous Integration/Continuous Deployment Pipelines"
+     ],
+     "value": "ci/cd"
+    },
+    {
+     "synonyms": [
+      "Fast API",
+      "FastAPI",
+      "FastAPI Framework",
+      "FastAPI Python",
+      "Python FastAPI",
+      "fast api development",
+      "fast-api",
+      "object relational mapping",
+      "orm",
+      "sql alchemy",
+      "sqlalchemy"
+     ],
+     "value": "fastapi"
+    },
+    {
+     "synonyms": [
+      "Mango DB",
+      "MangoDB",
+      "Mongo",
+      "Mongo DB",
+      "Mongo Database",
+      "MongoDB",
+      "MongoDB Database",
+      "MongoDB Server",
+      "mongo-db",
+      "nosql mongo"
+     ],
+     "value": "mongodb"
+    },
+    {
+     "synonyms": [
+      "REST APIs",
+      "REST",
+      "Representational State Transfer",
+      "RESTful",
+      "REST API",
+      "RESTful API",
+      "RESTful APIs",
+      "REST Web Services",
+      "RESTful Web Services",
+      "Representational State Transfer APIs",
+      "Representational State Transfer API",
+      "REST Services",
+      "REST-based APIs",
+      "REST-based Web Services",
+      "REST web service",
+      "RESTful web service",
+      "REST service",
+      "RESTful service",
+      "RESTful Services",
+      "REST-based Services",
+      "RESTful Web APIs",
+      "Representational State Transfer (REST) APIs",
+      "restfull",
+      "REST/JSON APIs",
+      "REST JSON APIs",
+      "RESTful JSON APIs",
+      "JSON REST APIs",
+      "JSON-based REST APIs",
+      "restapi",
+      "restap",
+      "RESTful API Design and Integration",
+      "REST API Design and Integration",
+      "Design and Integrate RESTful APIs",
+      "Design and Integrate REST APIs",
+      "API Design and Integration"
+     ],
+     "value": "rest apis"
+    },
+    {
+     "synonyms": [
+      "K8",
+      "K8s",
+      "K8s / Amazon EKS",
+      "K8s/EKS",
+      "Kube",
+      "Kubenetes",
+      "Kuberenets",
+      "Kuberentes",
+      "Kubernet",
+      "Kubernete",
+      "Kubernetes",
+      "Kubernetes / Amazon EKS",
+      "Kubernetes/EKS",
+      "Kuberntes",
+      "aks",
+      "aks clusters",
+      "aks k8s",
+      "go",
+      "go language",
+      "go programming language",
+      "golan",
+      "golang",
+      "golang0",
+      "golanguage",
+      "golong",
+      "kuberenetes",
+      "kubernate",
+      "kubernates",
+      "kubernetees",
+      "kubernets",
+      "operator framework"
+     ],
+     "value": "kubernetes"
+    },
+    {
+     "synonyms": [
+      "Data Integration Tool",
+      "Data Integration Tools",
+      "ELT",
+      "ETL",
+      "ETL & ELT",
+      "ETL Basics",
+      "ETL Concept",
+      "ETL Concepts",
+      "ETL Dev",
+      "ETL Development",
+      "ETL ELT",
+      "ETL Fundamentals",
+      "ETL Pipeline",
+      "ETL Process",
+      "ETL Process Concepts",
+      "ETL Processes",
+      "ETL Processing",
+      "ETL Programming",
+      "ETL Technologies",
+      "ETL Tool",
+      "ETL Tools",
+      "ETL Workflow",
+      "ETL-ELT",
+      "ETL/ELT",
+      "Extract Load Transform",
+      "Extract Transform Load",
+      "Extract Transform Load Development",
+      "Extract Transform Load Tools",
+      "Extract, Transform, Load",
+      "Extract-Transform-Load",
+      "Extract-Transform-Load Development",
+      "Extract-Transform-Load Tools",
+      "Extract/Transform/Load",
+      "e.t.l",
+      "e.t.l.",
+      "etl specialist",
+      "etl test",
+      "etl testing"
+     ],
+     "value": "etl"
+    },
+    {
+     "synonyms": [
+      "Cloud-Native Development",
+      "Cloud Native",
+      "Cloud-Native",
+      "Cloud Native Architecture",
+      "Cloud-Native Architecture",
+      "Cloud Native Development",
+      "Cloud Native Applications",
+      "Cloud-Native Applications",
+      "Cloud Native Application Development",
+      "Cloud-Native Application Development",
+      "Cloud-Native App Development",
+      "Cloud Native App Development",
+      "Cloud-Native Engineering",
+      "Cloud Native Engineering",
+      "Cloud Development",
+      "Cloud Application Development",
+      "Cloud App Development",
+      "Cloud Software Development",
+      "Cloud-Based Development",
+      "Cloud Based Development",
+      "Cloud Platform Development",
+      "Cloud Solutions Development",
+      "Cloud Native Software Development",
+      "Cloud-Native Software Engineering",
+      "Cloud Native Software Engineering",
+      "cloudnative",
+      "Cloud Native Computing",
+      "Cloud-Native Computing"
+     ],
+     "value": "cloud-native development"
+    }
+   ],
+   "recruiterId": 1380487,
+   "companyId": 332041,
+   "maximumSalaryINRFilter": 0,
+   "minimumSalaryINRFilter": 0,
+   "maximumSalaryINRMonthlyFilter": 0,
+   "minimumSalaryINRMonthlyFilter": 0,
+   "minimumExperienceFilter": 7,
+   "maximumExperienceFilter": 12,
+   "questionnaire": false,
+   "employerTypes": [
+    "Company"
+   ],
+   "walkInVenue": {},
+   "companyName": "Tata Consultancy Services",
+   "referenceCode": "dd659c98a472f796c9738aed1dabfced",
+   "status": 1,
+   "accountId": 0,
+   "currencyCode": "INR",
+   "hideSalary": 0,
+   "hideCompanyName": 0,
+   "autoMatch": 0,
+   "showContactDetails": 0,
+   "jobSource": "SCRAPPING",
+   "postingBoard": "SINGLE",
+   "graceJob": 0,
+   "quickJob": 0,
+   "jobFrom": "MOIN_OPERIA",
+   "isoCode": "en",
+   "recruiterName": "Tata Consultancy Services",
+   "channelId": 1,
+   "channelName": "India",
+   "isBold": 0,
+   "isJdLogo": 0,
+   "isSearchLogo": 0,
+   "siteContext": "rexmonster",
+   "freshness": 1793060168000,
+   "closedAt": 1795631400000,
+   "activeJob": true,
+   "isJobActive": true,
+   "isCJT": 0,
+   "isMicrosite": 0,
+   "redirectStage": 2,
+   "totalApplicants": 11,
+   "isGptwCompany": 0,
+   "jobSalaryConfidential": false,
+   "isUrgentlyHiring": false,
+   "quickApplyJob": 0,
+   "jobClassification": "SYNDICATE",
+   "isTestJob": false,
+   "jdUrl": "/job/senior-python-developer-tata-consultancy-services-india-69580841",
+   "isSaved": false,
+   "isApplied": false,
+   "minimumSalaryFilter": 0,
+   "maximumSalaryFilter": 0
+  },
+  {
+   "id": "69572519",
+   "score": 10019637.0,
+   "jobId": 69572519,
+   "kiwiJobId": "156196985",
+   "kiwiCompanyId": "332466",
+   "kiwiRecruiterId": "1183900",
+   "title": "Python Developer",
+   "company": {
+    "companyId": 332041,
+    "name": "Tata Consultancy Services"
+   },
+   "locations": [
+    {
+     "city": "Mumbai",
+     "country": "India",
+     "state": "Maharashtra",
+     "latLon": "19.075984,72.877656",
+     "uuid": "db3e442b-e262-4869-bf5e-29c815f41b58",
+     "isoCode": "IN",
+     "isdCode": 91,
+     "stdCode": 22
+    },
+    {
+     "country": "India",
+     "latLon": "20.593684,78.962880",
+     "uuid": "fc71fff2-b98a-4cd8-a482-2e197cb4fc34",
+     "isoCode": "IN",
+     "isdCode": 91,
+     "stdCode": 0
+    }
+   ],
+   "minimumExperience": {
+    "years": 4
+   },
+   "maximumExperience": {
+    "years": 6
+   },
+   "minimumSalary": {
+    "currency": "INR",
+    "absoluteValue": 0,
+    "absoluteMonthlyValue": 0
+   },
+   "maximumSalary": {
+    "currency": "INR",
+    "absoluteValue": 0,
+    "absoluteMonthlyValue": 0
+   },
+   "postedAt": 1793055917000,
+   "createdAt": 1793055917000,
+   "updatedAt": 1793055917000,
+   "applicants": [
+    {
+     "profileId": 108569663,
+     "seekerId": 92640539,
+     "uuid": "1aa1e16a-f53f-4c96-9b60-c0e9c3fa93bf",
+     "appliedAt": 1793211064695
+    },
+    {
+     "profileId": 106748747,
+     "seekerId": 90885691,
+     "uuid": "1f6cf07b-de36-40e6-8278-2f5cf77847ae",
+     "appliedAt": 1793512439236
+    },
+    {
+     "profileId": 117242020,
+     "seekerId": 101149561,
+     "uuid": "29756056-44d2-47f9-afd6-527f21dc72a2",
+     "appliedAt": 1793116178817
+    },
+    {
+     "profileId": 120503554,
+     "seekerId": 104346380,
+     "uuid": "29ac9a03-5ff8-4b04-a650-79ef95de4c4c",
+     "appliedAt": 1793214281698
+    },
+    {
+     "profileId": 111669420,
+     "seekerId": 95645511,
+     "uuid": "4435f933-328b-4b34-b2c8-1eddaad231fe",
+     "appliedAt": 1793074563657
+    },
+    {
+     "profileId": 121243836,
+     "seekerId": 105070442,
+     "uuid": "584ac94b-9bdf-4578-97b8-0999c5ee572e",
+     "appliedAt": 1793356283048
+    },
+    {
+     "profileId": 119559187,
+     "seekerId": 103418188,
+     "uuid": "5a69bc53-af91-4bd9-bbe3-bbd76ec47c81",
+     "appliedAt": 1793108665833
+    },
+    {
+     "profileId": 115328820,
+     "seekerId": 99248000,
+     "uuid": "5bdb130d-d762-4707-926c-294a6fd6ae8b",
+     "appliedAt": 1793197922395
+    },
+    {
+     "profileId": 117524455,
+     "seekerId": 101417283,
+     "uuid": "73234b10-0225-409b-ba8e-0578d63bdc4c",
+     "appliedAt": 1793345052428
+    },
+    {
+     "profileId": 103593937,
+     "seekerId": 87872473,
+     "uuid": "769f5312-fe48-49d8-9fab-d57ad8308be3",
+     "appliedAt": 1793341931721
+    },
+    {
+     "profileId": 111981218,
+     "seekerId": 95939641,
+     "uuid": "83462e0f-3523-4b81-8383-c4e921cea6e2",
+     "appliedAt": 1793156600558
+    },
+    {
+     "profileId": 98545781,
+     "seekerId": 83159188,
+     "uuid": "8609ebd4-65d0-4ff6-bdf8-6b92f054c2c9",
+     "appliedAt": 1793094019886
+    },
+    {
+     "profileId": 96420064,
+     "seekerId": 81295537,
+     "uuid": "86644d91-4306-45c7-a046-cf236dc7c01a",
+     "appliedAt": 1793421441244
+    },
+    {
+     "profileId": 113234588,
+     "seekerId": 97146379,
+     "uuid": "86b8d440-438c-48aa-bf31-1ac3bc540f1b",
+     "appliedAt": 1793424434174
+    },
+    {
+     "profileId": 123410437,
+     "seekerId": 107191874,
+     "uuid": "90915d8b-9256-4623-a33b-c07fbf6e8bd5",
+     "appliedAt": 1793077659521
+    },
+    {
+     "profileId": 117765421,
+     "seekerId": 101647167,
+     "uuid": "b07d4e5b-88dc-4b3c-a12f-1af257b6887e",
+     "appliedAt": 1793446201294
+    },
+    {
+     "profileId": 119662629,
+     "seekerId": 103518725,
+     "uuid": "b806ec6b-5b5a-4e2b-a8d9-1704b284cab1",
+     "appliedAt": 1793313682383
+    },
+    {
+     "profileId": 1235366,
+     "seekerId": 66404079,
+     "uuid": "ba4ffc5b-1332-11e9-beca-70106fbef802",
+     "appliedAt": 1793112082264
+    },
+    {
+     "profileId": 7229333,
+     "seekerId": 18144223,
+     "uuid": "bb928df2-0d95-11e9-beca-70106fbef802",
+     "appliedAt": 1793082084785
+    },
+    {
+     "profileId": 121433846,
+     "seekerId": 105256774,
+     "uuid": "bf163885-f74c-402a-948e-5ca599c0024b",
+     "appliedAt": 1793076959223
+    },
+    {
+     "profileId": 25699985,
+     "seekerId": 50501845,
+     "uuid": "c0bdd6a0-0d4a-11e9-beca-70106fbef802",
+     "appliedAt": 1793163512742
+    },
+    {
+     "profileId": 100635018,
+     "seekerId": 85118619,
+     "uuid": "cfb4a6ce-6091-460b-8485-2d596fb43d83",
+     "appliedAt": 1793278965681
+    },
+    {
+     "profileId": 119288277,
+     "seekerId": 103150008,
+     "uuid": "daf44b3e-2178-42d8-be36-2940f24335e1",
+     "appliedAt": 1793082950885
+    },
+    {
+     "profileId": 124697725,
+     "seekerId": 108448783,
+     "uuid": "dd7fcb68-ce02-4396-9506-45f6230d6358",
+     "appliedAt": 1793090430080
+    },
+    {
+     "profileId": 111845705,
+     "seekerId": 95812248,
+     "uuid": "df038be5-b656-4dec-8015-b01df6881f51",
+     "appliedAt": 1793087487664
+    }
+   ],
+   "industries": [
+    "Other"
+   ],
+   "functions": [
+    "Software Development"
+   ],
+   "description": "<p>Role: Python Developer</p><p>Required Technical Skill Set: Python</p><p><strong>Responsibility of / Expectations from the Role </strong></p><ul><li>4+ years of experience in Python application development end to end</li><li>Experience in atleast one popular python framework \u2013 Django , Flask</li><li>Strong Unix Shell scripting hands on experience</li><li>Good Knowledge of OOPS concepts and Familiar with ORM</li><li>Knowledge in Spark is added advantage</li><li>Knowledge in Hadoop is added advantage</li><li>Strong coding, debugging and analytical skills</li><li>Experience in large scale enterprise application implementation</li><li>Creative Individual with a track record of working on and implementing innovative tech based solutions</li><li>Exceptional intelligence and problem solving skills</li></ul><p></p><p><strong>Must-Have</strong></p><p>Python, Unix Shell Scripting, OOPS Concepts</p><p><strong>Good-to-Have</strong></p><p>Hadoop, Spark</p>",
+   "jobTypes": [
+    "Permanent Job"
+   ],
+   "employmentTypes": [
+    "Full time"
+   ],
+   "itSkills": [
+    {
+     "id": "c3fb2149-1744-4226-9795-d7f45786f1c8",
+     "text": "Django"
+    },
+    {
+     "id": "f0716685-d097-4fa5-b513-7dd496ecf039",
+     "text": "Hadoop"
+    },
+    {
+     "id": "18a3182e-457e-11e9-a89e-70106fbef856",
+     "text": "Unix Shell Scripting"
+    },
+    {
+     "id": "18a5f232-457e-11e9-a89e-70106fbef856",
+     "text": "Spark"
+    },
+    {
+     "id": "18b43457-457e-11e9-a89e-70106fbef856",
+     "text": "Oops Concepts"
+    },
+    {
+     "id": "1ad330bf-457e-11e9-a89e-70106fbef856",
+     "text": "Flask"
+    },
+    {
+     "id": "eb81df54-a693-4ef7-b44f-ded7e12e1d7c",
+     "text": "Python"
+    }
+   ],
+   "skillsWithSynonyms": [
+    {
+     "synonyms": [
+      "Django",
+      "Django Framework",
+      "Python Django",
+      "Django Web Framework",
+      "d jango",
+      "Jango"
+     ],
+     "value": "django"
+    },
+    {
+     "synonyms": [
+      "Hadoop",
+      "Apache Hadoop",
+      "Hadoop Framework",
+      "Apache Hadoop Framework"
+     ],
+     "value": "hadoop"
+    },
+    {
+     "synonyms": [
+      "Bash",
+      "Bash Scripting",
+      "Bash Shell Scripting",
+      "Bash/Shell Scripting",
+      "Bourne Again Shell",
+      "Bourne Shell Scripting",
+      "Linux Scripting",
+      "Linux Shell",
+      "Linux Shell Programming",
+      "Linux Shell Scripting",
+      "POSIX Shell",
+      "POSIX Shell Scripting",
+      "Scripting in Linux",
+      "Shell",
+      "Shell Programming",
+      "Shell Script",
+      "Shell Script Programming",
+      "Shell Scripting",
+      "Shell Scripts",
+      "Shell Scritpting",
+      "Shellscript",
+      "UNIX Shell",
+      "Unix Script",
+      "Unix Scripting",
+      "Unix Shell Programming",
+      "Unix Shell Script",
+      "Unix Shell Script Programming",
+      "Unix Shell Scripting",
+      "sh Script",
+      "sh Scripting",
+      "shell script writing"
+     ],
+     "value": "unix shell scripting"
+    },
+    {
+     "synonyms": [
+      "Apache Spark",
+      "Apache Spark Framework",
+      "Spark",
+      "Sparks",
+      "apace spark",
+      "apachespark",
+      "pyspark"
+     ],
+     "value": "spark"
+    },
+    {
+     "synonyms": [
+      "OOPS Concepts",
+      "OOP Concepts",
+      "Object-Oriented Programming Concepts",
+      "Object Oriented Programming Concepts",
+      "OO Concepts",
+      "OOP",
+      "OOPS",
+      "OOP Principles",
+      "OOPS Principles",
+      "Object-Oriented Concepts",
+      "Object-Oriented Programming",
+      "Object Oriented Programming"
+     ],
+     "value": "oops concepts"
+    },
+    {
+     "synonyms": [
+      "Flask",
+      "Flask Framework",
+      "Flask Python",
+      "Flask Web Framework",
+      "Pallets Flask",
+      "Python Flask",
+      "falsk"
+     ],
+     "value": "flask"
+    },
+    {
+     "synonyms": [
+      "Python",
+      "Python Programming",
+      "Core Python",
+      "Python Language",
+      "Python 3",
+      "Python 2",
+      "Python Scripting",
+      "CPython",
+      "Py",
+      "Python3",
+      "Phython",
+      "Phyton",
+      "pyhton",
+      "Python Coding",
+      "Python 2.7",
+      "Python Programming Language",
+      "Python2",
+      "Python Development",
+      "Python Fundamentals",
+      "Basic Python",
+      "Python Application Development",
+      "Python Software Development",
+      "Advanced Python",
+      "Advanced Python Programming",
+      "Basic Python Scripting",
+      "Python Script",
+      "Python Automation Scripting",
+      "pyhon",
+      "Python Code"
+     ],
+     "value": "python"
+    }
+   ],
+   "recruiterId": 1380487,
+   "companyId": 332041,
+   "maximumSalaryINRFilter": 0,
+   "minimumSalaryINRFilter": 0,
+   "maximumSalaryINRMonthlyFilter": 0,
+   "minimumSalaryINRMonthlyFilter": 0,
+   "minimumExperienceFilter": 4,
+   "maximumExperienceFilter": 6,
+   "questionnaire": false,
+   "employerTypes": [
+    "Company"
+   ],
+   "walkInVenue": {},
+   "companyName": "Tata Consultancy Services",
+   "referenceCode": "ad08b70b5d7f8f0eb9910e44466f843e",
+   "status": 1,
+   "accountId": 0,
+   "currencyCode": "INR",
+   "hideSalary": 0,
+   "hideCompanyName": 0,
+   "autoMatch": 0,
+   "showContactDetails": 0,
+   "jobSource": "SCRAPPING",
+   "postingBoard": "SINGLE",
+   "graceJob": 0,
+   "quickJob": 0,
+   "jobFrom": "MOIN_OPERIA",
+   "isoCode": "en",
+   "recruiterName": "Tata Consultancy Services",
+   "channelId": 1,
+   "channelName": "India",
+   "isBold": 0,
+   "isJdLogo": 0,
+   "isSearchLogo": 0,
+   "siteContext": "rexmonster",
+   "freshness": 1793055917000,
+   "closedAt": 1795631400000,
+   "activeJob": true,
+   "isJobActive": true,
+   "isCJT": 0,
+   "isMicrosite": 0,
+   "redirectStage": 2,
+   "totalApplicants": 25,
+   "isGptwCompany": 0,
+   "jobSalaryConfidential": false,
+   "isUrgentlyHiring": false,
+   "quickApplyJob": 0,
+   "jobClassification": "SYNDICATE",
+   "isTestJob": false,
+   "jdUrl": "/job/python-developer-tata-consultancy-services-mumbai-69572519",
+   "isSaved": false,
+   "isApplied": false,
+   "minimumSalaryFilter": 0,
+   "maximumSalaryFilter": 0
+  },
+  {
+   "id": "69566702",
+   "score": 10019637.0,
+   "jobId": 69566702,
+   "kiwiJobId": "156181823",
+   "kiwiCompanyId": "441700",
+   "kiwiRecruiterId": "704548",
+   "redirectUrl": "https://careers.oracle.com/jobs/#en/sites/jobsearch/job/346882/?location=India&locationId=300000000106947",
+   "title": "Senior Python Developer \u2013 Backend, AI/ML & RAG",
+   "company": {
+    "companyId": 441866,
+    "name": "Oracle",
+    "logo": "https://media.monsterindia.com/logos/xSP_orclinx/jdlogo.gif"
+   },
+   "locations": [
+    {
+     "city": "Hyderabad / Secunderabad, Telangana",
+     "country": "India",
+     "state": "Telangana",
+     "latLon": "17.439930,78.498274",
+     "uuid": "72da2468-1cbc-4a9a-863a-89e2cfd6502f",
+     "isoCode": "IN",
+     "isdCode": 91,
+     "stdCode": 40
+    },
+    {
+     "city": "Bengaluru / Bangalore",
+     "country": "India",
+     "state": "Karnataka",
+     "latLon": "12.971599,77.594563",
+     "uuid": "67bfdcae-92cb-4783-bf40-37f639e57710",
+     "isoCode": "IN",
+     "isdCode": 91,
+     "stdCode": 80
+    },
+    {
+     "country": "India",
+     "latLon": "20.593684,78.962880",
+     "uuid": "fc71fff2-b98a-4cd8-a482-2e197cb4fc34",
+     "isoCode": "IN",
+     "isdCode": 91,
+     "stdCode": 0
+    }
+   ],
+   "minimumExperience": {
+    "years": 6
+   },
+   "maximumExperience": {
+    "years": 10
+   },
+   "minimumSalary": {
+    "currency": "INR",
+    "absoluteValue": 0,
+    "absoluteMonthlyValue": 0
+   },
+   "maximumSalary": {
+    "currency": "INR",
+    "absoluteValue": 0,
+    "absoluteMonthlyValue": 0
+   },
+   "postedAt": 1793039595000,
+   "createdAt": 1793039595000,
+   "updatedAt": 1793039595000,
+   "applicants": [
+    {
+     "profileId": 102241767,
+     "seekerId": 86615926,
+     "uuid": "01023bf5-c45a-4df0-b469-dd7abf6fc860",
+     "appliedAt": 1793188519281
+    },
+    {
+     "profileId": 124622617,
+     "seekerId": 108374812,
+     "uuid": "1021c7e7-02c0-4ef8-bc75-ae84b46253ca",
+     "appliedAt": 1793074381170
+    },
+    {
+     "profileId": 124880219,
+     "seekerId": 108626514,
+     "uuid": "12587dea-31df-452e-a344-ba244ac4d261",
+     "appliedAt": 1793272923899
+    },
+    {
+     "profileId": 99012520,
+     "seekerId": 83598749,
+     "uuid": "70368fdb-5b39-46c6-a07e-7c567213737d",
+     "appliedAt": 1793336945931
+    },
+    {
+     "profileId": 97983433,
+     "seekerId": 82636195,
+     "uuid": "9c10c8ba-0270-45d7-ab2e-262af1ac1e8e",
+     "appliedAt": 1793168728410
+    },
+    {
+     "profileId": 121306543,
+     "seekerId": 105131675,
+     "uuid": "a0ab1a61-5787-4e1f-9754-a6b3ffb29ca7",
+     "appliedAt": 1793453783376
+    },
+    {
+     "profileId": 124470732,
+     "seekerId": 108227133,
+     "uuid": "aad287c1-04aa-48e1-a676-2872494febbe",
+     "appliedAt": 1793076743582
+    },
+    {
+     "profileId": 117765421,
+     "seekerId": 101647167,
+     "uuid": "b07d4e5b-88dc-4b3c-a12f-1af257b6887e",
+     "appliedAt": 1793446207509
+    },
+    {
+     "profileId": 38516365,
+     "seekerId": 38279775,
+     "uuid": "bac70d32-0d56-11e9-beca-70106fbef802",
+     "appliedAt": 1793085406703
+    },
+    {
+     "profileId": 91766257,
+     "seekerId": 79119981,
+     "uuid": "d93566a4-b6bb-4fdf-8309-9660f43ee33f",
+     "appliedAt": 1793454674770
+    },
+    {
+     "profileId": 99077046,
+     "seekerId": 83659919,
+     "uuid": "de346425-1f16-41d6-aee3-05c299041aa7",
+     "appliedAt": 1793337570987
+    },
+    {
+     "profileId": 124496669,
+     "seekerId": 108252077,
+     "uuid": "dee717f7-6f50-45e1-9918-7c6684fdb1c7",
+     "appliedAt": 1793418413584
+    },
+    {
+     "profileId": 123727756,
+     "seekerId": 107502901,
+     "uuid": "e211e5a4-1de8-41d2-b43f-cb2b3986abd3",
+     "appliedAt": 1793112799081
+    }
+   ],
+   "industries": [
+    "IT/Computers - Hardware & Networking"
+   ],
+   "functions": [
+    "Product and Research"
+   ],
+   "description": "<div><h1><span>Senior Python Developer \u00e2\u20ac Backend, AI/ML & RAG</span></h1><p><span><strong>Experience:</strong> 8+ years in software development, with strong Python backend expertise and hands-on experience delivering AI/ML applications.</span></p><h2><span>About Team</span></h2><p><span>Our team builds enterprise applications that combine robust backend engineering with AI-powered experiences. We develop intelligent assistants, knowledge-retrieval solutions, and workflow automation that integrate with enterprise platforms and services.</span></p><p><span>We are looking for a senior developer who can translate business requirements into secure, scalable applications, guide technical design, and take ownership from development through production support.</span></p><h2><span>Responsibilities</span></h2><ul><li><span>Design, develop, and maintain scalable Python backend services, REST APIs, and service-to-service integrations.</span></li><li><span>Build AI-powered applications using large language models (LLMs), agent frameworks, and machine learning capabilities.</span></li><li><span>Develop end-to-end Retrieval-Augmented Generation (RAG) pipelines covering document ingestion, chunking, embeddings, indexing, retrieval, and grounded response generation.</span></li><li><span>Implement prompt engineering, agent workflows, tool calling, and Model Context Protocol (MCP) integrations.</span></li><li><span>Integrate enterprise knowledge sources and applications, including ITSM platforms, Confluence, SharePoint, and enterprise APIs.</span></li><li><span>Evaluate AI solutions for accuracy, groundedness, hallucinations, retrieval quality, latency, and cost.</span></li><li><span>Build automated functional, integration, regression, performance, and AI evaluation tests.</span></li><li><span>Lead technical design discussions and code reviews document architecture, APIs, and implementation decisions.</span></li><li><span>Troubleshoot complex application, API, integration, and production issues, and implement sustainable fixes.</span></li><li><span>Improve application performance, reliability, observability, and model/token efficiency.</span></li><li><span>Apply secure coding practices, access controls, privacy safeguards, and enterprise AI governance requirements.</span></li><li><span>Collaborate with product, QA, engineering, and business stakeholders to define requirements and delivery priorities.</span></li><li><span>Mentor engineers and improve development practices across the software development lifecycle.</span></li><li><span>Support production operations, dependency upgrades, vulnerability remediation, and application maintenance.</span></li></ul><h2><span>Mandatory Skills</span></h2><ul><li><span><strong>Python and backend engineering:</strong> Strong hands-on Python expertise, including asynchronous programming, exception handling, testing, and maintainable application design.</span></li><li><span><strong>API development:</strong> Experience building production APIs using FastAPI, Flask, Django, or a comparable framework strong understanding of authentication, authorization, versioning, and error handling.</span></li><li><span><strong>Backend architecture:</strong> Experience designing scalable services, managing concurrency, and implementing caching, background processing, retries, and resilient integrations.</span></li><li><span><strong>Data management:</strong> Strong SQL and relational database skills, with experience in data modelling, query optimisation, and application data access.</span></li><li><span><strong>LLM application development:</strong> Hands-on experience integrating LLMs into applications, including prompt design, structured outputs, tool calling, and failure handling.</span></li><li><span><strong>RAG and retrieval:</strong> Practical experience with embeddings, vector databases or vector search, chunking strategies, metadata filtering, and retrieval optimisation.</span></li><li><span><strong>ML fundamentals:</strong> Understanding of model inference, data preparation, evaluation metrics, and the distinction between model quality and application performance.</span></li><li><span><strong>AI evaluation:</strong> Ability to build repeatable evaluations for retrieval relevance, response quality, groundedness, latency, and cost.</span></li><li><span><strong>Security and privacy:</strong> Experience protecting sensitive data, managing secrets, enforcing access controls, and addressing prompt injection and unsafe tool execution.</span></li><li><span><strong>Production delivery:</strong> Experience with cloud deployment, containers, CI/CD, logging, monitoring, and production troubleshooting.</span></li><li><span><strong>Technical leadership:</strong> Ability to lead design and code reviews, mentor engineers, and communicate technical decisions clearly.</span></li></ul><h2><span>Good to Have Skills</span></h2><ul><li><span>Experience with OCI or other major cloud platforms.</span></li><li><span>Experience with agent orchestration frameworks such as LangChain, LangGraph, or equivalent tools.</span></li><li><span>Hands-on experience building or integrating MCP servers and clients.</span></li><li><span>Experience with hybrid search, reranking, query rewriting, and permission-aware enterprise retrieval.</span></li><li><span>Experience with Slack APIs, Jira Service Management, chatbots, and IT service-management workflows.</span></li><li><span>Familiarity with proactive support, ticket routing, and self-healing automation.</span></li><li><span>Experience with Kubernetes, infrastructure as code, and distributed tracing.</span></li><li><span>Experience with MLOps/LLMOps, model adaptation or fine-tuning, and model-serving platforms.</span></li><li><span>Familiarity with AI auditability, data residency, and enterprise governance controls.</span></li></ul><h2></h2><div><div><div><div><h2><span>Self Assessment Questions</span></h2><ol><li><span>Do I have <strong>8+ years of software development experience</strong>, with strong hands-on expertise in Python backend development</span></li><li><span>Can I independently design and build scalable APIs, backend services, and enterprise integrations</span></li><li><span>Have I built AI/ML or LLM-powered applications with <strong>end-to-end RAG pipelines</strong>, including embeddings and vector search</span></li><li><span>Can I test, secure, deploy, and support these applications in production while improving response quality, performance, and cost</span></li><li><span>Am I comfortable owning technical delivery, leading design and code reviews, and mentoring engineers</span></li></ol></div></div></div></div></div>",
+   "jobTypes": [
+    "Permanent Job"
+   ],
+   "employmentTypes": [
+    "Full time"
+   ],
+   "itSkills": [
+    {
+     "id": "4c36c065-d628-40ab-9ad6-e0428b05ef63",
+     "text": "Data Management"
+    },
+    {
+     "id": "1cc88953-457e-11e9-a89e-70106fbef856",
+     "text": "Technical Leadership"
+    },
+    {
+     "id": "1abb8bfa-457e-11e9-a89e-70106fbef856",
+     "text": "Api Development"
+    },
+    {
+     "id": "31d12139-2d88-419b-a646-8622bb94cad3",
+     "text": "Backend Engineering"
+    },
+    {
+     "id": "eb81df54-a693-4ef7-b44f-ded7e12e1d7c",
+     "text": "Python"
+    }
+   ],
+   "skills": [
+    {
+     "text": "ML Fundamentals"
+    },
+    {
+     "text": "Backend Architecture"
+    },
+    {
+     "text": "Security and Privacy"
+    },
+    {
+     "text": "Production Delivery"
+    },
+    {
+     "text": "LLM Application Development"
+    },
+    {
+     "text": "AI Evaluation"
+    },
+    {
+     "text": "RAG and Retrieval"
+    }
+   ],
+   "skillsWithSynonyms": [
+    {
+     "synonyms": [
+      "Backend Architecture",
+      "Back-end Architecture",
+      "Back End Architecture",
+      "Server-side Architecture",
+      "Backend System Architecture",
+      "Backend Solution Architecture",
+      "Backend Design",
+      "Server-side Design",
+      "Server Architecture",
+      "Server Design",
+      "Application Server Architecture",
+      "Back-end Design",
+      "Backend System Design",
+      "Back-end System Design",
+      "Server-side System Design"
+     ],
+     "value": "backend architecture"
+    },
+    {
+     "synonyms": [
+      "Data Administration",
+      "Data Handling",
+      "Data Management",
+      "Data Manipulation",
+      "Data Mgmt",
+      "Data Operations",
+      "Data Processing",
+      "EPM Data Management",
+      "FDMEE",
+      "FDMEE Data Management",
+      "Financial Data Quality Management Enterprise Edition",
+      "Handling Data",
+      "Hyperion Data Management",
+      "Information Management",
+      "Oracle Data Management",
+      "Oracle FDMEE",
+      "Oracle Hyperion FDMEE",
+      "info management"
+     ],
+     "value": "data management"
+    },
+    {
+     "synonyms": [
+      "Technical Leadership",
+      "Technology Leadership",
+      "Tech Leadership",
+      "Technical Team Leadership",
+      "Engineering Leadership",
+      "Technical Direction",
+      "Software Engineering Leadership",
+      "Product Engineering Leadership",
+      "Engineering Management",
+      "Engg Leadership"
+     ],
+     "value": "technical leadership"
+    },
+    {
+     "synonyms": [
+      "API Design",
+      "API Design & Development",
+      "API Design and Development",
+      "API Dev",
+      "API Development",
+      "API Engineering",
+      "Application Programming Interface Development",
+      "Application Programming Interface Engineering",
+      "backend api dev"
+     ],
+     "value": "api development"
+    },
+    {
+     "synonyms": [
+      "LLM Application Development",
+      "LLM Applications",
+      "Large Language Model Applications",
+      "LLM Apps",
+      "Large Language Model Apps",
+      "Large Language Model Application Development",
+      "LLM-based Applications",
+      "LLM-powered Applications",
+      "Building LLM Applications"
+     ],
+     "value": "llm application development"
+    },
+    {
+     "synonyms": [
+      "AI Evaluation",
+      "Artificial Intelligence Evaluation",
+      "AI Eval",
+      "A.I. Evaluation",
+      "AI Model Evaluation",
+      "Artificial Intelligence Model Evaluation",
+      "Evaluation of AI Models",
+      "AI Solution Evaluation",
+      "AI Solution Assessment",
+      "AI Solutions Evaluation",
+      "AI Solutions Assessment",
+      "AI System Evaluation",
+      "AI System Assessment",
+      "Artificial Intelligence Solution Evaluation",
+      "Artificial Intelligence Solution Assessment"
+     ],
+     "value": "ai evaluation"
+    },
+    {
+     "synonyms": [
+      "Backend Engineering",
+      "Backend Development",
+      "Back-end Development",
+      "Backend Dev",
+      "Back-end Dev",
+      "Server-side Development",
+      "Server-side Engineering",
+      "Back-end Engineering",
+      "Back End Development",
+      "Server Side Development",
+      "Backend Services",
+      "Back-end Services",
+      "Backend Service Development",
+      "Back-end Service Development",
+      "Server-side Services",
+      "Backend Systems",
+      "Back-end Systems",
+      "Server-side Systems"
+     ],
+     "value": "backend engineering"
+    },
+    {
+     "synonyms": [
+      "Python",
+      "Python Programming",
+      "Core Python",
+      "Python Language",
+      "Python 3",
+      "Python 2",
+      "Python Scripting",
+      "CPython",
+      "Py",
+      "Python3",
+      "Phython",
+      "Phyton",
+      "pyhton",
+      "Python Coding",
+      "Python 2.7",
+      "Python Programming Language",
+      "Python2",
+      "Python Development",
+      "Python Fundamentals",
+      "Basic Python",
+      "Python Application Development",
+      "Python Software Development",
+      "Advanced Python",
+      "Advanced Python Programming",
+      "Basic Python Scripting",
+      "Python Script",
+      "Python Automation Scripting",
+      "pyhon",
+      "Python Code"
+     ],
+     "value": "python"
+    }
+   ],
+   "recruiterId": 719861,
+   "companyId": 441866,
+   "designations": [
+    "Software Engineer/Programmer"
+   ],
+   "maximumSalaryINRFilter": 0,
+   "minimumSalaryINRFilter": 0,
+   "maximumSalaryINRMonthlyFilter": 0,
+   "minimumSalaryINRMonthlyFilter": 0,
+   "minimumExperienceFilter": 6,
+   "maximumExperienceFilter": 10,
+   "questionnaire": false,
+   "employerTypes": [
+    "Company"
+   ],
+   "walkInVenue": {},
+   "companyName": "Oracle",
+   "referenceCode": "63112da014f7ad9cc3c11cdb74fb17c7",
+   "status": 1,
+   "accountId": 0,
+   "applyUrl": "https://careers.oracle.com/jobs/#en/sites/jobsearch/job/346882/?location=India&locationId=300000000106947",
+   "currencyCode": "INR",
+   "hideSalary": 0,
+   "companyLogoUrl": "https://media.monsterindia.com/logos/xSP_orclinx/jdlogo.gif",
+   "hideCompanyName": 0,
+   "recruiterContactNumber": "None",
+   "showContactDetails": 0,
+   "jobSource": "SCRAPPING",
+   "postingBoard": "SINGLE",
+   "graceJob": 0,
+   "quickJob": 0,
+   "jobFrom": "MOIN_MOHQ",
+   "isoCode": "en",
+   "recruiterName": "Oracle",
+   "companyProfile": "Only Oracle brings together the data, infrastructure, applications, and expertise to power everything from industry innovations to life-saving care. And with AI embedded across our products and services, we help customers turn that promise into a better future for all. Discover your potential at a company leading the way in AI and cloud solutions that impact billions of lives. True innovation starts when everyone is empowered to contribute. That's why we're committed to growing a workforce that promotes opportunities for all with competitive benefits that support our people with flexible medical, life insurance, and retirement options. We also encourage employees to give back to their communities through our volunteer programs. We're committed to including people with disabilities at all stages of the employment process. If you require accessibility assistance or accommodation for a disability at any point, let us know by emailing accommodation-request_mb@oracle.com or by calling 1-888-404-2494 in the United States. Oracle is an Equal Employment Opportunity Employer. All qualified applicants will receive consideration for employment without regard to race, color, religion, sex, national origin, sexual orientation, gender identity, disability and protected veterans' status, or any other characteristic protected by law. Oracle will consider for employment qualified applicants with arrest and conviction records pursuant to applicable law.",
+   "channelId": 1,
+   "channelName": "India",
+   "isBold": 1,
+   "isJdLogo": 1,
+   "isSearchLogo": 1,
+   "siteContext": "rexmonster",
+   "freshness": 1793039595000,
+   "closedAt": 1796927400000,
+   "activeJob": true,
+   "isJobActive": true,
+   "isCJT": 0,
+   "isMicrosite": 0,
+   "redirectStage": 2,
+   "totalApplicants": 13,
+   "isGptwCompany": 0,
+   "jobSalaryConfidential": false,
+   "isUrgentlyHiring": false,
+   "quickApplyJob": 0,
+   "jobClassification": "SYNDICATE",
+   "isTestJob": false,
+   "jdUrl": "/job/senior-python-developer-backend-ai-ml-rag-oracle-hyderabad-secunderabad-telangana-69566702",
+   "isSaved": false,
+   "isApplied": false,
+   "minimumSalaryFilter": 0,
+   "maximumSalaryFilter": 0
+  },
+  {
+   "id": "69572369",
+   "score": 10019637.0,
+   "jobId": 69572369,
+   "kiwiJobId": "156194947",
+   "kiwiCompanyId": "332466",
+   "kiwiRecruiterId": "1183900",
+   "title": "Python Developer",
+   "company": {
+    "companyId": 332041,
+    "name": "Tata Consultancy Services"
+   },
+   "locations": [
+    {
+     "city": "Chennai",
+     "country": "India",
+     "state": "Tamil Nadu",
+     "latLon": "13.082680,80.270718",
+     "uuid": "b2b9a668-5339-4ea8-8b02-2f7e1a582556",
+     "isoCode": "IN",
+     "isdCode": 91,
+     "stdCode": 44
+    },
+    {
+     "country": "India",
+     "latLon": "20.593684,78.962880",
+     "uuid": "fc71fff2-b98a-4cd8-a482-2e197cb4fc34",
+     "isoCode": "IN",
+     "isdCode": 91,
+     "stdCode": 0
+    }
+   ],
+   "minimumExperience": {
+    "years": 5
+   },
+   "maximumExperience": {
+    "years": 12
+   },
+   "minimumSalary": {
+    "currency": "INR",
+    "absoluteValue": 0,
+    "absoluteMonthlyValue": 0
+   },
+   "maximumSalary": {
+    "currency": "INR",
+    "absoluteValue": 0,
+    "absoluteMonthlyValue": 0
+   },
+   "postedAt": 1793055466000,
+   "createdAt": 1793055466000,
+   "updatedAt": 1793055466000,
+   "applicants": [
+    {
+     "profileId": 124622617,
+     "seekerId": 108374812,
+     "uuid": "1021c7e7-02c0-4ef8-bc75-ae84b46253ca",
+     "appliedAt": 1793073546587
+    },
+    {
+     "profileId": 120503554,
+     "seekerId": 104346380,
+     "uuid": "29ac9a03-5ff8-4b04-a650-79ef95de4c4c",
+     "appliedAt": 1793214274991
+    },
+    {
+     "profileId": 109758123,
+     "seekerId": 93767931,
+     "uuid": "3fbde70f-5eff-44c0-ba53-7ba0895d30df",
+     "appliedAt": 1793347293823
+    },
+    {
+     "profileId": 118442134,
+     "seekerId": 102309542,
+     "uuid": "50c40dc8-5e10-47ca-a02c-f1aca2a75066",
+     "appliedAt": 1793327764197
+    },
+    {
+     "profileId": 115328820,
+     "seekerId": 99248000,
+     "uuid": "5bdb130d-d762-4707-926c-294a6fd6ae8b",
+     "appliedAt": 1793197922866
+    },
+    {
+     "profileId": 120979426,
+     "seekerId": 104812271,
+     "uuid": "630a0d5a-1ad4-49ea-8cb3-c942b73bbbc2",
+     "appliedAt": 1793252424256
+    },
+    {
+     "profileId": 111981218,
+     "seekerId": 95939641,
+     "uuid": "83462e0f-3523-4b81-8383-c4e921cea6e2",
+     "appliedAt": 1793156588190
+    },
+    {
+     "profileId": 117765421,
+     "seekerId": 101647167,
+     "uuid": "b07d4e5b-88dc-4b3c-a12f-1af257b6887e",
+     "appliedAt": 1793446202969
+    },
+    {
+     "profileId": 7229333,
+     "seekerId": 18144223,
+     "uuid": "bb928df2-0d95-11e9-beca-70106fbef802",
+     "appliedAt": 1793246644571
+    },
+    {
+     "profileId": 121433846,
+     "seekerId": 105256774,
+     "uuid": "bf163885-f74c-402a-948e-5ca599c0024b",
+     "appliedAt": 1793076959930
+    },
+    {
+     "profileId": 25024348,
+     "seekerId": 65741479,
+     "uuid": "bfdbb337-131f-11e9-beca-70106fbef802",
+     "appliedAt": 1793494784152
+    },
+    {
+     "profileId": 121465759,
+     "seekerId": 105288195,
+     "uuid": "bfefc4d6-76d1-4651-ac3b-1386dea11add",
+     "appliedAt": 1793422809714
+    },
+    {
+     "profileId": 124643612,
+     "seekerId": 108395521,
+     "uuid": "e8b2c7a8-1de5-414f-9bea-964b3199c1c2",
+     "appliedAt": 1793074680176
+    },
+    {
+     "profileId": 124805486,
+     "seekerId": 108554128,
+     "uuid": "fb1165cf-7c30-429c-94aa-77ef9f2745c2",
+     "appliedAt": 1793553033963
+    }
+   ],
+   "industries": [
+    "Other"
+   ],
+   "functions": [
+    "Information Technology"
+   ],
+   "description": "<p><strong>Greetings from Tata Consultancy Services (TCS)!</strong></p><p></p><p>Job Title: <strong>Python Developer</strong></p><p></p><p><strong>Desired Experience Range:</strong> 5-12 Years</p><p></p><p><strong>Location :</strong> Mumbai, Chennai, Hyderabad, Bangalore</p><p></p><p>Must-Have:</p><ul><li>Strong hands-on experience in Python Development</li><li>Experience with REST API development and backend services</li><li>Strong SQL and database knowledge</li><li>Good understanding of Data Structures and Algorithms</li><li>Experience with Git and version control systems</li><li>Knowledge of CI/CD pipelines and deployment practices</li><li>Strong debugging, troubleshooting, and problem-solving skills</li></ul><p>Good to Have:</p><ul><li>Experience with Django or Flask Framework</li><li>Exposure to Azure, AWS, or GCP Cloud Platforms</li><li>Knowledge of Microservices Architecture</li><li>Experience in Automation and Data Processing</li><li>Agile/Scrum development experience</li></ul><p>Role:</p><ul><li>Design, develop, and maintain scalable Python applications</li><li>Build and optimize REST APIs and backend services</li><li>Develop automation solutions and data processing workflows</li><li>Troubleshoot, debug, and enhance application performance</li><li>Collaborate with cross-functional teams to deliver quality solutions</li><li>Participate in code reviews and best practice implementation</li></ul>",
+   "jobTypes": [
+    "Permanent Job"
+   ],
+   "employmentTypes": [
+    "Full time"
+   ],
+   "itSkills": [
+    {
+     "id": "04705af9-f869-40a0-b7db-01547086564b",
+     "text": "Rest API Development"
+    },
+    {
+     "id": "18969cd8-457e-11e9-a89e-70106fbef856",
+     "text": "Git"
+    },
+    {
+     "id": "adef4d0c-62b8-4299-924d-128b559a03f3",
+     "text": "Python Development"
+    },
+    {
+     "id": "18ecd0ee-457e-11e9-a89e-70106fbef856",
+     "text": "Debugging"
+    },
+    {
+     "id": "1bd80ab1-457e-11e9-a89e-70106fbef856",
+     "text": "Data Structures And Algorithms"
+    },
+    {
+     "id": "4a5d94f6-424c-4df8-adaf-700135c94dab",
+     "text": "Sql"
+    }
+   ],
+   "skills": [
+    {
+     "text": "CI/CD pipelines"
+    },
+    {
+     "id": "64323180-4a0b-11e9-a89e-70106fbef856",
+     "text": "Troubleshooting"
+    }
+   ],
+   "skillsWithSynonyms": [
+    {
+     "synonyms": [
+      "REST API Development",
+      "RESTful API Development",
+      "REST Service Development",
+      "RESTful Service Development",
+      "REST Web Service Development",
+      "RESTful Web Services Development",
+      "REST API",
+      "RESTful API",
+      "REST Web Services Development",
+      "RESTful Web Services",
+      "REST Web Services"
+     ],
+     "value": "rest api development"
+    },
+    {
+     "synonyms": [
+      "Git",
+      "Git / GitHub",
+      "Git SCM",
+      "Git Source Control",
+      "Git VCS",
+      "Git Version Control",
+      "Git Versioning",
+      "Git/GitHub",
+      "GitHub",
+      "git-scm",
+      "gitlab",
+      "gitlab repo",
+      "gitlab runner",
+      "version control system"
+     ],
+     "value": "git"
+    },
+    {
+     "synonyms": [
+      "Python Development",
+      "Python Programming",
+      "Python Software Development",
+      "Python Application Development",
+      "Python Dev",
+      "Python Coding",
+      "Core Python",
+      "Python",
+      "Python Fundamentals",
+      "Basic Python",
+      "Python Language",
+      "Python Scripting",
+      "Advanced Python",
+      "Advanced Python Programming",
+      "Python 3",
+      "Python Code"
+     ],
+     "value": "python development"
+    },
+    {
+     "synonyms": [
+      "CI/CD Pipelines",
+      "CI/CD Pipeline",
+      "CI CD Pipelines",
+      "CI CD Pipeline",
+      "Continuous Integration/Continuous Delivery Pipelines",
+      "Continuous Integration and Continuous Delivery Pipelines",
+      "Continuous Integration/Continuous Deployment Pipelines",
+      "Continuous Integration and Continuous Deployment Pipelines",
+      "Continuous Integration & Continuous Delivery Pipelines",
+      "Continuous Integration & Continuous Deployment Pipelines",
+      "CICD Pipelines",
+      "CICD Pipeline",
+      "Continuous Delivery Pipelines",
+      "Continuous Deployment Pipelines",
+      "Build and Release Pipelines",
+      "DevOps Pipelines",
+      "Delivery Pipelines",
+      "Continuous Integration Pipeline",
+      "Continuous Delivery Pipeline",
+      "Continuous Deployment Pipeline",
+      "Build and Deployment Pipelines",
+      "CI-CD Pipelines",
+      "CI/CD",
+      "Continuous Integration and Continuous Delivery",
+      "Continuous Integration and Continuous Deployment",
+      "DevOps Pipeline",
+      "Deployment Pipelines",
+      "Release Pipelines",
+      "CD Pipelines",
+      "CD Pipeline",
+      "Deployment Pipeline",
+      "Release Pipeline"
+     ],
+     "value": "ci/cd pipelines"
+    },
+    {
+     "synonyms": [
+      "Debugging",
+      "Code Debugging",
+      "Software Debugging",
+      "Program Debugging",
+      "Bug Fixing",
+      "Defect Fixing",
+      "Debug",
+      "Bugfixing",
+      "Bug Fixes",
+      "Defect Resolution",
+      "Bug Resolution",
+      "Issue Fixing",
+      "Issue Resolution",
+      "Troubleshooting",
+      "Error Fixing",
+      "Debuging",
+      "Application Debugging",
+      "Debugged",
+      "Bug Debugging"
+     ],
+     "value": "debugging"
+    },
+    {
+     "synonyms": [
+      "Data Structures and Algorithms",
+      "DSA",
+      "Data Structures & Algorithms",
+      "Data Structure and Algorithms",
+      "Data Structures and Algorithm",
+      "DS & Algo",
+      "DS Algo",
+      "Algorithms and Data Structures",
+      "Data Structure and Algorithm"
+     ],
+     "value": "data structures and algorithms"
+    },
+    {
+     "synonyms": [
+      "Troubleshooting",
+      "Trouble Shooting",
+      "Issue Troubleshooting",
+      "Problem Diagnosis",
+      "Fault Diagnosis",
+      "Fault Finding",
+      "Troubleshoot",
+      "Issue Resolution",
+      "Problem Resolution",
+      "Trouble-Shooting",
+      "Technical Troubleshooting",
+      "Incident Resolution",
+      "Case Resolution",
+      "Ticket Resolution",
+      "Query Resolution",
+      "Issue Handling",
+      "Technical Issue Resolution",
+      "Break-Fix Support",
+      "Bug Fixing",
+      "Bugfixing",
+      "Bug Fixes",
+      "Defect Fixing",
+      "Defect Resolution",
+      "Bug Resolution",
+      "Issue Fixing",
+      "Debugging",
+      "Error Fixing",
+      "Troubleshooter",
+      "System Troubleshooting",
+      "System Diagnosis",
+      "Issue Diagnosis",
+      "Troubleshooted",
+      "Trouble Shooter",
+      "Trouble-Shooter",
+      "Debuging",
+      "Software Debugging",
+      "Code Debugging",
+      "Program Debugging",
+      "Basic Troubleshooting",
+      "Fault-Finding",
+      "Fault Diagnostics",
+      "Diagnostic Troubleshooting",
+      "Trobleshooting"
+     ],
+     "value": "troubleshooting"
+    },
+    {
+     "synonyms": [
+      "ANSI SQL",
+      "Advanced SQL",
+      "Basic SQL",
+      "Core SQL",
+      "DB SQL",
+      "Database SQL",
+      "PgSQL",
+      "PostgreSQL / SQL",
+      "Postgres SQL",
+      "RDBMS SQL",
+      "Relational DB",
+      "SQL",
+      "SQL Coding",
+      "SQL Core",
+      "SQL DB",
+      "SQL Database",
+      "SQL Databases",
+      "SQL Development",
+      "SQL Fundamentals",
+      "SQL Programming",
+      "SQL Querying",
+      "SQL Scripting",
+      "Sequel",
+      "Standard SQL",
+      "Strong SQL",
+      "Strong in SQL",
+      "Structured Query Language",
+      "sql command sets",
+      "sql queries"
+     ],
+     "value": "sql"
+    }
+   ],
+   "recruiterId": 1380487,
+   "companyId": 332041,
+   "maximumSalaryINRFilter": 0,
+   "minimumSalaryINRFilter": 0,
+   "maximumSalaryINRMonthlyFilter": 0,
+   "minimumSalaryINRMonthlyFilter": 0,
+   "minimumExperienceFilter": 5,
+   "maximumExperienceFilter": 12,
+   "questionnaire": false,
+   "employerTypes": [
+    "Company"
+   ],
+   "walkInVenue": {},
+   "companyName": "Tata Consultancy Services",
+   "referenceCode": "6ba365f7fa90cb03f1fe66a1f9f2ad71",
+   "status": 1,
+   "accountId": 0,
+   "currencyCode": "INR",
+   "hideSalary": 0,
+   "hideCompanyName": 0,
+   "autoMatch": 0,
+   "showContactDetails": 0,
+   "jobSource": "SCRAPPING",
+   "postingBoard": "SINGLE",
+   "graceJob": 0,
+   "quickJob": 0,
+   "jobFrom": "MOIN_OPERIA",
+   "isoCode": "en",
+   "recruiterName": "Tata Consultancy Services",
+   "channelId": 1,
+   "channelName": "India",
+   "isBold": 0,
+   "isJdLogo": 0,
+   "isSearchLogo": 0,
+   "siteContext": "rexmonster",
+   "freshness": 1793055466000,
+   "closedAt": 1795631400000,
+   "activeJob": true,
+   "isJobActive": true,
+   "isCJT": 0,
+   "isMicrosite": 0,
+   "redirectStage": 2,
+   "totalApplicants": 14,
+   "isGptwCompany": 0,
+   "jobSalaryConfidential": false,
+   "isUrgentlyHiring": false,
+   "quickApplyJob": 0,
+   "jobClassification": "SYNDICATE",
+   "isTestJob": false,
+   "jdUrl": "/job/python-developer-tata-consultancy-services-chennai-69572369",
+   "isSaved": false,
+   "isApplied": false,
+   "minimumSalaryFilter": 0,
+   "maximumSalaryFilter": 0
+  },
+  {
+   "id": "69572364",
+   "score": 10019637.0,
+   "jobId": 69572364,
+   "kiwiJobId": "156194917",
+   "kiwiCompanyId": "332466",
+   "kiwiRecruiterId": "1183900",
+   "title": "Python Developer",
+   "company": {
+    "companyId": 332041,
+    "name": "Tata Consultancy Services"
+   },
+   "locations": [
+    {
+     "city": "Mumbai",
+     "country": "India",
+     "state": "Maharashtra",
+     "latLon": "19.075984,72.877656",
+     "uuid": "db3e442b-e262-4869-bf5e-29c815f41b58",
+     "isoCode": "IN",
+     "isdCode": 91,
+     "stdCode": 22
+    },
+    {
+     "country": "India",
+     "latLon": "20.593684,78.962880",
+     "uuid": "fc71fff2-b98a-4cd8-a482-2e197cb4fc34",
+     "isoCode": "IN",
+     "isdCode": 91,
+     "stdCode": 0
+    }
+   ],
+   "minimumExperience": {
+    "years": 5
+   },
+   "maximumExperience": {
+    "years": 7
+   },
+   "minimumSalary": {
+    "currency": "INR",
+    "absoluteValue": 0,
+    "absoluteMonthlyValue": 0
+   },
+   "maximumSalary": {
+    "currency": "INR",
+    "absoluteValue": 0,
+    "absoluteMonthlyValue": 0
+   },
+   "postedAt": 1793055461000,
+   "createdAt": 1793055461000,
+   "updatedAt": 1793055460000,
+   "applicants": [
+    {
+     "profileId": 120503554,
+     "seekerId": 104346380,
+     "uuid": "29ac9a03-5ff8-4b04-a650-79ef95de4c4c",
+     "appliedAt": 1793214282440
+    },
+    {
+     "profileId": 115328820,
+     "seekerId": 99248000,
+     "uuid": "5bdb130d-d762-4707-926c-294a6fd6ae8b",
+     "appliedAt": 1793197923981
+    },
+    {
+     "profileId": 117524455,
+     "seekerId": 101417283,
+     "uuid": "73234b10-0225-409b-ba8e-0578d63bdc4c",
+     "appliedAt": 1793345052927
+    },
+    {
+     "profileId": 117727248,
+     "seekerId": 101610458,
+     "uuid": "73ad7192-3ea2-4e45-99ad-ccd676423f85",
+     "appliedAt": 1793297757073
+    },
+    {
+     "profileId": 111981218,
+     "seekerId": 95939641,
+     "uuid": "83462e0f-3523-4b81-8383-c4e921cea6e2",
+     "appliedAt": 1793156600950
+    },
+    {
+     "profileId": 113234588,
+     "seekerId": 97146379,
+     "uuid": "86b8d440-438c-48aa-bf31-1ac3bc540f1b",
+     "appliedAt": 1793424437729
+    },
+    {
+     "profileId": 102128210,
+     "seekerId": 86511374,
+     "uuid": "991192db-46b1-4163-8fc8-d3487c9e4ad8",
+     "appliedAt": 1793120611352
+    },
+    {
+     "profileId": 1235366,
+     "seekerId": 66404079,
+     "uuid": "ba4ffc5b-1332-11e9-beca-70106fbef802",
+     "appliedAt": 1793112093340
+    },
+    {
+     "profileId": 7229333,
+     "seekerId": 18144223,
+     "uuid": "bb928df2-0d95-11e9-beca-70106fbef802",
+     "appliedAt": 1793246068787
+    },
+    {
+     "profileId": 121433846,
+     "seekerId": 105256774,
+     "uuid": "bf163885-f74c-402a-948e-5ca599c0024b",
+     "appliedAt": 1793076960658
+    },
+    {
+     "profileId": 124697725,
+     "seekerId": 108448783,
+     "uuid": "dd7fcb68-ce02-4396-9506-45f6230d6358",
+     "appliedAt": 1793090489352
+    },
+    {
+     "profileId": 85558176,
+     "seekerId": 1891654,
+     "uuid": "f9736522-0d5f-11e9-beca-70106fbef802",
+     "appliedAt": 1793166861154
+    }
+   ],
+   "industries": [
+    "Other"
+   ],
+   "functions": [
+    "Information Technology"
+   ],
+   "description": "<p>Greetings from TCS!</p><p>TCS is hiring for<strong> Python Developer </strong></p><p>Desired Experience Range: <strong> 5+ Years</strong></p><p>Job Location: <strong>Mumbai, Chennai, Hyderabad, Bangalore, Indore Ahmedabad</strong></p><p></p><p><strong>Must-Have</strong></p><p>Python, Unix Shell Scripting, OOPS Concepts</p><p></p><p><strong>Good-to-Have</strong></p><p>Hadoop, Spark</p>",
+   "jobTypes": [
+    "Permanent Job"
+   ],
+   "employmentTypes": [
+    "Full time"
+   ],
+   "itSkills": [
+    {
+     "id": "da1d15c6-e39b-4ffa-b8c5-c79136105a5d",
+     "text": "Unix"
+    },
+    {
+     "id": "f0716685-d097-4fa5-b513-7dd496ecf039",
+     "text": "Hadoop"
+    },
+    {
+     "id": "18a5f232-457e-11e9-a89e-70106fbef856",
+     "text": "Spark"
+    },
+    {
+     "id": "18b43457-457e-11e9-a89e-70106fbef856",
+     "text": "Oops Concepts"
+    },
+    {
+     "id": "a2f5133d-3962-413e-9a7f-63ea12fd29bc",
+     "text": "Shell Scripting"
+    },
+    {
+     "id": "eb81df54-a693-4ef7-b44f-ded7e12e1d7c",
+     "text": "Python"
+    }
+   ],
+   "skillsWithSynonyms": [
+    {
+     "synonyms": [
+      "UNIX",
+      "UNIX OS",
+      "Unix Operating System",
+      "Unix/Linux",
+      "Unix & Linux",
+      "Unix Linux",
+      "UNIX and Linux",
+      "Linux",
+      "GNU/Linux",
+      "Linux/UNIX",
+      "Linux / UNIX",
+      "Linux Unix",
+      "UNIX / Linux",
+      "Linux & UNIX",
+      "Unix-like",
+      "Linux OS"
+     ],
+     "value": "unix"
+    },
+    {
+     "synonyms": [
+      "Hadoop",
+      "Apache Hadoop",
+      "Hadoop Framework",
+      "Apache Hadoop Framework"
+     ],
+     "value": "hadoop"
+    },
+    {
+     "synonyms": [
+      "Apache Spark",
+      "Apache Spark Framework",
+      "Spark",
+      "Sparks",
+      "apace spark",
+      "apachespark",
+      "pyspark"
+     ],
+     "value": "spark"
+    },
+    {
+     "synonyms": [
+      "OOPS Concepts",
+      "OOP Concepts",
+      "Object-Oriented Programming Concepts",
+      "Object Oriented Programming Concepts",
+      "OO Concepts",
+      "OOP",
+      "OOPS",
+      "OOP Principles",
+      "OOPS Principles",
+      "Object-Oriented Concepts",
+      "Object-Oriented Programming",
+      "Object Oriented Programming"
+     ],
+     "value": "oops concepts"
+    },
+    {
+     "synonyms": [
+      "Bash",
+      "Bash Scripting",
+      "Bash Shell Scripting",
+      "Bash/Shell Scripting",
+      "Bourne Again Shell",
+      "Bourne Shell Scripting",
+      "Linux Scripting",
+      "Linux Shell",
+      "Linux Shell Programming",
+      "Linux Shell Scripting",
+      "POSIX Shell",
+      "POSIX Shell Scripting",
+      "Scripting in Linux",
+      "Shell",
+      "Shell Programming",
+      "Shell Script",
+      "Shell Script Programming",
+      "Shell Scripting",
+      "Shell Scripts",
+      "Shell Scritpting",
+      "Shellscript",
+      "UNIX Shell",
+      "Unix Script",
+      "Unix Scripting",
+      "Unix Shell Programming",
+      "Unix Shell Script",
+      "Unix Shell Script Programming",
+      "Unix Shell Scripting",
+      "ans",
+      "ansible",
+      "auto sys",
+      "auto-sys",
+      "autosys",
+      "bash script",
+      "command line automation",
+      "sh Script",
+      "sh Scripting",
+      "unix shell scripts"
+     ],
+     "value": "shell scripting"
+    },
+    {
+     "synonyms": [
+      "Python",
+      "Python Programming",
+      "Core Python",
+      "Python Language",
+      "Python 3",
+      "Python 2",
+      "Python Scripting",
+      "CPython",
+      "Py",
+      "Python3",
+      "Phython",
+      "Phyton",
+      "pyhton",
+      "Python Coding",
+      "Python 2.7",
+      "Python Programming Language",
+      "Python2",
+      "Python Development",
+      "Python Fundamentals",
+      "Basic Python",
+      "Python Application Development",
+      "Python Software Development",
+      "Advanced Python",
+      "Advanced Python Programming",
+      "Basic Python Scripting",
+      "Python Script",
+      "Python Automation Scripting",
+      "pyhon",
+      "Python Code"
+     ],
+     "value": "python"
+    }
+   ],
+   "recruiterId": 1380487,
+   "companyId": 332041,
+   "maximumSalaryINRFilter": 0,
+   "minimumSalaryINRFilter": 0,
+   "maximumSalaryINRMonthlyFilter": 0,
+   "minimumSalaryINRMonthlyFilter": 0,
+   "minimumExperienceFilter": 5,
+   "maximumExperienceFilter": 7,
+   "questionnaire": false,
+   "employerTypes": [
+    "Company"
+   ],
+   "walkInVenue": {},
+   "companyName": "Tata Consultancy Services",
+   "referenceCode": "55f3536c5f8a89ebcf70f95177f9e62e",
+   "status": 1,
+   "accountId": 0,
+   "currencyCode": "INR",
+   "hideSalary": 0,
+   "hideCompanyName": 0,
+   "autoMatch": 0,
+   "showContactDetails": 0,
+   "jobSource": "SCRAPPING",
+   "postingBoard": "SINGLE",
+   "graceJob": 0,
+   "quickJob": 0,
+   "jobFrom": "MOIN_OPERIA",
+   "isoCode": "en",
+   "recruiterName": "Tata Consultancy Services",
+   "channelId": 1,
+   "channelName": "India",
+   "isBold": 0,
+   "isJdLogo": 0,
+   "isSearchLogo": 0,
+   "siteContext": "rexmonster",
+   "freshness": 1793055461000,
+   "closedAt": 1795631400000,
+   "activeJob": true,
+   "isJobActive": true,
+   "isCJT": 0,
+   "isMicrosite": 0,
+   "redirectStage": 2,
+   "totalApplicants": 12,
+   "isGptwCompany": 0,
+   "jobSalaryConfidential": false,
+   "isUrgentlyHiring": false,
+   "quickApplyJob": 0,
+   "jobClassification": "SYNDICATE",
+   "isTestJob": false,
+   "jdUrl": "/job/python-developer-tata-consultancy-services-mumbai-69572364",
+   "isSaved": false,
+   "isApplied": false,
+   "minimumSalaryFilter": 0,
+   "maximumSalaryFilter": 0
+  }
+ ],
+ "meta": {
+  "paging": {
+   "cursors": {
+    "next": "5",
+    "previous": "0"
+   },
+   "total": 5103,
+   "limit": 5
+  },
+  "resultId": "536a47ba-fb13-43fc-b254-74e099ddd221",
+  "searchId": "536a47ba-fb13-43fc-b254-74e099ddd221",
+  "version": "V1",
+  "buildVersion": "9.1.4"
+ }
+}

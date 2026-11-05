@@ -1,0 +1,594 @@
+[
+ {
+  "id": 1786143,
+  "public_url": "jobs/python-developer-trellisconsulting-1786143",
+  "title": "Python Developer",
+  "organization_id": 2121991,
+  "type": "jobs",
+  "subtype": "jobs",
+  "regn_open": 1,
+  "updated_at": "2026-11-01T20:37:59+05:30",
+  "region": "online",
+  "visibility": "public",
+  "details": "<p><strong>Role:</strong></p>\n<p>We are looking for a Python Backend Developer to develop and maintain our <strong>e-commerce backend web portal</strong> using Python, Django and Django Oscar.</p>\n<p><strong>Key Responsibilities:</strong></p>\n<ul>\n<li>Develop and maintain backend modules using <strong>Python &amp; Django</strong>.</li>\n<li>Customize and enhance <strong>Django Oscar</strong> e-commerce modules if needed.</li>\n<li>Develop and maintain <strong>REST APIs</strong>.</li>\n<li>Work on e-commerce modules like <strong>Products, Catalogue, Inventory, Cart, Orders, Customers, Offers, Gift Cards and Checkout</strong>.</li>\n<li>Integrate or modify third-party APIs such as <strong>Payment, Courier, ERP and other services</strong>.</li>\n<li>Write and optimize <strong>SQL queries and database operations</strong>.</li>\n<li><strong>Debug and resolve application/production issues</strong>.</li>\n<li>Work with frontend, QA teams.</li>\n<li><strong>Maintain clean, reusable and well-documented code</strong>.</li>\n<li>Postman / API testing/ Unit testing</li>\n</ul>\n<p><strong>Required Skills:</strong></p>\n<ul>\n<li><strong>Python</strong></li>\n<li><strong>Django</strong></li>\n<li><strong>Django Oscar</strong> &ndash;Good to know</li>\n<li><strong>REST API / Django REST Framework</strong></li>\n<li><strong>SQL &amp; Relational Databases</strong> &ndash; PostgreSQL/MySQL/SQL Server</li>\n<li><strong>Django ORM</strong></li>\n<li><strong>Git</strong></li>\n<li>Basic <strong>Linux</strong> knowledge</li>\n</ul>\n<p><strong>Good to Have:</strong></p>\n<ul>\n<li>E-commerce domain experience</li>\n<li><strong>Redis / Celery</strong></li>\n<li><strong>Solr / Elasticsearch / Haystack</strong></li>\n<li>Docker / AWS basics</li>\n<li><strong>Basic AI / Generative AI</strong> knowledge and practical usage</li>\n</ul>\n<p><strong>Candidate Profile:</strong></p>\n<ul>\n<li>1&ndash;3 years of hands-on Python/Django experience.</li>\n<li>Good programming and problem-solving skills.</li>\n<li>Understanding of APIs, databases and e-commerce workflows.</li>\n<li>Ability to understand and modify existing code.</li>\n<li>Good communication and teamwork skills.</li>\n</ul>",
+  "short_id": "NZ4apyg",
+  "logoUrl2": "https://d8it4huxumps7.cloudfront.net/uploads/images/150x150/uploadedManual-6ae48fac038d1_trellis_logo_final.png",
+  "organisation": {
+   "id": 2121991,
+   "name": "TrellisConsulting",
+   "public_url": "c/trellisconsulting-2121991",
+   "logoUrl": "",
+   "logoUrl2": "",
+   "show_evaluator_login_link": false,
+   "official_email_domains": null,
+   "tier": null
+  },
+  "seo_url": "https://unstop.com/jobs/python-developer-trellisconsulting-1786143",
+  "status": "LIVE",
+  "tags": [],
+  "thumb": null,
+  "isPaid": false,
+  "festival": null,
+  "prizes": [],
+  "address_with_country_logo": {
+   "address": "",
+   "city": "",
+   "state": "",
+   "country": ""
+  },
+  "short_url": "https://unstop.com/o/NZ4apyg",
+  "workfunction": [
+   {
+    "id": 2006,
+    "name": "Backend Development",
+    "description": "",
+    "created_at": "2026-02-06T23:31:46+05:30",
+    "updated_at": "2026-02-06T23:31:46+05:30",
+    "work_function_name": null,
+    "batch_id": 11,
+    "pivot": {
+     "entity_id": 1786143,
+     "subject_id": 2006,
+     "id": 6725694,
+     "ai_generated": true
+    }
+   }
+  ],
+  "assignedTag": {
+   "tag": null
+  },
+  "opportunity_config": {
+   "id": 1479546,
+   "opportunity_id": 1786143,
+   "banner_config": "{\"color\":\"color-bg2\",\"text\":\"Python Developer\",\"type\":7,\"banner_data\":[2]}",
+   "show_registrations_count": 0,
+   "show_impressions": 1,
+   "show_team_size": 1,
+   "show_region": 1
+  },
+  "payment_services": [],
+  "filters": [
+   {
+    "id": 421,
+    "name": "Experienced Professionals",
+    "type": "eligible",
+    "subtype": null,
+    "file_name": "corporate",
+    "domain_id": 0,
+    "icon_url": "https://d8it4huxumps7.cloudfront.net/images/icons/color_icons/corporate.svg"
+   }
+  ],
+  "required_skills": [
+   {
+    "id": 647074,
+    "skill": "Python",
+    "skill_name": "Python",
+    "pivot": {
+     "entity_id": 1786143,
+     "subject_id": 647074,
+     "id": 6725689,
+     "ai_generated": true
+    }
+   },
+   {
+    "id": 643226,
+    "skill": "API Development (REST)",
+    "skill_name": "API Development (REST)",
+    "pivot": {
+     "entity_id": 1786143,
+     "subject_id": 643226,
+     "id": 6725690,
+     "ai_generated": true
+    }
+   },
+   {
+    "id": 647405,
+    "skill": "SQL",
+    "skill_name": "SQL",
+    "pivot": {
+     "entity_id": 1786143,
+     "subject_id": 647405,
+     "id": 6725691,
+     "ai_generated": true
+    }
+   },
+   {
+    "id": 643321,
+    "skill": "Backend development",
+    "skill_name": "Backend development",
+    "pivot": {
+     "entity_id": 1786143,
+     "subject_id": 643321,
+     "id": 6725692,
+     "ai_generated": true
+    }
+   },
+   {
+    "id": 646248,
+    "skill": "Git Version Control",
+    "skill_name": "Git Version Control",
+    "pivot": {
+     "entity_id": 1786143,
+     "subject_id": 646248,
+     "id": 6725693,
+     "ai_generated": true
+    }
+   }
+  ],
+  "locations": [
+   {
+    "id": 1884363,
+    "city": "Gurgaon",
+    "state": "Haryana",
+    "country": "India",
+    "addressable_id": 1786143,
+    "addressable_type": "App\\Model\\Opportunity"
+   },
+   {
+    "id": 1884364,
+    "city": "New Delhi",
+    "state": "Delhi",
+    "country": "India",
+    "addressable_id": 1786143,
+    "addressable_type": "App\\Model\\Opportunity"
+   }
+  ],
+  "jobDetail": {
+   "entity_id": 1786143,
+   "max_salary": 600000,
+   "currency": "fa-rupee",
+   "locations": [
+    "Gurgaon",
+    "New Delhi"
+   ],
+   "type": "in_office",
+   "min_salary": 400000,
+   "show_salary": 1,
+   "min_experience": null,
+   "max_experience": null,
+   "timing": "full_time",
+   "paid_unpaid": "paid",
+   "pay_in": "annually",
+   "not_disclosed": false
+  },
+  "end_date": "2026-11-13T00:00:00+05:30",
+  "approved_date": "2026-10-30 21:50:45 GMT+0530",
+  "viewsCount": 1,
+  "registerCount": 36,
+  "regnRequirements": {
+   "opportunity_id": 1786143,
+   "start_regn_dt": "2026-10-30T00:00:00+05:30",
+   "end_regn_dt": "2026-11-13T00:00:00+05:30",
+   "show_deadline": 1,
+   "min_team_size": 1,
+   "max_team_size": 1,
+   "work_location_type": "city",
+   "eligibility": "{\"sector\":[\"corporates\"],\"engineering\":[],\"bSchools\":[],\"arts\":[],\"medicine\":[],\"law\":[],\"others\":[\"all\"],\"experience\":[\"1 year\",\"2 years\",\"3 years\"],\"studentPassoutYearsSelected\":[\"all\"],\"fresherPassoutYearsSelected\":[\"all\"],\"schoolFilteredClasses\":[\"all\"],\"minMarks\":{\"high_school_perc\":0,\"high_school_cgpa\":0},\"locations\":[],\"location_type\":\"all\",\"professionalEligibility\":null,\"fresherEligibility\":null}",
+   "reg_status": "STARTED",
+   "remainingDaysArray": {
+    "durations": 10,
+    "text": " days left"
+   },
+   "remain_days": "10 days left",
+   "remaining_time": 929797
+  }
+ },
+ {
+  "id": 1785946,
+  "public_url": "jobs/ai-python-instructor-neuronetwrks-ai-ed-pvt-ltd-1785946",
+  "title": "AI & Python Instructor",
+  "organization_id": 2097010,
+  "type": "jobs",
+  "subtype": "jobs",
+  "regn_open": 1,
+  "updated_at": "2026-11-01T21:59:04+05:30",
+  "region": "online",
+  "visibility": "public",
+  "details": "<p><strong>About Us:</strong></p>\n<p>NeuroNetworks AI Ed is an Indian AI and technology education company. Our flagship Neuromind AI Creator Program is a 1-year, 104-lecture course for students after Class 10 and college tech students. Every student watches the same recorded lectures; hands-on practicals run in our own browser-based lab.</p>\n<p><strong>The Role:</strong></p>\n<p>You will be the instructor students see and hear in every lecture. You will write the lecture scripts and record ~40-minute lectures (concept explanations + live coding) for the whole program, from a detailed syllabus set by our Course Architect.</p>\n<p><strong>Topics:</strong></p>\n<p>AI foundations; Python (data structures, OOP, Pydantic, HTTP, exceptions, files); Git and AI coding tools; prompting and LLM APIs; React, FastAPI, PostgreSQL basics; Linux and Docker; local models and RAG; MCP; workflow automation; AI agents (LangChain, LangGraph, CrewAI, Claude Agent SDK); monitoring; AI security and governance.</p>\n<p><strong>Must Have:</strong></p>\n<ul data-spread=\"false\">\n<li>Minimum 3 years teaching through pre-recorded video lectures (Udemy, YouTube, edtech or corporate training).</li>\n<li>Fluent spoken and written English.</li>\n<li>Strong hands-on Python.</li>\n<li>Working knowledge of Generative AI (LLM APIs, prompting, RAG, agents).</li>\n<li>You write your own lecture scripts.</li>\n<li>Full-time from our Pune office.</li>\n<li>Able to join within 14 days of an offer.</li>\n</ul>\n<p><strong>Good to Have:</strong></p>\n<ul data-spread=\"false\">\n<li>React/FastAPI/PostgreSQL projects.</li>\n<li>Linux, Docker, Git.</li>\n<li>MCP or agent frameworks.</li>\n<li>PCEP or AWS Certified AI Practitioner.</li>\n<li>Experience teaching beginners.</li>\n<li>Ability to make simple slides.</li>\n</ul>",
+  "short_id": "vDGhacd",
+  "logoUrl2": "https://d8it4huxumps7.cloudfront.net/uploads/images/150x150/6ae4da666039d_organisation_image-RgmqeRD2mH36251386Eie7cGcPuW.png",
+  "organisation": {
+   "id": 2097010,
+   "name": "Neuronetwrks AI Ed Pvt. Ltd.",
+   "public_url": "c/neuronetwrks-ai-ed-pvt-ltd-2097010",
+   "logoUrl": "https://d8it4huxumps7.cloudfront.net/images/partners/new_organisation_image-RgmqeRD2mH36251386Eie7cGcPuW.png",
+   "logoUrl2": "https://d8it4huxumps7.cloudfront.net/images/partners/new_organisation_image-RgmqeRD2mH36251386Eie7cGcPuW.png",
+   "show_evaluator_login_link": false,
+   "official_email_domains": null,
+   "tier": null
+  },
+  "seo_url": "https://unstop.com/jobs/ai-python-instructor-neuronetwrks-ai-ed-pvt-ltd-1785946",
+  "status": "LIVE",
+  "tags": [],
+  "thumb": null,
+  "isPaid": false,
+  "festival": null,
+  "prizes": [],
+  "address_with_country_logo": {
+   "address": "",
+   "city": "",
+   "state": "",
+   "country": ""
+  },
+  "short_url": "https://unstop.com/o/vDGhacd",
+  "workfunction": [
+   {
+    "id": 1855,
+    "name": "Applied AI",
+    "description": "",
+    "created_at": "2026-02-06T23:31:46+05:30",
+    "updated_at": "2026-02-06T23:31:46+05:30",
+    "work_function_name": null,
+    "batch_id": 11,
+    "pivot": {
+     "entity_id": 1785946,
+     "subject_id": 1855,
+     "id": 6726354,
+     "ai_generated": false
+    }
+   },
+   {
+    "id": 1914,
+    "name": "Teaching",
+    "description": "",
+    "created_at": "2026-02-06T23:31:46+05:30",
+    "updated_at": "2026-02-06T23:31:46+05:30",
+    "work_function_name": null,
+    "batch_id": 11,
+    "pivot": {
+     "entity_id": 1785946,
+     "subject_id": 1914,
+     "id": 6726360,
+     "ai_generated": true
+    }
+   },
+   {
+    "id": 2107,
+    "name": "AI Engineering",
+    "description": "",
+    "created_at": "2026-04-09T00:17:10+05:30",
+    "updated_at": "2026-04-09T00:17:10+05:30",
+    "work_function_name": null,
+    "batch_id": 11,
+    "pivot": {
+     "entity_id": 1785946,
+     "subject_id": 2107,
+     "id": 6726361,
+     "ai_generated": true
+    }
+   }
+  ],
+  "assignedTag": {
+   "tag": null
+  },
+  "opportunity_config": {
+   "id": 1479180,
+   "opportunity_id": 1785946,
+   "banner_config": "{\"color\":\"color-bg5\",\"text\":\"AI & Python Course Instructor - Pre-recorded Lectures\",\"type\":1,\"banner_data\":[4]}",
+   "show_registrations_count": 0,
+   "show_impressions": 1,
+   "show_team_size": 1,
+   "show_region": 1
+  },
+  "payment_services": [],
+  "filters": [
+   {
+    "id": 421,
+    "name": "Experienced Professionals",
+    "type": "eligible",
+    "subtype": null,
+    "file_name": "corporate",
+    "domain_id": 0,
+    "icon_url": "https://d8it4huxumps7.cloudfront.net/images/icons/color_icons/corporate.svg"
+   }
+  ],
+  "required_skills": [
+   {
+    "id": 647074,
+    "skill": "Python",
+    "skill_name": "Python",
+    "pivot": {
+     "entity_id": 1785946,
+     "subject_id": 647074,
+     "id": 6726355,
+     "ai_generated": true
+    }
+   },
+   {
+    "id": 645173,
+    "skill": "Teaching Experience",
+    "skill_name": "Teaching Experience",
+    "pivot": {
+     "entity_id": 1785946,
+     "subject_id": 645173,
+     "id": 6726356,
+     "ai_generated": true
+    }
+   },
+   {
+    "id": 645580,
+    "skill": "Artificial Intelligence (AI)",
+    "skill_name": "Artificial Intelligence (AI)",
+    "pivot": {
+     "entity_id": 1785946,
+     "subject_id": 645580,
+     "id": 6726357,
+     "ai_generated": true
+    }
+   },
+   {
+    "id": 647577,
+    "skill": "Training Delivery",
+    "skill_name": "Training Delivery",
+    "pivot": {
+     "entity_id": 1785946,
+     "subject_id": 647577,
+     "id": 6726358,
+     "ai_generated": true
+    }
+   },
+   {
+    "id": 647514,
+    "skill": "Technical Communication",
+    "skill_name": "Technical Communication",
+    "pivot": {
+     "entity_id": 1785946,
+     "subject_id": 647514,
+     "id": 6726359,
+     "ai_generated": true
+    }
+   }
+  ],
+  "locations": [
+   {
+    "id": 1884439,
+    "city": "Pune",
+    "state": "Maharashtra",
+    "country": "India",
+    "addressable_id": 1785946,
+    "addressable_type": "App\\Model\\Opportunity"
+   }
+  ],
+  "jobDetail": {
+   "entity_id": 1785946,
+   "max_salary": 1500000,
+   "currency": "fa-rupee",
+   "locations": [
+    "Pune"
+   ],
+   "type": "in_office",
+   "min_salary": 1000000,
+   "show_salary": 1,
+   "min_experience": null,
+   "max_experience": null,
+   "timing": "full_time",
+   "paid_unpaid": "paid",
+   "pay_in": "annually",
+   "not_disclosed": false
+  },
+  "end_date": "2026-11-13T00:00:00+05:30",
+  "approved_date": "2026-10-30 23:27:14 GMT+0530",
+  "viewsCount": 19,
+  "registerCount": 8,
+  "regnRequirements": {
+   "opportunity_id": 1785946,
+   "start_regn_dt": "2026-10-30T00:00:00+05:30",
+   "end_regn_dt": "2026-11-13T00:00:00+05:30",
+   "show_deadline": 1,
+   "min_team_size": 1,
+   "max_team_size": 1,
+   "work_location_type": "city",
+   "eligibility": "{\"sector\":[\"corporates\"],\"engineering\":[],\"bSchools\":[],\"arts\":[],\"medicine\":[],\"law\":[],\"others\":[\"all\"],\"experience\":[\"3 years\",\"4 years\",\"5 years\"],\"studentPassoutYearsSelected\":[\"all\"],\"fresherPassoutYearsSelected\":[\"all\"],\"schoolFilteredClasses\":[\"all\"],\"minMarks\":{\"high_school_perc\":0,\"high_school_cgpa\":0},\"locations\":[],\"location_type\":\"all\",\"professionalEligibility\":null,\"fresherEligibility\":null}",
+   "reg_status": "STARTED",
+   "remainingDaysArray": {
+    "durations": 10,
+    "text": " days left"
+   },
+   "remain_days": "10 days left",
+   "remaining_time": 929617
+  }
+ },
+ {
+  "id": 1778984,
+  "public_url": "jobs/software-engineering-specialist-python-fullstack-ge-vernova-1778984",
+  "title": "Software Engineering Specialist- Python Fullstack",
+  "organization_id": 982590,
+  "type": "jobs",
+  "subtype": "jobs",
+  "regn_open": 0,
+  "updated_at": "2026-11-01T15:41:11+05:30",
+  "region": "online",
+  "visibility": "public",
+  "details": "<p data-lfile-container=\"68e07d53-9169-4e5f-8561-195e33870e90\" data-pm-slice=\"1 1 []\"><strong>GE Vernova is hiring for the role of Software Engineering Specialist- Python Fullstack!</strong></p>\n<p><strong>Responsibilities of the Candidate:</strong></p>\n<ul>\n<li>Build, maintain, and enhance end to end product features across frontend, backend, and data layers</li>\n<li>Develop robust, reusable, and maintainable UI components using modern frontend technologies, preferably Angular</li>\n<li>Develop backend services and APIs in Python, ensuring scalability, reliability, security, and maintainability</li>\n<li>Design, build, and optimize REST APIs for internal and external product integrations</li>\n<li>Write clean, testable, and well documented code that adheres to engineering standards and best practices</li>\n<li>Create and maintain unit and integration tests to improve reliability and reduce regression risk</li>\n<li>Contribute to CI/CD workflows, build pipelines, and deployment readiness activities</li>\n</ul>\n<p><strong>Requirements:</strong></p>\n<ul>\n<li>1 to 2 years of professional software engineering experience in full stack product development environments. For roles outside USA: Bachelor's Degree in Computer Science or &ldquo;STEM&rdquo; Majors (Science, Technology, Engineering and Math) with basic experience.</li>\n<li>Strong proficiency in modern frontend and UI development, preferably Angular, including component based architecture, TypeScript, and responsive web development</li>\n<li>Strong proficiency in Python backend development, with hands on experience building and maintaining production grade services or APIs</li>\n<li>Demonstrated experience designing, developing, and consuming REST APIs</li>\n<li>Strong working knowledge of SQL and relational databases, including schema design, query optimization, and data access patterns</li>\n<li>Experience working with Git based version control in collaborative development environments.</li>\n</ul>",
+  "short_id": "FzZLKmJ",
+  "logoUrl2": "https://d8it4huxumps7.cloudfront.net/uploads/images/150x150/6ae04357799d7_organisation_image-vgfcSuBhzG19984573676R0HTq6XQV.png",
+  "organisation": {
+   "id": 982590,
+   "name": "GE Vernova",
+   "public_url": "c/ge-vernova-982590",
+   "logoUrl": "https://d8it4huxumps7.cloudfront.net/images/partners/new_organisation_image-vgfcSuBhzG19984573676R0HTq6XQV.png",
+   "logoUrl2": "https://d8it4huxumps7.cloudfront.net/images/partners/new_organisation_image-vgfcSuBhzG19984573676R0HTq6XQV.png",
+   "show_evaluator_login_link": false,
+   "official_email_domains": null,
+   "tier": 3
+  },
+  "seo_url": "https://unstop.com/jobs/software-engineering-specialist-python-fullstack-ge-vernova-1778984",
+  "status": "LIVE",
+  "tags": [],
+  "thumb": null,
+  "isPaid": false,
+  "festival": null,
+  "prizes": [],
+  "address_with_country_logo": {
+   "address": "",
+   "city": "",
+   "state": "",
+   "country": ""
+  },
+  "short_url": "https://unstop.com/o/FzZLKmJ",
+  "workfunction": [
+   {
+    "id": 2007,
+    "name": "Full Stack Development",
+    "description": "",
+    "created_at": "2026-02-06T23:31:46+05:30",
+    "updated_at": "2026-02-06T23:31:46+05:30",
+    "work_function_name": null,
+    "batch_id": 11,
+    "pivot": {
+     "entity_id": 1778984,
+     "subject_id": 2007,
+     "id": 6678941,
+     "ai_generated": true
+    }
+   }
+  ],
+  "assignedTag": {
+   "tag": null
+  },
+  "opportunity_config": {
+   "id": 1471691,
+   "opportunity_id": 1778984,
+   "banner_config": "{\"color\":\"color-bg8\",\"text\":\"Software Engineering Specialist- Python Fullstack\",\"type\":3,\"banner_data\":[4]}",
+   "show_registrations_count": 0,
+   "show_impressions": 0,
+   "show_team_size": 1,
+   "show_region": 1
+  },
+  "payment_services": [],
+  "filters": [
+   {
+    "id": 421,
+    "name": "Experienced Professionals",
+    "type": "eligible",
+    "subtype": null,
+    "file_name": "corporate",
+    "domain_id": 0,
+    "icon_url": "https://d8it4huxumps7.cloudfront.net/images/icons/color_icons/corporate.svg"
+   }
+  ],
+  "required_skills": [
+   {
+    "id": 647074,
+    "skill": "Python",
+    "skill_name": "Python",
+    "pivot": {
+     "entity_id": 1778984,
+     "subject_id": 647074,
+     "id": 6678936,
+     "ai_generated": true
+    }
+   },
+   {
+    "id": 645537,
+    "skill": "Angular",
+    "skill_name": "Angular",
+    "pivot": {
+     "entity_id": 1778984,
+     "subject_id": 645537,
+     "id": 6678937,
+     "ai_generated": true
+    }
+   },
+   {
+    "id": 643226,
+    "skill": "API Development (REST)",
+    "skill_name": "API Development (REST)",
+    "pivot": {
+     "entity_id": 1778984,
+     "subject_id": 643226,
+     "id": 6678938,
+     "ai_generated": true
+    }
+   },
+   {
+    "id": 647405,
+    "skill": "SQL",
+    "skill_name": "SQL",
+    "pivot": {
+     "entity_id": 1778984,
+     "subject_id": 647405,
+     "id": 6678939,
+     "ai_generated": true
+    }
+   },
+   {
+    "id": 646248,
+    "skill": "Git Version Control",
+    "skill_name": "Git Version Control",
+    "pivot": {
+     "entity_id": 1778984,
+     "subject_id": 646248,
+     "id": 6678940,
+     "ai_generated": true
+    }
+   }
+  ],
+  "locations": [
+   {
+    "id": 1878302,
+    "city": "Bangalore",
+    "state": "Karnataka",
+    "country": "India",
+    "addressable_id": 1778984,
+    "addressable_type": "App\\Model\\Opportunity"
+   }
+  ],
+  "jobDetail": {
+   "entity_id": 1778984,
+   "currency": "fa-rupee",
+   "locations": [
+    "Bangalore"
+   ],
+   "type": "in_office",
+   "show_salary": 0,
+   "min_experience": null,
+   "max_experience": null,
+   "timing": "full_time",
+   "paid_unpaid": "paid",
+   "pay_in": "annually",
+   "not_disclosed": false
+  },
+  "end_date": "2026-11-09T00:00:00+05:30",
+  "approved_date": "2026-10-27 11:53:30 GMT+0530",
+  "viewsCount": 1,
+  "registerCount": 0,
+  "regnRequirements": {
+   "opportunity_id": 1778984,
+   "start_regn_dt": "2026-10-26T00:00:00+05:30",
+   "end_regn_dt": "2026-11-09T00:00:00+05:30",
+   "show_deadline": 1,
+   "min_team_size": 1,
+   "max_team_size": 1,
+   "work_location_type": "city",
+   "eligibility": "{\"sector\":[\"corporates\"],\"engineering\":[],\"bSchools\":[],\"arts\":[],\"medicine\":[],\"law\":[],\"others\":[\"all\"],\"experience\":[\"1 year\",\"2 years\"],\"studentPassoutYearsSelected\":[\"all\"],\"fresherPassoutYearsSelected\":[\"all\"],\"schoolFilteredClasses\":[\"all\"],\"minMarks\":{\"high_school_perc\":0,\"high_school_cgpa\":0},\"locations\":[],\"location_type\":\"all\",\"professionalEligibility\":{\"engineering\":[{\"course\":\"btech\",\"type\":\"engineering\",\"programme\":[\"all\"],\"passoutYear\":[\"all\"],\"specialization\":[\"all\"],\"duration\":4}],\"bSchools\":[],\"arts\":[],\"medicine\":[],\"law\":[]},\"fresherEligibility\":null}",
+   "reg_status": "STARTED",
+   "remainingDaysArray": {
+    "durations": 6,
+    "text": " days left"
+   },
+   "remain_days": "6 days left",
+   "remaining_time": 583942
+  }
+ }
+]

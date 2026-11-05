@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-6">
+  <!-- Page Header -->
+  <div class="editorial-card p-6 sm:p-7 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EFECE4] text-[#4A4943] text-xs font-semibold mb-2.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
+        Governance &amp; Policy Enforcement
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-[#1A211D] font-serif">HITL Approvals Center</h1>
+      <p class="text-sm text-[#57605A] mt-1">Human-in-the-loop review for policy exceptions, student drive nominations, and cohort bootcamp launches. Every decision is immutably audited.</p>
+    </div>
+  </div>
+
+  <!-- Approvals Queue Surface -->
+  <div id="approvals" class="space-y-4">
+    <div class="editorial-card p-10 text-center">
+      <div class="w-8 h-8 rounded-full border-2 border-[#1D5C42] border-t-transparent animate-spin mx-auto mb-3"></div>
+      <p class="text-xs font-mono text-[#57605A]">Loading pending approvals queue...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var box = document.getElementById("approvals");
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function render(items) {
+    box.innerHTML = "";
+    if (!items.length) {
+      var empty = el("div", "editorial-card p-12 text-center");
+      var icon = document.createElement("div");
+      icon.className = "w-12 h-12 rounded-2xl bg-[#E3F2EA] text-[#1D5C42] mx-auto flex items-center justify-center mb-3";
+      icon.innerHTML = '<svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>';
+      empty.appendChild(icon);
+      empty.appendChild(el("p", "text-base font-bold text-[#1A211D] font-serif", "No approvals in the queue"));
+      empty.appendChild(el("p", "text-xs text-[#57605A] mt-1 max-w-sm mx-auto", "Nominate a candidate for a drive, publish a bootcamp intervention, or request a proficiency waiver to populate this governance ledger."));
+      box.appendChild(empty);
+      return;
+    }
+
+    items.forEach(function (a) {
+      var card = el("div", "editorial-card p-6 sm:p-7 transition-all");
+      var head = el("div", "flex flex-wrap items-center justify-between gap-3 mb-3.5 pb-3.5 border-b border-[#EDEBE3]");
+      var left = el("div", "flex flex-wrap items-center gap-2");
+
+      var pillCls = "inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ";
+      if (a.status === "pending_review") {
+        pillCls += "bg-[#EFECE4] text-[#4A4943]";
+      } else if (a.status === "approved") {
+        pillCls += "bg-[#E3F2EA] text-[#164934]";
+      } else {
+        pillCls += "bg-[#FBECE9] text-[#9E2A20]";
+      }
+      left.appendChild(el("span", pillCls, a.status.replace("_", " ")));
+      left.appendChild(el("span", "text-xs font-mono font-medium px-3 py-1 rounded-full bg-[#F9F8F4] text-[#57605A] border border-[#E5E3DA]", a.kind));
+      head.appendChild(left);
+      head.appendChild(el("span", "text-xs font-mono text-[#767F79]", a.id));
+      card.appendChild(head);
+
+      card.appendChild(el("h2", "text-lg font-bold text-[#1A211D] font-serif tracking-tight", a.title || a.kind));
+      if (a.summary) {
+        card.appendChild(el("p", "text-sm text-[#57605A] mt-1 leading-relaxed", a.summary));
+      }
+
+      if (a.payload) {
+        var payloadBox = el("div", "mt-3.5 bg-[#F9F8F4] rounded-xl p-3.5 border border-[#E5E3DA] font-mono text-xs text-[#3B423E] space-y-1");
+        if (a.payload.job_id) {
+          payloadBox.appendChild(el("div", "text-[#57605A]", "Target Job: " + a.payload.job_id));
+        }
+        if (a.payload.student_id) {
+          payloadBox.appendChild(el("div", "text-[#57605A]", "Target Candidate: " + a.payload.student_id));
+        }
+        if (a.payload.skill_id) {
+          payloadBox.appendChild(el("div", "text-[#57605A]", "Target Competency: " + a.payload.skill_id));
+        }
+        card.appendChild(payloadBox);
+      }
+
+      if (a.review_note) {
+        var noteBox = el("div", "mt-3 text-xs text-[#57605A] bg-[#F9F8F4] rounded-xl px-3.5 py-2.5 border-l-2 border-[#1D5C42] italic");
+        noteBox.textContent = "Decision note: " + a.review_note;
+        card.appendChild(noteBox);
+      }
+
+      if (a.endorsed_by) {
+        var endBox = el("div", "mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E3F2EA] text-[#164934] text-xs font-semibold");
+        endBox.textContent = "Endorsed by " + a.endorsed_by;
+        card.appendChild(endBox);
+      }
+
+      if (a.status === "pending_review") {
+        var actions = el("div", "flex flex-wrap items-center gap-2.5 mt-4 pt-4 border-t border-[#EDEBE3]");
+        var note = document.createElement("input");
+        note.type = "text";
+        note.placeholder = "Review note (optional)";
+        note.className = "note-input flex-1 min-w-[14rem] text-xs rounded-full border border-[#D4D1C7] bg-[#FBFBF9] px-4 py-2 text-[#1A211D] placeholder:text-[#8E9690] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]";
+        actions.appendChild(note);
+
+        var endorseBtn = el("button", "btn-secondary-pill text-xs", "Endorse");
+        endorseBtn.type = "button";
+
+        var approveBtn = el("button", "btn-primary-pill text-xs", "Approve & Execute");
+        approveBtn.type = "button";
+
+        var rejectBtn = el("button", "inline-flex items-center justify-center whitespace-nowrap gap-1.5 px-4 py-2 rounded-full bg-[#FBECE9] hover:bg-[#F5D8D2] border border-[#F3D2CC] text-[#9E2A20] text-xs font-semibold transition-colors", "Reject");
+        rejectBtn.type = "button";
+
+        endorseBtn.addEventListener("click", function () { decide(a.id, "endorse", note.value, endorseBtn, card); });
+        approveBtn.addEventListener("click", function () { decide(a.id, "approve", note.value, approveBtn, card); });
+        rejectBtn.addEventListener("click", function () { decide(a.id, "reject", note.value, rejectBtn, card); });
+
+        actions.appendChild(endorseBtn);
+        actions.appendChild(approveBtn);
+        actions.appendChild(rejectBtn);
+        card.appendChild(actions);
+      }
+
+      box.appendChild(card);
+    });
+  }
+
+  function decide(id, verb, note, btn, card) {
+    btn.disabled = true;
+    fetch("/api/approvals/" + id + "/" + verb, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: note || "" })
+    }).then(function (r) {
+      if (!r.ok) return r.json().then(function (j) { throw new Error(j.detail || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function (j) {
+      var executed = j.executed ? (" Executed: " + (j.executed.mutated || "ok")) : "";
+      if (window.toast) {
+        var verbLabel = verb === "approve" ? "Approved" : (verb === "endorse" ? "Endorsed" : "Rejected");
+        window.toast(verbLabel + " " + j.kind + "." + executed,
+          verb === "approve" ? "success" : (verb === "endorse" ? "success" : "info"));
+      }
+      load();
+    }).catch(function (e) {
+      btn.disabled = false;
+      if (window.toast) {
+        window.toast("Could not " + verb + ": " + e.message, "error");
+      }
+    });
+  }
+
+  function load() {
+    fetch("/api/approvals").then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (items) {
+      var pending = items.filter(function (a) { return a.status === "pending_review"; });
+      var done = items.filter(function (a) { return a.status !== "pending_review"; }).slice(0, 10);
+      render(pending.concat(done));
+    }).catch(function (e) {
+      box.innerHTML = "";
+      box.appendChild(el("p", "text-sm text-[#9E2A20] p-4 bg-[#FDF2F0] rounded-2xl border border-[#F3D2CC]", "Could not load approvals: " + e.message));
+    });
+  }
+
+  load();
+})();
+</script>
+{% endblock %}

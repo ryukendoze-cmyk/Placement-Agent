@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-6">
+  <!-- Page Header -->
+  <div class="editorial-card p-6 sm:p-7 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EFECE4] text-[#4A4943] text-xs font-semibold mb-2.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
+        Immutable Security Ledger
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-[#1A211D] font-serif">Audit Trail Inspector</h1>
+      <p class="text-sm text-[#57605A] mt-1">Append-only compliance ledger of every AI decision, student profile update, and human governance override.</p>
+    </div>
+  </div>
+
+  <!-- Enterprise Data Grid Card -->
+  <div class="editorial-card overflow-hidden">
+    <!-- Filter Toolbar -->
+    <div class="px-6 py-4 border-b border-[#E5E3DA] flex flex-wrap items-center justify-between gap-4 bg-[#F9F8F4]">
+      <div class="relative flex-1 min-w-[16rem]">
+        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#767F79]">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+        </div>
+        <input id="audit-filter" type="text" placeholder="Filter by action, entity ID, actor role, or payload..."
+               class="w-full pl-10 pr-4 py-2 text-xs rounded-full border border-[#D4D1C7] bg-white text-[#1A211D] placeholder:text-[#8E9690] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] transition-all font-sans" />
+      </div>
+      <span id="audit-count" class="text-xs font-mono font-semibold text-[#4A4943] tabular-nums px-3 py-1 rounded-full bg-[#EFECE4]"></span>
+    </div>
+
+    <!-- Log Table -->
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-[#F9F8F4] text-[#57605A] text-[11px] font-bold uppercase tracking-widest border-b border-[#E5E3DA]">
+          <tr>
+            <th class="px-6 py-3.5">Timestamp</th>
+            <th class="px-6 py-3.5">Action</th>
+            <th class="px-6 py-3.5">Entity</th>
+            <th class="px-6 py-3.5">Actor</th>
+            <th class="px-6 py-3.5">Payload Detail</th>
+          </tr>
+        </thead>
+        <tbody id="audit-log" class="divide-y divide-[#EDEBE3]">
+          <tr><td colspan="5" class="px-6 py-8 text-center text-xs font-mono text-[#767F79]">Loading audit records from compliance ledger...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var body = document.getElementById("audit-log");
+  var count = document.getElementById("audit-count");
+  var filter = document.getElementById("audit-filter");
+  var rows = [];
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function render() {
+    var q = (filter.value || "").toLowerCase();
+    var shown = rows.filter(function (r) {
+      if (!q) return true;
+      return (String(r.action || "") + " " + String(r.entity_type || "") + " " + String(r.entity_id || "") + " " + String(r.actor_role || "") + " " + JSON.stringify(r.detail || "")).toLowerCase().indexOf(q) >= 0;
+    });
+
+    count.textContent = shown.length + " / " + rows.length + " entries";
+
+    if (!shown.length) {
+      body.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-xs text-[#767F79]">No matching audit events found.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = shown.map(function (r) {
+      var actionBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-[#EFECE4] text-[#4A4943]">' + esc(r.action) + '</span>';
+      if ((r.action || "").indexOf("approval") >= 0) {
+        actionBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-[#FBECE9] text-[#9E2A20]">' + esc(r.action) + '</span>';
+      } else if ((r.action || "").indexOf("interview") >= 0) {
+        actionBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-[#E3F2EA] text-[#164934]">' + esc(r.action) + '</span>';
+      }
+
+      var roleBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#EFECE4] text-[#4A4943]">' + esc(r.actor_role) + '</span>';
+      if (r.actor_role === "tpo_admin") {
+        roleBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#E3F2EA] text-[#164934]">TPO Admin</span>';
+      } else if (r.actor_role === "student") {
+        roleBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#EFECE4] text-[#3B423E]">Student</span>';
+      }
+
+      var detailJson = JSON.stringify(r.detail || {});
+
+      return '<tr class="hover:bg-[#F9F8F4] transition-colors">' +
+        '<td class="px-6 py-3.5 text-xs font-mono text-[#57605A] whitespace-nowrap tabular-nums">' + esc(r.created_at) + '</td>' +
+        '<td class="px-6 py-3.5">' + actionBadge + '</td>' +
+        '<td class="px-6 py-3.5 text-xs font-mono text-[#1A211D]">' +
+          esc(r.entity_type) + ' <span class="text-[#767F79] font-normal">(' + esc(r.entity_id) + ')</span>' +
+        '</td>' +
+        '<td class="px-6 py-3.5">' + roleBadge + '</td>' +
+        '<td class="px-6 py-3.5 text-xs font-mono text-[#57605A] max-w-xs md:max-w-md truncate" title="' + esc(detailJson) + '">' +
+          esc(detailJson) +
+        '</td>' +
+      '</tr>';
+    }).join("");
+  }
+
+  fetch("/api/admin/audit?limit=200").then(function (r) {
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }).then(function (data) {
+    rows = data || [];
+    render();
+  }).catch(function (e) {
+    body.innerHTML = '<tr><td colspan="5" class="px-6 py-6 text-center text-xs text-[#9E2A20] bg-[#FDF2F0]">Could not load audit log: ' + esc(e.message) + '</td></tr>';
+  });
+
+  filter.addEventListener("input", render);
+})();
+</script>
+{% endblock %}

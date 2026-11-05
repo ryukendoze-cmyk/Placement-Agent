@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 pb-3 border-b border-[#E5E3DC]">
+  <div>
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[#1B5E43] text-xs font-semibold mb-2">
+      <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
+      Workspace
+    </div>
+    <h1 class="font-serif-display text-2xl sm:text-3xl font-semibold text-[#1C1E1B] tracking-tight">Student Cohort Directory</h1>
+    <p class="text-sm text-[#5C5A52] mt-1">Manage candidates, review readiness, and onboard new resumes with AI extraction.</p>
+  </div>
+  <div class="flex flex-wrap items-center gap-2">
+    <span class="mono inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-full bg-white border border-[#E5E3DC] text-[#1C1E1B]">
+      <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]" aria-hidden="true"></span>
+      Cohort: {{ students|length }}
+    </span>
+    <span class="mono inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[#1B5E43] font-medium">
+      AI Extraction: online
+    </span>
+    <span class="mono inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-full bg-[#EFECE4] border border-[#E2DEC9] text-[#4A483F]">
+      Taxonomy: 124 skills
+    </span>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-7">
+  <section class="lg:col-span-7">
+    <div class="editorial-card overflow-hidden">
+      <div class="px-6 py-4 border-b border-[#ECEAE2] flex items-center justify-between">
+        <div>
+          <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">All candidates</h2>
+          <p class="text-xs text-[#5C5A52] mt-0.5">Monogram, branch, year, and quick actions per student.</p>
+        </div>
+        <span class="mono text-xs px-2.5 py-1 rounded-full bg-[#EFECE4] text-[#4A483F] font-medium">{{ students|length }} total</span>
+      </div>
+      <ul class="divide-y divide-[#ECEAE2]">
+        {% for s in students %}
+        <li class="px-6 py-4 flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 hover:bg-[#FAF9F5] transition-colors">
+          <div class="flex items-center gap-3.5 min-w-0 flex-1">
+            <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[#1D5C42] text-xs font-bold shrink-0 mono" aria-hidden="true">
+              {{ s.name[:2]|upper }}
+            </span>
+            <div class="min-w-0 flex-1">
+              <a href="/students/{{ s.id }}" class="text-sm font-bold text-[#1C1E1B] hover:text-[#1D5C42] hover:underline truncate block">{{ s.name }}</a>
+              <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                {% if s.branch %}<span class="text-[11px] px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] font-semibold">{{ s.branch }}</span>{% endif %}
+                <span class="mono text-[11px] px-2.5 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">Y{{ s.year }}</span>
+                {% if s.gpa %}<span class="mono text-[11px] px-2.5 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">GPA {{ "%.2f"|format(s.gpa) }}</span>{% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-1.5 shrink-0">
+            <a href="/students/{{ s.id }}" class="inline-flex items-center justify-center text-xs font-medium px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] transition-colors whitespace-nowrap">Profile</a>
+            <a href="/students/{{ s.id }}/matches" class="inline-flex items-center justify-center text-xs font-semibold px-3 py-1.5 rounded-full bg-[#1D5C42] hover:bg-[#154531] text-white transition-colors whitespace-nowrap">Matches</a>
+            <a href="/students/{{ s.id }}/plan" class="inline-flex items-center justify-center text-xs font-medium px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] transition-colors whitespace-nowrap">Plan</a>
+          </div>
+        </li>
+        {% else %}
+        <li class="px-6 py-10 text-center">
+          <p class="text-sm text-[#5C5A52]">No students yet. Onboard your first candidate with the AI Resume card.</p>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+
+  <section class="lg:col-span-5">
+    <div class="editorial-card overflow-hidden">
+      <div class="px-6 py-4 border-b border-[#ECEAE2]">
+        <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">AI Resume Onboarding</h2>
+        <p class="text-xs text-[#5C5A52] mt-0.5">Upload a resume to auto-fill candidate metadata and extract proficiency.</p>
+      </div>
+      <form method="post" action="/upload" enctype="multipart/form-data" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-[#4A483F] uppercase tracking-wider mono mb-1.5">Resume file</label>
+          <div class="rounded-2xl border border-dashed border-[#C7C4B8] bg-[#FAF9F5] px-4 py-5 text-center hover:border-[#1D5C42] transition-colors">
+            <svg class="mx-auto text-[#1D5C42]" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+            <p class="text-xs text-[#5C5A52] mt-2">Drag &amp; drop or click to select</p>
+            <input type="file" name="file" required accept=".pdf,.docx,.txt,.text,.md,.png,.jpg,.jpeg"
+                   class="mt-2.5 block w-full text-xs text-[#4A483F] file:mr-3 file:px-3.5 file:py-1.5 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#E3F2EA] file:text-[#1B5E43] hover:file:bg-[#D1EAD9] cursor-pointer" />
+            <div class="flex flex-wrap justify-center gap-1.5 mt-3">
+              <span class="mono text-[10px] px-2 py-0.5 rounded-full border border-[#D5D2C6] bg-white text-[#5C5A52]">PDF</span>
+              <span class="mono text-[10px] px-2 py-0.5 rounded-full border border-[#D5D2C6] bg-white text-[#5C5A52]">DOCX</span>
+              <span class="mono text-[10px] px-2 py-0.5 rounded-full border border-[#D5D2C6] bg-white text-[#5C5A52]">TXT</span>
+              <span class="mono text-[10px] px-2 py-0.5 rounded-full border border-[#D5D2C6] bg-white text-[#5C5A52]">MD</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3.5">
+          <label class="block col-span-2">
+            <span class="block text-xs font-medium text-[#4A483F] mb-1">Name</span>
+            <input type="text" name="name"
+                   class="block w-full text-sm border border-[#D5D2C6] bg-[#FAF9F5] focus:bg-white rounded-xl px-3.5 py-2 focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]" />
+          </label>
+          <label class="block">
+            <span class="block text-xs font-medium text-[#4A483F] mb-1">Branch</span>
+            <input type="text" name="branch"
+                   class="block w-full text-sm border border-[#D5D2C6] bg-[#FAF9F5] focus:bg-white rounded-xl px-3.5 py-2 focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]" />
+          </label>
+          <label class="block">
+            <span class="block text-xs font-medium text-[#4A483F] mb-1">Year</span>
+            <input type="number" name="year" value="3"
+                   class="mono block w-full text-sm border border-[#D5D2C6] bg-[#FAF9F5] focus:bg-white rounded-xl px-3.5 py-2 focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]" />
+          </label>
+          <label class="block col-span-2 sm:col-span-1">
+            <span class="block text-xs font-medium text-[#4A483F] mb-1">GPA</span>
+            <input type="number" name="gpa" step="0.01" value="0"
+                   class="mono block w-full text-sm border border-[#D5D2C6] bg-[#FAF9F5] focus:bg-white rounded-xl px-3.5 py-2 focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]" />
+          </label>
+        </div>
+
+        <div id="ai-preview" class="hidden rounded-xl border border-[#C8E4D5] bg-[#F2F7F4] p-3.5">
+          <div class="flex items-center gap-2 text-xs font-semibold text-[#1B5E43]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3Z"/></svg>
+            AI-detected skills
+          </div>
+          <ul id="ai-skills" class="mono text-xs text-[#1C1E1B] space-y-1 mt-2"></ul>
+        </div>
+
+        <button type="submit" id="upload-btn"
+                class="w-full btn-primary-pill py-2.5 text-sm">
+          <span>Upload &amp; Run AI Extraction</span>
+        </button>
+      </form>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  const uploadForm = document.querySelector('form[action="/upload"]');
+  const uploadBtn = document.getElementById('upload-btn');
+  if (uploadForm && uploadBtn) {
+    uploadForm.addEventListener('submit', function (e) {
+      if (uploadBtn.disabled) {
+        e.preventDefault();
+        return;
+      }
+      uploadBtn.disabled = true;
+      uploadBtn.classList.add('opacity-75', 'cursor-not-allowed');
+      uploadBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Parsing with AI... Please wait';
+    });
+  }
+  const fileInput = document.querySelector('form[action="/upload"] input[name="file"]');
+  if (!fileInput) return;
+  const nameInput = document.querySelector('form[action="/upload"] input[name="name"]');
+  const branchInput = document.querySelector('form[action="/upload"] input[name="branch"]');
+  const yearInput = document.querySelector('form[action="/upload"] input[name="year"]');
+  const gpaInput = document.querySelector('form[action="/upload"] input[name="gpa"]');
+  const preview = document.getElementById('ai-preview');
+  const skillList = document.getElementById('ai-skills');
+
+  fileInput.addEventListener('change', async function () {
+    const file = this.files && this.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch('/api/resumes/extract', { method: 'POST', body: formData });
+      if (!res.ok) return;
+      const data = await res.json();
+      const p = data.profile || {};
+      if (nameInput && !nameInput.value.trim() && p.name) nameInput.value = p.name;
+      if (branchInput && !branchInput.value.trim() && p.branch) branchInput.value = p.branch;
+      if (yearInput && p.year != null) yearInput.value = p.year;
+      if (gpaInput && parseFloat(gpaInput.value || '0') === 0 && p.gpa != null) gpaInput.value = p.gpa;
+      if (skillList && Array.isArray(data.skills)) {
+        skillList.innerHTML = '';
+        data.skills.forEach(function (s) {
+          const li = document.createElement('li');
+          li.textContent = s.name + ' — ' + s.level;
+          skillList.appendChild(li);
+        });
+        if (data.skills.length && preview) preview.classList.remove('hidden');
+      }
+    } catch (e) {
+      /* auto-fill is progressive enhancement; ignore network errors */
+    }
+  });
+})();
+</script>
+{% endblock %}

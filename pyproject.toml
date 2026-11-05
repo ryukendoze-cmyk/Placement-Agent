@@ -1,0 +1,64 @@
+[project]
+name = "ps06"
+version = "0.1.0"
+description = "PS-06 Intelligent Placement Readiness & Career Matching Agent"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.43.123",
+    "fastapi>=0.162.0",
+    "jinja2>=3.1.6",
+    "numpy>=2.5.4",
+    "openai>=3.42.0",
+    "pgvector>=0.5.1",
+    "playwright>=1.64.1",
+    "playwright-stealth>=2.0.3",
+    "psycopg[binary]>=3.3.6",
+    "pydantic-settings>=2.16.2",
+    "pymupdf>=2.0",
+    "python-docx>=1.2.0",
+    "python-jobspy>=1.1.70",
+    "python-multipart>=0.0.33",
+    "sentence-transformers>=6.2.0",
+    "sqlmodel>=0.0.48",
+    "tenacity>=9.2.1",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1.post1",
+    "pyyaml>=6.0.2",
+    "ruff>=0.17.3",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "--basetemp=.pytest_temp"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "integration: needs local PostgreSQL",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["I001", "F401", "F841", "B008", "RUF046", "E711", "E712"]
+ignore = []
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI and Typer parameter definitions in defaults are idiomatic; exempt them.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.File",
+    "fastapi.Form",
+    "fastapi.Query",
+    "fastapi.Path",
+    "typer.Option",
+    "typer.Argument",
+]

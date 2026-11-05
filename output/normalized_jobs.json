@@ -1,0 +1,176 @@
+[
+  {
+    "id": "job-ext-a0bd30bcb6",
+    "title": "Python Developer - Backend Architecture",
+    "company": "Black & White Business Solutions",
+    "description": "About the Role : We are looking for an experienced Python Developer with 7+ years of hands-on experience in designing, developing, and maintaining scalable, high-performance applications. The ideal candidate should have strong programming skills in Python, experience with backend development, API integration, database management, and a solid understanding of software development best practices. Key Responsibilities : - Design, develop, test, and maintain scalable applications using Python. - Build and maintain backend services, RESTful APIs, and microservices. - Write clean, reusable, efficient, and well-documented code following industry best practices. - Work with relational and NoSQL databases to design schemas, optimize queries, and manage data efficiently. - Develop and integrate third-party APIs and external services. - Identify, troubleshoot, and resolve application performance issues and technical defects. - Implement unit testing, integration testing, and automated testing frameworks. - Collaborate with product managers, business analysts, frontend developers, and other stakeholders to understand requirements and deliver solutions. - Participate in code reviews and contribute to technical design discussions. - Optimize application performance, scalability, reliability, and security. - Work with CI/CD pipelines, version control systems, and deployment processes. - Contribute to application architecture, technical documentation, and continuous improvement initiatives. Required Skills and Qualifications: - 7+ years of professional experience in Python development. - Strong proficiency in Python programming, object-oriented programming, and data structures. - Hands-on experience with Python frameworks such as Django, Flask, or FastAPI. - Strong understanding of RESTful APIs, microservices architecture, and API integration. - Experience working with databases such as PostgreSQL, MySQL, MongoDB, or similar technologies. - Knowledge of ORM frameworks, database optimization, and query performance tuning. - Experience with Git and version control systems. - Familiarity with unit testing frameworks such as PyTest or unittest. - Understanding of software design principles, design patterns, and clean coding practices. - Experience with debugging, performance optimization, and production issue resolution. - Familiarity with Docker, CI/CD pipelines, and cloud platforms such as AWS, Azure, or GCP. - Strong analytical, problem-solving, and communication skills.\n\nApply URL: https://www.hirist.tech/j/python-developer-backend-architecture-1681104\nSource: hirist (Scraped via stealth_harvester)",
+    "required_skills": [
+      "python",
+      "fastapi",
+      "django",
+      "flask",
+      "rest api",
+      "mysql"
+    ],
+    "preferred_skills": [
+      "postgresql",
+      "mongodb",
+      "microservices"
+    ],
+    "experience_years": 7.0,
+    "location": "Hyderabad, Pune, Bangalore",
+    "remote": false,
+    "salary_lpa": [
+      0,
+      0
+    ],
+    "salary_disclosed": false,
+    "min_gpa": 7.0,
+    "allowed_branches": [
+      "CSE",
+      "IT",
+      "ECE"
+    ],
+    "job_url": "https://www.hirist.tech/j/python-developer-backend-architecture-1681104",
+    "source": "hirist",
+    "scraper_engine": "stealth_harvester"
+  },
+  {
+    "id": "job-ext-881a953fd9",
+    "title": "AWS Data Engineer",
+    "company": "NS Global Corporation",
+    "description": "Job Description : AWS Data Engineer Number of Positions : 2 Experience : 8 - 15 Years Work Location : Hyderabad, Bengaluru, Pune & Chennai Work Mode : Hybrid Work Timing : 11 : 00 AM to 8 : 00 PM Interview Mode : Virtual Interview Rounds : 2 Internal Rounds + 1 Client Round Required Skills & Experience : Must-Have Skills : - 8 - 15 years of overall experience in Data Engineering, with strong expertise in AWS. - Hands-on experience with AWS Lake Formation, including data governance, permissions management, and LF-Tags. - Working knowledge of Amazon Neptune, including graph data modelling and Gremlin/SPARQL query experience. - Strong experience with core AWS data services such as AWS Glue, Athena, S3, Lambda, and Redshift. - Strong proficiency in Python and SQL for data engineering and development activities. - Experience in graph database development and implementation. - Excellent communication skills and the ability to work directly with client stakeholders. Good-to-Have Skills : - Exposure to Amazon SageMaker for machine learning pipeline support. - Experience with Apache Airflow for workflow orchestration. Interview Process : - 2 Internal Interview Rounds - 1 Client Interview Round - All interview rounds will be conducted virtually.\n\nApply URL: https://www.hirist.tech/j/aws-data-engineer-1681561\nSource: hirist (Scraped via stealth_harvester)",
+    "required_skills": [
+      "python",
+      "sql",
+      "aws",
+      "airflow",
+      "machine learning"
+    ],
+    "preferred_skills": [],
+    "experience_years": 8.0,
+    "location": "Bangalore, Hyderabad, Pune, Chennai",
+    "remote": false,
+    "salary_lpa": [
+      0,
+      0
+    ],
+    "salary_disclosed": false,
+    "min_gpa": 7.0,
+    "allowed_branches": [
+      "CSE",
+      "IT",
+      "ECE"
+    ],
+    "job_url": "https://www.hirist.tech/j/aws-data-engineer-1681561",
+    "source": "hirist",
+    "scraper_engine": "stealth_harvester"
+  },
+  {
+    "id": "job-ext-7bc89fd55e",
+    "title": "AWS Data Engineer - Snowflake DB",
+    "company": "CRESCENDO GLOBAL LEADERSHIP HIRING INDIA PRIVATE L",
+    "description": "Role & Responsibilities : A Manager (Band C1) in Data Engineering serves as a critical bridge between client business goals and high-performing technical delivery. In this role, you will lead the architecture, construction, and deployment of scalable, cloud-native data pipelines and modern data warehousing solutions. You will combine hands-on expertise in Python, SQL, Snowflake, AWS, and Jenkins with technical project governance, mentoring engineers, ensuring delivery quality, and interfacing directly with key global stakeholders. Key Responsibilities : 1. Technical Delivery & Architecture (60%) : - Architect, build, and optimize enterprise-grade ELT/ETL pipelines to ingest structured and semi-structured data using Python and advanced SQL. - Design, implement, and maintain scalable cloud data warehouses using Snowflake (leveraging features like virtual warehouses, time travel, zero-copy cloning, dynamic data masking, and performance clustering). - Deploy cloud solutions utilizing AWS core services (S3, Glue, Lambda, EC2, CloudWatch, MWAA, IAM). - Establish robust automated build, test, and release processes using Jenkins CI/CD pipelines to support enterprise data pipelines. - Ensure data pipeline resilience, optimization, automated data checks, and end-to-end monitoring. 2. Team Leadership & Project Management (25%) : - Act as the C1 Tech Lead / Delivery Manager, guiding a pod of data engineers, developers, and analysts across execution lifecycles. - Perform code reviews, enforce engineering best practices, and drive continuous improvement across data integration workflows. - Estimate delivery effort, manage technical sprints, and ensure adherence to SLAs and client deliverables. - Mentor and upskill junior team members in cloud analytics and modern data stack tools. 3. Stakeholder Management & Strategy (15%) : - Collaborate with business analysts, data science teams, and client stakeholders to translate business requirements into technical architectures. - Participate in solution design discussions for new analytics opportunities and client onboarding projects. Required Technical Skills & Qualifications : - Overall Experience: 7 - 11 years in Data Engineering, Data Warehousing, and Cloud Analytics, with at least 2+ years in a lead or managerial role. - Snowflake: Expert-level experience in Snowflake design, query optimization, resource management, and secure data sharing. - SQL: Advanced mastery of complex SQL development, performance tuning, indexing strategies, analytical functions, and schema modeling (Star/Snowflake schemas). - Python: Strong proficiency in Python for building automated data pipelines, custom scripts, and data manipulation. - AWS Services: Hands-on experience with AWS data ecosystem tools (AWS S3, Glue, Lambda, CloudWatch, EMR, or Redshift). - CI/CD & DevOps: Proven track record in orchestrating deployment automation using Jenkins. - Education: B.E. / B.Tech / M.E. / M.Tech / MCA in Computer Science, Information Technology, Data Engineering, or equivalent. Good-to-Have Skills : - Experience with orchestration frameworks like Apache Airflow. - Exposure to modern analytics engineering workflows (e.g., dbt). - Certifications: Snowflake SnowPro Core/Advanced or AWS Certified Data Engineer / Solutions Architect. - Prior exposure to domain-driven analytics (Insurance, BFSI, Healthcare, or Supply Chain). Why Join EXL? : - Impact & Scale: Work with fortune 500 enterprises on mission-critical data platforms. - Continuous Growth: Structured learning tracks, cloud certification sponsorships, and clear leadership career paths. - Collaborative Culture: Work alongside world-class data scientists, consultants, and platform architects in a collaborative environment.\n\nApply URL: https://www.hirist.tech/j/aws-data-engineer-snowflake-db-1681405\nSource: hirist (Scraped via stealth_harvester)",
+    "required_skills": [
+      "python",
+      "sql",
+      "aws",
+      "etl",
+      "airflow",
+      "ci/cd"
+    ],
+    "preferred_skills": [
+      "jenkins",
+      "ci",
+      "cd",
+      "devops"
+    ],
+    "experience_years": 7.0,
+    "location": "Bangalore",
+    "remote": false,
+    "salary_lpa": [
+      0,
+      0
+    ],
+    "salary_disclosed": false,
+    "min_gpa": 7.0,
+    "allowed_branches": [
+      "CSE",
+      "IT",
+      "ECE"
+    ],
+    "job_url": "https://www.hirist.tech/j/aws-data-engineer-snowflake-db-1681405",
+    "source": "hirist",
+    "scraper_engine": "stealth_harvester"
+  },
+  {
+    "id": "job-ext-1bdacb3396",
+    "title": "AWS DevOps Engineer - Cloud Infrastructure",
+    "company": "Black & White Business Solutions",
+    "description": "AWS DevOps Engineer Qualification: Any Graduate or Above Relevant Experience: 7+ Years Job Summary: We are looking for an experienced AWS DevOps Engineer with strong expertise in AWS services, container orchestration, infrastructure automation, and cloud deployment. The ideal candidate will have hands-on experience with AWS Lambda, AWS Glue, Amazon EKS, Terraform, and Docker to build, deploy, and maintain scalable, secure, and reliable cloud infrastructure. Key Responsibilities: - Design, implement, and maintain scalable cloud infrastructure on Amazon Web Services (AWS). - Develop and manage serverless applications and workflows using AWS Lambda. - Build, configure, and maintain data integration and ETL workflows using AWS Glue. - Deploy, manage, and troubleshoot containerized applications using Docker and Amazon Elastic Kubernetes Service (EKS). - Automate infrastructure provisioning and configuration using Terraform and Infrastructure as Code (IaC) best practices. - Develop and maintain CI/CD pipelines to automate application builds, testing, deployments, and releases. - Monitor application performance, system health, and infrastructure availability using AWS monitoring and logging services. - Implement cloud security best practices, including IAM, network security, secrets management, and access controls. - Optimize cloud infrastructure for performance, scalability, reliability, and cost efficiency. - Troubleshoot deployment issues, production incidents, and infrastructure-related problems. - Collaborate with development, data engineering, and operations teams to improve deployment processes and operational efficiency. - Maintain technical documentation and follow DevOps standards and best practices. Required Skills: - 7+ years of relevant experience in DevOps, cloud infrastructure, or related engineering roles. - Strong hands-on experience with AWS services, particularly AWS Lambda and AWS Glue. - Practical experience deploying and managing applications on Amazon EKS (Elastic Kubernetes Service). - Strong knowledge of Terraform for infrastructure provisioning and automation. - Hands-on experience with Docker and containerized application deployment. - Experience creating and managing CI/CD pipelines. - Understanding of cloud networking, IAM, security, monitoring, and logging. - Strong troubleshooting, problem-solving, and communication skills.\n\nApply URL: https://www.hirist.tech/j/aws-devops-engineer-cloud-infrastructure-1681133\nSource: hirist (Scraped via stealth_harvester)",
+    "required_skills": [
+      "ci/cd",
+      "docker",
+      "kubernetes",
+      "aws",
+      "terraform",
+      "ci"
+    ],
+    "preferred_skills": [
+      "cd",
+      "devops"
+    ],
+    "experience_years": 7.0,
+    "location": "Pune, Chennai, Bangalore",
+    "remote": false,
+    "salary_lpa": [
+      0,
+      0
+    ],
+    "salary_disclosed": false,
+    "min_gpa": 7.0,
+    "allowed_branches": [
+      "CSE",
+      "IT",
+      "ECE"
+    ],
+    "job_url": "https://www.hirist.tech/j/aws-devops-engineer-cloud-infrastructure-1681133",
+    "source": "hirist",
+    "scraper_engine": "stealth_harvester"
+  },
+  {
+    "id": "job-ext-8bee2ba2f9",
+    "title": "DevOps Engineer - CI/CD Pipeline",
+    "company": "HyrMe",
+    "description": "Role Overview : We are looking for a seasoned DevOps Engineer to join our high-growth engineering team in Bangalore. In this role, you will be the backbone of our infrastructure, ensuring that our complex distributed systems remain resilient, scalable, and highly available. You will work closely with cross-functional product and development teams to bridge the gap between code and production, streamlining our deployment pipelines and optimizing cloud resource utilization. Your work will directly impact the end-user experience by minimizing downtime and accelerating the delivery of new features, ultimately driving our business growth and maintaining our competitive edge in the market. Key Responsibilities : - Architect and maintain robust CI/CD pipelines using Jenkins to automate software delivery, ensuring rapid and error-free releases for our global client base. - Manage and scale containerized environments using Docker and Kubernetes to ensure high availability and efficient resource orchestration across our cloud infrastructure. - Design and implement secure, high-performance API and WebSocket integrations to support real-time data streaming and seamless communication between microservices. - Automate infrastructure provisioning and configuration management using Ansible, reducing manual overhead and ensuring consistency across development, staging, and production environments. - Monitor, troubleshoot, and optimize AWS cloud resources to maintain optimal performance, security, and cost-efficiency for our mission-critical applications. Required Skillset : - Demonstrated expertise in managing cloud-native architectures on AWS, with a deep understanding of VPCs, IAM, and load balancing to ensure secure and scalable deployments. - Proven ability to script and automate operational tasks using Python, enabling the team to move faster and reduce technical debt. - Strong proficiency in version control workflows using Git, ensuring clean code management and seamless collaboration within large engineering teams. - Excellent problem-solving skills with the ability to communicate complex technical challenges to non-technical stakeholders, fostering a culture of transparency and collaboration. - A proactive mindset with the ability to thrive in a fast-paced, hybrid work environment in Bangalore, balancing independent ownership of projects with team-oriented goals. - A Bachelor's degree in Computer Science or a related field, complemented by 4 - 6 years of hands-on experience in building and maintaining production-grade DevOps ecosystems.\n\nApply URL: https://www.hirist.tech/j/devops-engineer-cicd-pipeline-4-6-yrs-1681036\nSource: hirist (Scraped via stealth_harvester)",
+    "required_skills": [
+      "ci/cd",
+      "docker",
+      "kubernetes",
+      "aws",
+      "jenkins",
+      "ci"
+    ],
+    "preferred_skills": [
+      "cd",
+      "devops"
+    ],
+    "experience_years": 4.0,
+    "location": "Bangalore",
+    "remote": false,
+    "salary_lpa": [
+      0,
+      0
+    ],
+    "salary_disclosed": false,
+    "min_gpa": 7.0,
+    "allowed_branches": [
+      "CSE",
+      "IT",
+      "ECE"
+    ],
+    "job_url": "https://www.hirist.tech/j/devops-engineer-cicd-pipeline-4-6-yrs-1681036",
+    "source": "hirist",
+    "scraper_engine": "stealth_harvester"
+  }
+]

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign in &middot; JKLU CareerOS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root { font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    .font-serif-display { font-family: "Fraunces", Georgia, serif; letter-spacing: -0.02em; }
+    .mono, code { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .err { background: #FDF0ED; color: #9E2A20; border: 1px solid #F5D0C8; border-radius: .75rem; padding: .6rem .85rem; margin-bottom: 1rem; font-size: .875rem; }
+  </style>
+</head>
+<body class="bg-[#F4F3EC] text-[#1C1E1B] min-h-screen flex items-center justify-center px-4 py-8">
+  <div class="w-full max-w-xl">
+    <div class="flex items-center gap-3.5 mb-6 justify-center">
+      <span class="bg-[#E3F2EA] border border-[#C8E4D5] text-[#1D5C42] rounded-2xl p-3 flex items-center justify-center">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 2 4 7v10l8 5 8-5V7l-8-5Z" />
+          <path d="M12 7 8 9.5v5L12 17l4-2.5v-5L12 7Z" />
+        </svg>
+      </span>
+      <div>
+        <p class="font-serif-display font-semibold text-2xl leading-tight text-[#1C1E1B]">JKLU CareerOS</p>
+        <p class="text-xs text-[#5C5A52] leading-snug">Autonomous Placement &middot; Institutional Portal</p>
+      </div>
+    </div>
+
+    <div class="bg-white border border-[#E5E3DC] rounded-[24px] shadow-[0_4px_20px_rgba(28,30,27,0.04)] p-6 md:p-8">
+      <h1 class="font-serif-display text-xl font-semibold text-[#1C1E1B]">Sign in with JKLU Institutional Account</h1>
+      <p class="text-sm text-[#5C5A52] mt-1">Use your official <span class="mono font-medium text-[#1D5C42]">@jklu.edu.in</span> address to access the placement portal.</p>
+
+      {% if error %}<div class="err mt-4">{{ error }}</div>{% endif %}
+
+      <form id="jklu-login" method="POST" action="/auth/login" class="mt-5 space-y-4">
+        <div>
+          <label for="email" class="block text-[11px] uppercase tracking-wider text-[#6E6C64] font-semibold mb-1.5">Institutional email</label>
+          <input id="email" name="email" type="email" required autocomplete="username"
+                 placeholder="2022btech01@jklu.edu.in"
+                 class="w-full text-sm rounded-xl border border-[#D5D2C6] bg-[#FAF9F5] focus:bg-white px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]" />
+        </div>
+        <button type="submit"
+                class="w-full inline-flex items-center justify-center text-sm font-semibold px-5 py-2.5 rounded-full bg-[#1D5C42] hover:bg-[#154531] text-white transition-colors cursor-pointer whitespace-nowrap">
+          Sign in with JKLU Institutional Account
+        </button>
+      </form>
+
+      {% if students and students|length > 0 %}
+      <div class="mt-6 pt-5 border-t border-[#ECEAE2]">
+        <div class="flex items-center justify-between mb-2.5">
+          <p class="text-[11px] uppercase tracking-wider text-[#6E6C64] font-bold">Student personas (institutional cohort)</p>
+          <span class="mono text-[10px] px-2.5 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">{{ students|length }} enrolled</span>
+        </div>
+        <div id="student-personas" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+          {% for s in students %}
+          <div class="student-persona-card p-3.5 rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] hover:bg-[#F2F7F4] flex items-center justify-between gap-3 transition-colors">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <p class="text-sm font-bold text-[#1C1E1B] truncate">{{ s.name }}</p>
+                {% if s.branch %}
+                <span class="mono text-[10px] px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5] shrink-0 font-semibold">{{ s.branch }}</span>
+                {% endif %}
+              </div>
+              <p class="mono text-[11px] text-[#5C5A52] mt-0.5">ID: <span class="text-[#1C1E1B]">{{ s.id }}</span> &middot; {{ s.id }}@jklu.edu.in</p>
+            </div>
+            <button type="button" class="student-fast-btn text-xs px-4 py-1.5 rounded-full bg-[#1D5C42] hover:bg-[#154531] text-white font-semibold transition-colors cursor-pointer shrink-0 inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
+                    data-role="student"
+                    data-student-id="{{ s.id }}"
+                    data-name="{{ s.name }}"
+                    data-department="{{ s.branch }}"
+                    data-email="{{ s.id }}@jklu.edu.in">
+              <span>Fast Login</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="mt-6 pt-5 border-t border-[#ECEAE2]">
+        <p class="text-[11px] uppercase tracking-wider text-[#6E6C64] mb-2.5 font-bold">Institutional role fast login</p>
+        <div id="fast-login" class="grid grid-cols-3 gap-2">
+          <button type="button" class="fast-role-btn inline-flex items-center justify-center text-xs px-3 py-2 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] font-semibold cursor-pointer whitespace-nowrap"
+                  data-role="student" data-email="{% if students and students|length > 0 %}{{ students[0].id }}@jklu.edu.in{% else %}2022btech01@jklu.edu.in{% endif %}"
+                  {% if students and students|length > 0 %}data-student-id="{{ students[0].id }}" data-name="{{ students[0].name }}" data-department="{{ students[0].branch }}"{% endif %}>student</button>
+          <button type="button" class="fast-role-btn inline-flex items-center justify-center text-xs px-3 py-2 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] font-semibold cursor-pointer whitespace-nowrap"
+                  data-role="faculty_mentor" data-email="faculty@jklu.edu.in">faculty_mentor</button>
+          <button type="button" class="fast-role-btn inline-flex items-center justify-center text-xs px-3 py-2 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] font-semibold cursor-pointer whitespace-nowrap"
+                  data-role="tpo_admin" data-email="tpo@jklu.edu.in">tpo_admin</button>
+        </div>
+        <p class="text-[11px] text-[#7A776E] mt-2">One-click demo selector for evaluation and development.</p>
+      </div>
+    </div>
+
+    <p class="text-center text-[11px] text-[#7A776E] mt-4">JKLU CareerOS &middot; PS-06 Placement Agent</p>
+  </div>
+
+  <script>
+    (function () {
+      function postLogin(email, role, studentId, name, department) {
+        var payload = { email: email, role: role };
+        if (studentId) payload.student_id = studentId;
+        if (name) payload.name = name;
+        if (department) payload.department = department;
+        fetch("/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          window.location.href = "/";
+        }).catch(function () {
+          window.location.href = "/login";
+        });
+      }
+
+      var form = document.getElementById("jklu-login");
+      if (form) form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var email = (document.getElementById("email").value || "").trim();
+        if (email) postLogin(email, null, null, null, null);
+      });
+
+      document.querySelectorAll("#fast-login .fast-role-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          postLogin(
+            btn.getAttribute("data-email"),
+            btn.getAttribute("data-role"),
+            btn.getAttribute("data-student-id"),
+            btn.getAttribute("data-name"),
+            btn.getAttribute("data-department")
+          );
+        });
+      });
+
+      document.querySelectorAll(".student-fast-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          postLogin(
+            btn.getAttribute("data-email"),
+            btn.getAttribute("data-role") || "student",
+            btn.getAttribute("data-student-id"),
+            btn.getAttribute("data-name"),
+            btn.getAttribute("data-department")
+          );
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

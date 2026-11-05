@@ -1,0 +1,52 @@
+<div id="job-description" class="profile-block"
+     
+     ng-cloak>
+
+    
+
+    <h2 class="profile-block-heading" ng-click="toggleSection('description')" ng-if="!showNewJobModal">
+        <img class="section-icon" src="https://static.instahyre.com/new-static/svg/design_system_icons/checklist-yellow.svg" alt="">
+        Job Description
+        <span ng-if="isOpenedInMobile"
+              >
+            <i ng-if="!showSections.description"
+               class="fa fa-angle-down expand-icon"></i>
+            <i ng-if="showSections.description"
+               class="fa fa-angle-up expand-icon"></i>
+        </span>
+    </h2>
+    <div class="entries short-paragraph" ng-show="!isOpenedInMobile || showSections.description">
+        <div class="entry">
+            <p>
+                
+
+                <span class="bold-text">
+                    Function:
+                </span>
+
+                
+                        
+                            <span>Software Engineering</span> <span ng-class="{'elevate-up' : isChromeBrowser}">&rarr;</span> <span>Backend Development, Full-Stack Development, Other Software Development</span>
+                        
+                
+            </p>
+            <div  class="skills-container" ng-class="{
+                'opacity-hide': isSkillsReady['description'] !== undefined && !isSkillsReady['description'],
+                'opacity-show': isSkillsReady['description'] !== undefined && isSkillsReady['description']}">
+                <ul id="job-skills-description"
+                    class="tags"
+                    ng-init="checkSkillsOverflow('description')"
+                    ng-class="{
+                        'job-description-skills': hideSkills['description']
+                    }">
+                    <li id="expand-skills-description"
+                        
+                        ng-if="isSkillsOverflow['description']"
+                        ng-click="unhideSkills($event, 'description')">
+                        [[ '+' + hiddenSkillsCount['description'] + ' more' ]]
+                    </li>
+                    
+                        <li>Backend</li><li>FastAPI</li><li>Python</li>
+                    
+                </ul>
+            </div>

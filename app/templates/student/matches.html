@@ -1,0 +1,1918 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .match-card.master-inactive {
+    display: none;
+  }
+  .master-nav-item {
+    background-color: #FFFFFF;
+    border: 1.5px solid #E5E3DC;
+    border-radius: 1.15rem;
+    padding: 1rem 1.1rem;
+    transition: all 0.16s ease;
+    cursor: pointer;
+  }
+  .master-nav-item:hover {
+    border-color: #B7C9BF;
+    background-color: #FCFBF8;
+  }
+  .master-nav-item.active-master {
+    border-color: #1D5C42;
+    background-color: #FAFDFB;
+    box-shadow: 0 4px 16px rgba(29, 92, 66, 0.08);
+  }
+</style>
+
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-wrap items-end justify-between gap-4 pb-3 border-b border-[#E5E3DC]">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[#1B5E43] text-xs font-semibold mb-2">
+        <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
+        Algorithmic Career Alignment
+      </div>
+      <h1 class="font-serif-display text-2xl sm:text-3xl font-semibold tracking-tight text-[#1C1E1B]">Explainable Job Matches</h1>
+      <p class="text-sm text-[#5C5A52] mt-1">Hybrid lexical, dense semantic vector, and skill-graph alignment with grounded resume evidence.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2.5">
+      <button id="open-scrape-modal" type="button"
+              class="btn-secondary-pill text-xs px-4 py-2">
+        <svg class="w-3.5 h-3.5 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" />
+        </svg>
+        <span>Fetch Live Jobs</span>
+      </button>
+      {% if has_matches %}
+      <button hx-get="/api/students/{{ sid }}/matches" hx-indicator="#rerun-spinner" hx-on::after-request="location.reload()"
+              class="btn-primary-pill text-xs px-4 py-2">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+        <span>Re-run matching</span>
+      </button>
+      <span id="rerun-spinner" class="htmx-indicator ml-1 text-xs font-mono text-[#5C5A52]">Computing...</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not has_matches %}
+  <!-- Empty State -->
+  <div class="editorial-card p-12 text-center max-w-xl mx-auto">
+    <div class="w-14 h-14 rounded-2xl bg-[#E3F2EA] text-[#1D5C42] mx-auto flex items-center justify-center mb-4">
+      <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672ZM12 2.25V4.5m5.834.166-1.591 1.591M20.25 10.5H18M7.757 14.743l-1.59 1.59M6 10.5H3.75m4.007-4.243-1.59-1.59"/></svg>
+    </div>
+    <h2 class="font-serif-display text-xl font-semibold text-[#1C1E1B] mb-1.5">No job matches computed yet</h2>
+    <p class="text-xs text-[#5C5A52] leading-relaxed mb-6">Execute the hybrid matching engine to index your candidate skills against active campus placement opportunities.</p>
+    <button hx-get="/api/students/{{ sid }}/matches" hx-indicator="#run" hx-on::after-request="location.reload()"
+            class="btn-primary-pill px-5 py-2.5">
+      <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"/></svg>
+      <span>Run matching</span>
+    </button>
+    <div id="run" class="htmx-indicator mt-3 text-xs font-mono text-[#5C5A52]">Evaluating role taxonomies...</div>
+  </div>
+  {% else %}
+
+  <!-- 8-Dimension Client-Side Filtering & Sorting Suite (ARCHITECTURE §16.2.C) -->
+  <div class="editorial-card p-5 md:p-6 space-y-4">
+    <!-- Row 1: Search & Segmented Quick Tabs -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#ECEAE2]">
+      <!-- Dim 1: Full-Text Keyword Search -->
+      <div class="relative flex-1 max-w-lg">
+        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#7A776E]">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+        </div>
+        <input id="filter-search" type="text"
+               class="w-full pl-10 pr-9 py-2 text-xs border border-[#D5D2C6] rounded-full bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] text-[#1C1E1B] placeholder:text-[#7A776E] font-sans transition-all"
+               placeholder="Search by role, company, location, or skill..." />
+        <button id="clear-search-btn" type="button" aria-label="Clear search"
+                class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-[#7A776E] hover:text-[#1C1E1B] cursor-pointer">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Segmented Opportunity Quick Tabs & Fresher Filter Pill -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex items-center gap-1 p-1 bg-[#F4F3EC] rounded-full border border-[#E2DEC9] w-fit text-xs font-semibold shrink-0">
+          <button type="button" class="match-tab-btn active px-3.5 py-1.5 rounded-full bg-white text-[#1C1E1B] shadow-2xs border border-[#D5D2C6] transition-all inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap" data-filter="all">
+            <span>All Opportunities</span>
+            <span id="count-all" class="px-1.5 py-0.5 rounded-full font-mono text-[11px] bg-[#EFECE4] text-[#1C1E1B] font-bold">0</span>
+          </button>
+          <button type="button" class="match-tab-btn px-3.5 py-1.5 rounded-full text-[#5C5A52] hover:text-[#1C1E1B] transition-all inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap" data-filter="live">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
+            <span>Live Market</span>
+            <span id="count-live" class="px-1.5 py-0.5 rounded-full font-mono text-[11px] bg-[#E3F2EA] text-[#1B5E43] font-bold">0</span>
+          </button>
+          <button type="button" class="match-tab-btn px-3.5 py-1.5 rounded-full text-[#5C5A52] hover:text-[#1C1E1B] transition-all inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap" data-filter="local">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#4A483F]"></span>
+            <span>On-Campus</span>
+            <span id="count-local" class="px-1.5 py-0.5 rounded-full font-mono text-[11px] bg-[#EFECE4] text-[#4A483F] font-bold">0</span>
+          </button>
+        </div>
+
+        <button id="filter-fresher-pill" type="button" class="px-3.5 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] transition-all inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold whitespace-nowrap" data-active="false">
+          <input id="filter-fresher-checkbox" type="checkbox" class="rounded border-[#C7C4B8] text-[#1D5C42] focus:ring-[#1D5C42] cursor-pointer pointer-events-none" />
+          <span>Fresher Roles Only</span>
+          <span id="count-fresher" class="px-1.5 py-0.5 rounded-full font-mono text-[11px] bg-[#EFECE4] text-[#1C1E1B] font-bold">0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Row 2: Four Core Dropdown Dimensions Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+      <!-- Dim 2: Salary Range & Disclosed Toggle -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label for="filter-salary" class="font-bold text-[#4A483F] uppercase tracking-wider font-mono text-[11px]">Salary (LPA)</label>
+          <label class="inline-flex items-center gap-1.5 text-[11px] text-[#5C5A52] cursor-pointer font-medium">
+            <input id="filter-disclosed-only" type="checkbox" class="rounded border-[#C7C4B8] text-[#1D5C42] focus:ring-[#1D5C42] cursor-pointer" />
+            <span>Disclosed Only</span>
+          </label>
+        </div>
+        <select id="filter-salary" class="w-full px-3 py-2 text-xs border border-[#D5D2C6] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] text-[#1C1E1B] bg-[#FAF9F5]">
+          <option value="all">Any Salary</option>
+          <option value="lt6">&lt; 6 LPA</option>
+          <option value="6-10">6 – 10 LPA</option>
+          <option value="10-15">10 – 15 LPA (Dream)</option>
+          <option value="15-25">15 – 25 LPA (Super Dream)</option>
+          <option value="gte25">25+ LPA (Top Tier)</option>
+        </select>
+      </div>
+
+      <!-- Dim 4: Eligibility & Match Score Bands -->
+      <div class="space-y-1.5">
+        <label class="block font-bold text-[#4A483F] uppercase tracking-wider font-mono text-[11px]">Eligibility &amp; Score</label>
+        <div class="grid grid-cols-2 gap-2">
+          <select id="filter-eligibility" class="w-full px-2.5 py-2 text-xs border border-[#D5D2C6] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] text-[#1C1E1B] bg-[#FAF9F5]">
+            <option value="all">All Eligibility</option>
+            <option value="true">Eligible Only</option>
+            <option value="false">Not Eligible</option>
+          </select>
+          <select id="filter-band" class="w-full px-2.5 py-2 text-xs border border-[#D5D2C6] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] text-[#1C1E1B] bg-[#FAF9F5]">
+            <option value="all">All Scores</option>
+            <option value="strong">Strong (80%+)</option>
+            <option value="moderate">Good (60-79%)</option>
+            <option value="developing">Developing (&lt;60%)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Dim 5: Location & Work Mode -->
+      <div class="space-y-1.5">
+        <label class="block font-bold text-[#4A483F] uppercase tracking-wider font-mono text-[11px]">Location &amp; Mode</label>
+        <div class="grid grid-cols-2 gap-2">
+          <select id="filter-location" class="w-full px-2.5 py-2 text-xs border border-[#D5D2C6] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] text-[#1C1E1B] bg-[#FAF9F5]">
+            <option value="all">All Locations</option>
+            <option value="bengaluru">Bengaluru</option>
+            <option value="hyderabad">Hyderabad</option>
+            <option value="pune">Pune</option>
+            <option value="delhi">Delhi NCR</option>
+            <option value="mumbai">Mumbai</option>
+            <option value="chennai">Chennai</option>
+            <option value="remote">Remote</option>
+            <option value="other">Other</option>
+          </select>
+          <select id="filter-mode" class="w-full px-2.5 py-2 text-xs border border-[#D5D2C6] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] text-[#1C1E1B] bg-[#FAF9F5]">
+            <option value="all">All Modes</option>
+            <option value="remote">Remote Only</option>
+            <option value="hybrid">Hybrid</option>
+            <option value="on_site">On-site</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Dim 6: Experience Level -->
+      <div class="space-y-1.5">
+        <label for="filter-exp" class="block font-bold text-[#4A483F] uppercase tracking-wider font-mono text-[11px]">Experience Level</label>
+        <select id="filter-exp" class="w-full px-3 py-2 text-xs border border-[#D5D2C6] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] text-[#1C1E1B] bg-[#FAF9F5]">
+          <option value="all">All Experience Levels</option>
+          <option value="0-1">Fresher / Entry (0-1 yrs)</option>
+          <option value="1-3">Junior (1-3 yrs)</option>
+          <option value="3-5">Mid-Level (3-5 yrs)</option>
+          <option value="5+">Senior (5+ yrs)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Row 3: Dim 3 - Hiring Portals Multi-Select Filter Pills -->
+    <div class="pt-3 border-t border-[#ECEAE2] space-y-2">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-[#4A483F] uppercase tracking-wider font-mono text-[11px]">Hiring Portals:</span>
+          <span id="portal-selected-summary" class="text-[11px] font-mono text-[#7A776E]">All 9 active</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-medium">
+          <button id="btn-portal-all" type="button" class="px-2.5 py-0.5 rounded-full text-[#1D5C42] hover:bg-[#E3F2EA] cursor-pointer whitespace-nowrap">Select All</button>
+          <span class="text-[#C7C4B8]">&middot;</span>
+          <button id="btn-portal-none" type="button" class="px-2.5 py-0.5 rounded-full text-[#5C5A52] hover:bg-[#EFECE4] cursor-pointer whitespace-nowrap">Deselect All</button>
+          <span class="text-[#C7C4B8]">&middot;</span>
+          <button id="btn-portal-scraped" type="button" class="px-2.5 py-0.5 rounded-full text-[#1B5E43] hover:bg-[#E3F2EA] cursor-pointer whitespace-nowrap">Scraped Only</button>
+          <span class="text-[#C7C4B8]">&middot;</span>
+          <button id="btn-portal-campus" type="button" class="px-2.5 py-0.5 rounded-full text-[#4A483F] hover:bg-[#EFECE4] cursor-pointer whitespace-nowrap">Campus Only</button>
+        </div>
+      </div>
+      <div id="portal-pills" class="flex flex-wrap gap-1.5">
+        <!-- Rendered via JS to include dynamic counts -->
+      </div>
+    </div>
+
+    <!-- Row 4: Dim 7 - Dynamic Skill Match Cloud -->
+    <div class="pt-3 border-t border-[#ECEAE2] space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="font-bold text-[#4A483F] uppercase tracking-wider font-mono text-[11px]">Skill Competencies:</span>
+        <span id="skills-selected-hint" class="text-[11px] font-mono text-[#7A776E]">Click chips to filter (match any)</span>
+      </div>
+      <div id="skill-cloud" class="flex flex-wrap gap-1.5">
+        <!-- Python, FastAPI, React, Docker, SQL, AWS, Machine Learning, PostgreSQL, TypeScript, Git -->
+      </div>
+    </div>
+
+    <!-- Row 5: Dim 8 - Sorting & Sticky Counter Bar -->
+    <div class="pt-3 border-t border-[#ECEAE2] flex flex-wrap items-center justify-between gap-3 bg-[#FAF9F5] p-3 rounded-xl border border-[#E5E3DC]">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="font-medium text-[#4A483F] text-xs">
+          Showing <span id="visible-matches-count" class="font-bold font-mono text-[#1D5C42]">0</span> of <span id="total-matches-count" class="font-bold font-mono text-[#1C1E1B]">0</span> opportunities
+        </span>
+        <span id="active-filters-badge" class="hidden inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">
+          <span id="active-filter-count">0</span> filters active
+        </span>
+      </div>
+      <div class="flex flex-wrap items-center gap-2.5">
+        <div class="flex items-center gap-1.5">
+          <label for="filter-sort" class="text-[11px] font-semibold uppercase tracking-wider text-[#5C5A52] font-mono">Sort By:</label>
+          <select id="filter-sort" class="px-3 py-1.5 text-xs border border-[#D5D2C6] rounded-full focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] text-[#1C1E1B] bg-white font-medium cursor-pointer">
+            <option value="score_desc" selected>Composite Fit (High to Low)</option>
+            <option value="salary_desc">Salary (High to Low)</option>
+            <option value="salary_asc">Salary (Low to High)</option>
+            <option value="date_desc">Posting Date (Newest)</option>
+            <option value="company_asc">Company Name (A-Z)</option>
+          </select>
+        </div>
+        <button id="btn-reset-filters" type="button" class="btn-secondary-pill text-xs px-3.5 py-1.5">
+          <svg class="w-3.5 h-3.5 text-[#5C5A52] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+          </svg>
+          <span>Reset All Filters</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Master-Detail Layout matching Editorial Reference -->
+  <div class="flex flex-col lg:flex-row items-start gap-6">
+    <!-- Left Column: Numbered Master Selector List -->
+    <div id="master-list-column" class="w-full lg:w-[340px] xl:w-[370px] shrink-0 space-y-3 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1">
+      {% for c in cards %}
+      {% set is_live = (c.job and c.job.source in ("linkedin", "naukri", "indeed", "live", "foundit", "internshala", "unstop", "instahyre", "hirist")) or (c.source in ("linkedin", "naukri", "indeed", "live", "foundit", "internshala", "unstop", "instahyre", "hirist")) or (c.job and c.job.id and c.job.id.startswith("job-ext-")) or (c.job_id and c.job_id.startswith("job-ext-")) %}
+      {% set src_label = (c.job.source if c.job else c.source)|default('Live')|capitalize %}
+      {% set score_clamped = 100 if c.score > 100 else (0 if c.score < 0 else c.score) %}
+      <div class="master-nav-item {% if loop.first %}active-master{% endif %}"
+           data-master-for="{{ c.job_id }}"
+           data-master-index="{{ loop.index0 }}"
+           onclick="selectMasterCard('{{ c.job_id }}')">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-start gap-3 min-w-0 flex-1">
+            <span class="master-idx-num mono text-xs text-[#6E6C64] font-medium pt-1 shrink-0 w-5">{% if loop.index < 10 %}0{{ loop.index }}{% else %}{{ loop.index }}{% endif %}</span>
+            <div class="min-w-0 flex-1">
+              <h3 class="text-sm font-bold text-[#1C1E1B] truncate leading-snug">{{ c.title }}</h3>
+              <p class="text-xs text-[#5C5A52] truncate mt-0.5">{{ c.company }} &middot; {{ c.location }}</p>
+              <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                {% if is_live %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#E3F2EA] text-[#1B5E43] whitespace-nowrap">
+                  Live &middot; {{ src_label }}
+                </span>
+                {% else %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#EFECE4] text-[#4A483F] whitespace-nowrap">
+                  On-Campus
+                </span>
+                {% endif %}
+                {% if not c.eligible %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FDECE9] text-[#9E2A20] whitespace-nowrap">
+                  Not eligible
+                </span>
+                {% else %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#E3F2EA] text-[#1B5E43] whitespace-nowrap">
+                  Eligible
+                </span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <!-- Mini SVG Circular Score Ring -->
+          <div class="relative w-11 h-11 shrink-0 flex items-center justify-center">
+            <svg class="w-11 h-11 -rotate-90" viewBox="0 0 44 44" aria-hidden="true">
+              <circle cx="22" cy="22" r="18" fill="none" stroke="#E5E3DC" stroke-width="3.5" />
+              <circle class="master-ring-arc" cx="22" cy="22" r="18" fill="none" stroke="#1D5C42" stroke-width="3.5" stroke-linecap="round"
+                      stroke-dasharray="113.1" stroke-dashoffset="{{ (113.1 * (100 - score_clamped) / 100)|round(1) }}" />
+            </svg>
+            <span class="absolute font-serif-display text-xs font-bold text-[#1C1E1B] tabular-nums">{{ c.score }}</span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Right Column: Match Cards Stream Container (Detail Pane) -->
+    <div id="cards-container" class="flex-1 min-w-0 w-full space-y-6">
+      {% for c in cards %}
+      {% set is_live = (c.job and c.job.source in ("linkedin", "naukri", "indeed", "live", "foundit", "internshala", "unstop", "instahyre", "hirist")) or (c.source in ("linkedin", "naukri", "indeed", "live", "foundit", "internshala", "unstop", "instahyre", "hirist")) or (c.job and c.job.id and c.job.id.startswith("job-ext-")) or (c.job_id and c.job_id.startswith("job-ext-")) %}
+      {% set job_src = ((c.job.source if c.job else c.source)|default('local'))|lower %}
+      {% set card_sal_min = c.salary_lpa[0] if (c.salary_lpa and c.salary_lpa|length >= 1) else 0 %}
+      {% set card_sal_max = c.salary_lpa[1] if (c.salary_lpa and c.salary_lpa|length >= 2) else (c.salary_lpa[0] if (c.salary_lpa and c.salary_lpa|length == 1) else 0) %}
+      {% set is_disclosed = (c.job.salary_disclosed if c.job else c.salary_disclosed) and c.salary_lpa and c.salary_lpa|length >= 2 and c.salary_lpa[0] > 0 %}
+      {% set card_loc = (c.location|default(''))|lower %}
+      {% set card_mode = 'remote' if (c.remote or (c.job and c.job.remote) or 'remote' in card_loc) else ('hybrid' if 'hybrid' in card_loc else 'on_site') %}
+      {% set card_exp = c.experience_years|default(0) %}
+      {% set card_skills = ((c.job.required_skills if c.job and c.job.required_skills else []) + (c.matched_required|map(attribute='0')|list if c.matched_required else []) + (c.missing_required if c.missing_required else []))|join(',')|lower %}
+      {% set card_date = c.created_at|default('') %}
+      {% set is_fresher_val = (c.is_fresher if c.is_fresher is defined else (c.job.is_fresher if c.job and c.job.is_fresher is defined else true)) %}
+      {% set score_clamped = 100 if c.score > 100 else (0 if c.score < 0 else c.score) %}
+      <div class="match-card job-card {% if not loop.first %}master-inactive{% endif %} bg-white rounded-[24px] border border-[#E5E3DC] shadow-[0_4px_20px_rgba(28,30,27,0.04)] p-6 md:p-8 transition-all"
+           data-job-id="{{ c.job_id }}"
+           data-fresher="{% if is_fresher_val %}true{% else %}false{% endif %}"
+           data-job-type="{% if is_live %}live{% else %}local{% endif %}"
+           data-source="{{ job_src }}"
+           data-title="{{ c.title|lower }}"
+           data-company="{{ c.company|lower }}"
+           data-location="{{ card_loc }}"
+           data-salary-min="{{ card_sal_min }}"
+           data-salary-max="{{ card_sal_max }}"
+           data-salary-disclosed="{% if is_disclosed %}true{% else %}false{% endif %}"
+           data-eligible="{% if c.eligible %}true{% else %}false{% endif %}"
+           data-score="{{ c.score }}"
+           data-match-score="{{ c.score }}"
+           data-band="{{ c.band|lower }}"
+           data-tier="{{ c.tier|lower }}"
+           data-work-mode="{{ card_mode }}"
+           data-exp="{{ card_exp }}"
+           data-exp-years="{{ card_exp }}"
+           data-skills="{{ card_skills }}"
+           data-date="{{ card_date }}">
+        <!-- Top Header: Metadata Pills, Title, Subtitle & Circular Composite Fit Gauge -->
+        <div class="flex flex-col md:flex-row md:items-start justify-between gap-6">
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-3">
+              {% if is_live %}
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#E3F2EA] text-[#1B5E43] whitespace-nowrap">
+                Live market &middot; {{ (c.job.source if c.job else c.source)|default('Live')|capitalize }}
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#E3F2EA] text-[#1B5E43] whitespace-nowrap">
+                On-Campus &middot; JKLU
+              </span>
+              {% endif %}
+
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#EFECE4] text-[#4A483F] whitespace-nowrap">
+                {{ c.tier|replace('_', ' ')|capitalize }}
+              </span>
+
+              {% set job_engine = (c.job.scraper_engine if c.job else c.scraper_engine)|default('') %}
+              {% set job_source = ((c.job.source if c.job else c.source)|default(''))|lower %}
+              {% if job_engine == 'stealth_harvester' or job_source in ['naukri', 'linkedin', 'indeed', 'foundit', 'internshala', 'unstop', 'instahyre', 'hirist'] %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-medium bg-[#EFECE4] text-[#4A483F] whitespace-nowrap" title="Harvested via 8-Portal Stealth Engine">
+                stealth_harvester
+              </span>
+              {% elif job_engine and job_engine != 'local' %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-medium bg-[#EFECE4] text-[#4A483F] whitespace-nowrap">
+                {{ job_engine }}
+              </span>
+              {% endif %}
+            </div>
+
+            <h2 class="font-serif-display text-2xl sm:text-3xl font-semibold text-[#1C1E1B] tracking-tight leading-tight">
+              {{ c.title }}
+            </h2>
+
+            <p class="text-sm text-[#5C5A52] mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              <span>{{ c.company }}</span>
+              <span class="text-[#B8B4A6]">&middot;</span>
+              <span>{{ c.location }}</span>
+              <span class="text-[#B8B4A6]">&middot;</span>
+              {% if (c.job.salary_disclosed if c.job else c.salary_disclosed) and c.salary_lpa and c.salary_lpa|length >= 2 and c.salary_lpa[0] > 0 %}
+                <span class="font-medium text-[#1C1E1B]">
+                  {% if c.salary_lpa[0] == c.salary_lpa[1] %}
+                    {{ c.salary_lpa[0] }} LPA
+                  {% else %}
+                    {{ c.salary_lpa[0] }}–{{ c.salary_lpa[1] }} LPA
+                  {% endif %}
+                </span>
+              {% else %}
+                <span>Salary not disclosed</span>
+                <span class="text-slate-400 font-mono text-[11px] italic sr-only">Not Disclosed</span>
+              {% endif %}
+            </p>
+          </div>
+
+          <!-- Circular Score Gauge + COMPOSITE FIT -->
+          <div class="flex items-center gap-3.5 shrink-0">
+            <div class="relative w-[72px] h-[72px] flex items-center justify-center shrink-0">
+              <svg class="w-[72px] h-[72px] -rotate-90" viewBox="0 0 72 72" aria-hidden="true">
+                <circle cx="36" cy="36" r="30" fill="none" stroke="#E5E3DC" stroke-width="5.5" />
+                <circle cx="36" cy="36" r="30" fill="none" stroke="#1D5C42" stroke-width="5.5" stroke-linecap="round"
+                        stroke-dasharray="188.5" stroke-dashoffset="{{ (188.5 * (100 - score_clamped) / 100)|round(1) }}" />
+              </svg>
+              <span class="absolute font-serif-display text-2xl font-semibold text-[#1C1E1B] tabular-nums">{{ c.score }}</span>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase font-semibold tracking-widest text-[#6E6C64]">Composite Fit</p>
+              <p class="text-base font-bold text-[#1D5C42] leading-tight mt-0.5">{{ c.band|capitalize }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pill Action Buttons Row (Strictly Contained Inside Button Boxes) -->
+        <div class="mt-5 flex flex-wrap items-center gap-3">
+          <button type="button"
+                  onclick="genPlan('{{ sid }}','{{ c.job_id }}', this)"
+                  data-job="{{ c.job_id }}"
+                  class="btn-primary-pill px-5 py-2.5 text-xs">
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.25"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+            <span>Generate plan for this job</span>
+          </button>
+
+          {% if is_live and (c.job.job_url if c.job else c.job_url) %}
+          <a href="{{ (c.job.job_url if c.job else c.job_url) }}" target="_blank" rel="noopener noreferrer"
+             class="btn-secondary-pill px-5 py-2.5 text-xs">
+            <span>View on {{ (c.job.source if c.job else c.source)|default('Live')|capitalize }}</span>
+            <svg class="w-3.5 h-3.5 text-[#5C5A52] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+          </a>
+          {% endif %}
+
+          <button type="button"
+                  onclick="applyJob('{{ sid }}','{{ c.job_id }}', '{{ c.eligible|lower }}', this)"
+                  data-job="{{ c.job_id }}"
+                  class="btn-secondary-pill px-5 py-2.5 text-xs">
+            <svg class="w-3.5 h-3.5 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+            <span>{% if c.eligible %}Apply / Nominate{% else %}Request Waiver (HITL){% endif %}</span>
+          </button>
+        </div>
+
+        <!-- Eligibility Callout Banner -->
+        {% if not c.eligible %}
+        <div class="mt-6 rounded-2xl bg-[#FDF0ED] border border-[#F5D0C8] px-5 py-4 flex items-start gap-3.5">
+          <svg class="w-5 h-5 text-[#9E2A20] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4.5m0 3h.01" />
+          </svg>
+          <div class="min-w-0">
+            <p class="text-xs font-bold text-[#9E2A20]">Not eligible for this role</p>
+            <p class="text-xs text-[#8A3B32] mt-0.5 leading-relaxed">
+              {{ c.eligibility_reasons|join(' · ') if c.eligibility_reasons else 'Policy eligibility criteria not met for this role.' }}
+            </p>
+          </div>
+        </div>
+        {% else %}
+        <div class="mt-6 rounded-2xl bg-[#F2F7F4] border border-[#DCE8E1] px-5 py-3.5 flex items-center gap-3">
+          <svg class="w-4 h-4 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.25">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+          </svg>
+          <p class="text-xs font-semibold text-[#1B5E43]">Eligible for this role under JKLU placement policy</p>
+        </div>
+        {% endif %}
+
+        <!-- 3-Column Explainability Grid -->
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-5">
+          <!-- 1. Matched Required -->
+          <div>
+            <h3 class="text-[11px] font-bold uppercase tracking-wider text-[#1D5C42] mb-3">
+              Matched required &middot; {{ c.matched_required|length }}
+            </h3>
+            <div class="space-y-2.5">
+              {% for s, ev in c.matched_required %}
+              <div class="rounded-xl bg-[#F2F7F4] border border-[#DCE8E1] p-3.5">
+                <p class="text-xs font-bold text-[#1C1E1B]">{{ s }}</p>
+                {% if ev %}
+                <p class="text-xs text-[#4A5550] italic mt-1.5 leading-relaxed">&ldquo;{{ ev }}&rdquo;</p>
+                {% else %}
+                <p class="text-xs text-[#6E6C64] italic mt-1.5 leading-relaxed">Verified in candidate profile</p>
+                {% endif %}
+              </div>
+              {% else %}
+              <div class="rounded-xl bg-[#F9F8F4] border border-dashed border-[#DCD9CE] p-3.5 text-xs text-[#6E6C64]">
+                No required competencies matched.
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- 2. Missing Required -->
+          <div>
+            <h3 class="text-[11px] font-bold uppercase tracking-wider text-[#6E6C64] mb-3">
+              Missing required &middot; {{ c.missing_required|length }}
+            </h3>
+            {% if c.missing_required %}
+            <div class="flex flex-wrap gap-2">
+              {% for s in c.missing_required %}
+              <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-[#FDECE9] text-[#9E2A20] border border-[#F5D0C8]">
+                {{ s }}
+              </span>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="rounded-xl bg-[#F9F8F4] border border-dashed border-[#DCD9CE] p-3.5 flex items-center gap-2 text-xs text-[#4A483F]">
+              <svg class="w-4 h-4 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.25">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+              </svg>
+              <span>No required gaps</span>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- 3. Preferred -->
+          <div>
+            <h3 class="text-[11px] font-bold uppercase tracking-wider text-[#2E3862] mb-3">
+              Preferred
+            </h3>
+            <div class="space-y-3.5">
+              <div>
+                <p class="text-xs text-[#6E6C64] mb-2">You have</p>
+                {% if c.matched_preferred %}
+                <div class="flex flex-wrap gap-1.5">
+                  {% for s in c.matched_preferred %}
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#E3F2EA] text-[#1B5E43]">
+                    <svg class="w-3 h-3 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                    <span>{{ s }}</span>
+                  </span>
+                  {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-xs text-[#7A776E] italic">None matched yet</p>
+                {% endif %}
+              </div>
+
+              <div>
+                <p class="text-xs text-[#6E6C64] mb-2">Not yet</p>
+                {% if c.missing_preferred %}
+                <div class="flex flex-wrap gap-1.5">
+                  {% for s in c.missing_preferred %}
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white text-[#4A483F] border border-dashed border-[#C7C4B8]">
+                    {{ s }}
+                  </span>
+                  {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-xs text-[#7A776E] italic">No secondary gaps</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+
+      <!-- Empty filtered state notice -->
+      <div id="no-filtered-matches" class="hidden editorial-card p-12 text-center">
+        <div class="w-12 h-12 rounded-2xl bg-[#EFECE4] text-[#5C5A52] mx-auto flex items-center justify-center mb-3">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+        </div>
+        <p class="font-serif-display text-base font-semibold text-[#1C1E1B]">No opportunities match the selected filters.</p>
+        <p class="text-xs text-[#5C5A52] mt-1 max-w-sm mx-auto">Try clearing search terms, expanding salary ranges, or resetting filters to explore all active roles.</p>
+        <button type="button" onclick="document.getElementById('btn-reset-filters').click()" class="mt-4 btn-secondary-pill text-xs px-4 py-2">
+          Reset All Filters
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  var activeMasterJobId = null;
+
+  function selectMasterCard(jobId) {
+    activeMasterJobId = jobId;
+    var cardsContainer = document.getElementById("cards-container");
+    var masterColumn = document.getElementById("master-list-column");
+    if (!cardsContainer || !masterColumn) return;
+
+    Array.from(cardsContainer.querySelectorAll(".match-card")).forEach(function (card) {
+      if (card.getAttribute("data-job-id") === jobId && !card.classList.contains("hidden")) {
+        card.classList.remove("master-inactive");
+      } else {
+        card.classList.add("master-inactive");
+      }
+    });
+
+    Array.from(masterColumn.querySelectorAll(".master-nav-item")).forEach(function (nav) {
+      if (nav.getAttribute("data-master-for") === jobId) {
+        nav.classList.add("active-master");
+      } else {
+        nav.classList.remove("active-master");
+      }
+    });
+  }
+
+  function genPlan(sid, job_id, btn) {
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Generating plan...";
+      btn.classList.add("opacity-60", "cursor-wait");
+    }
+    fetch("/api/students/" + sid + "/plans", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({job_id: job_id})
+    })
+      .then(function (r) { return r.json().then(function (j) { return {ok: r.ok, j: j}; }); })
+      .then(function (x) {
+        if (x.ok) {
+          location.href = "/students/" + sid + "/plan";
+        } else {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Generate plan for this job";
+            btn.classList.remove("opacity-60", "cursor-wait");
+          }
+          if (window.toast) {
+            window.toast("Could not generate plan: " + (x.j && (x.j.detail || JSON.stringify(x.j)) || "Unknown error"), "error");
+          }
+        }
+      })
+      .catch(function (err) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Generate plan for this job";
+          btn.classList.remove("opacity-60", "cursor-wait");
+        }
+        if (window.toast) {
+          window.toast("Error: " + err, "error");
+        }
+      });
+  }
+
+  function applyJob(sid, job_id, eligible, btn) {
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add("opacity-60", "cursor-wait");
+    }
+    fetch("/api/students/" + sid + "/applications", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({job_id: job_id, request_waiver: eligible !== "true"})
+    })
+      .then(function (r) { return r.json().then(function (j) { return {ok: r.ok, status: r.status, j: j}; }); })
+      .then(function (x) {
+        if (x.ok) {
+          var st = (x.j && x.j.application && x.j.application.status) || "submitted";
+          if (window.toast) {
+            window.toast("Application " + st + (x.j && x.j.hitl ? " (HITL pending)" : ""), "success");
+          }
+          if (btn) {
+            btn.disabled = false;
+            btn.classList.remove("opacity-60", "cursor-wait");
+            var lbl = btn.querySelector("span");
+            if (lbl) lbl.textContent = "Applied";
+          }
+        } else {
+          if (btn) {
+            btn.disabled = false;
+            btn.classList.remove("opacity-60", "cursor-wait");
+          }
+          var detail = x.j && x.j.detail;
+          var msg = (detail && (detail.detail || JSON.stringify(detail))) || ("HTTP " + x.status);
+          if (window.toast) {
+            window.toast("Could not apply: " + msg, "error");
+          }
+        }
+      })
+      .catch(function (err) {
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove("opacity-60", "cursor-wait");
+        }
+        if (window.toast) {
+          window.toast("Error: " + err, "error");
+        }
+      });
+  }
+
+  // =========================================================================
+  // 8-Dimension Client-Side 60fps Filtering & Sorting Engine (ARCHITECTURE §16.2.C)
+  // =========================================================================
+  (function initFilteringSuite() {
+    var cardsContainer = document.getElementById("cards-container");
+    if (!cardsContainer) return;
+
+    var allCards = Array.from(cardsContainer.querySelectorAll(".match-card"));
+    var totalCardsCount = allCards.length;
+
+    // Filter state
+    var state = {
+      search: "",
+      quickTab: "all", // "all" | "live" | "local"
+      salaryRange: "all", // "all" | "lt6" | "6-10" | "10-15" | "15-25" | "gte25"
+      disclosedOnly: false,
+      eligibility: "all", // "all" | "true" | "false"
+      band: "all", // "all" | "strong" | "moderate" | "developing"
+      location: "all",
+      mode: "all", // "all" | "remote" | "hybrid" | "on_site"
+      exp: "all", // "all" | "0-1" | "1-3" | "3-5" | "5+"
+      portals: new Set(["local", "naukri", "linkedin", "indeed", "foundit", "internshala", "unstop", "instahyre", "hirist"]),
+      skills: new Set(),
+      fresherOnly: false,
+      sort: "score_desc"
+    };
+
+    var ALL_PORTAL_KEYS = ["local", "naukri", "linkedin", "indeed", "foundit", "internshala", "unstop", "instahyre", "hirist"];
+    var SCRAPED_PORTAL_KEYS = ["naukri", "linkedin", "indeed", "foundit", "internshala", "unstop", "instahyre", "hirist"];
+    var PORTAL_LABELS = {
+      "local": "On-Campus (Local)",
+      "naukri": "Naukri",
+      "linkedin": "LinkedIn",
+      "indeed": "Indeed",
+      "foundit": "Foundit",
+      "internshala": "Internshala",
+      "unstop": "Unstop",
+      "instahyre": "Instahyre",
+      "hirist": "Hirist"
+    };
+
+    // DOM References
+    var searchInput = document.getElementById("filter-search");
+    var clearSearchBtn = document.getElementById("clear-search-btn");
+    var tabBtns = document.querySelectorAll(".match-tab-btn");
+    var salarySelect = document.getElementById("filter-salary");
+    var disclosedCheckbox = document.getElementById("filter-disclosed-only");
+    var eligibilitySelect = document.getElementById("filter-eligibility");
+    var bandSelect = document.getElementById("filter-band");
+    var locationSelect = document.getElementById("filter-location");
+    var modeSelect = document.getElementById("filter-mode");
+    var expSelect = document.getElementById("filter-exp");
+    var sortSelect = document.getElementById("filter-sort");
+    var resetBtn = document.getElementById("btn-reset-filters");
+    var portalPillsContainer = document.getElementById("portal-pills");
+    var portalSummary = document.getElementById("portal-selected-summary");
+    var skillCloudContainer = document.getElementById("skill-cloud");
+    var visibleCountEl = document.getElementById("visible-matches-count");
+    var totalCountEl = document.getElementById("total-matches-count");
+    var activeFiltersBadge = document.getElementById("active-filters-badge");
+    var activeFiltersCountEl = document.getElementById("active-filter-count");
+    var noFilteredMatches = document.getElementById("no-filtered-matches");
+    var fresherPill = document.getElementById("filter-fresher-pill");
+    var fresherCheckbox = document.getElementById("filter-fresher-checkbox");
+
+    // Quick Tab Count Badges (preserved for backward compatibility tests)
+    var countAll = document.getElementById("count-all");
+    var countLive = document.getElementById("count-live");
+    var countLocal = document.getElementById("count-local");
+
+    var liveTotal = 0;
+    var localTotal = 0;
+    var fresherTotal = 0;
+    var portalCounts = {};
+    ALL_PORTAL_KEYS.forEach(function (k) { portalCounts[k] = 0; });
+
+    allCards.forEach(function (c) {
+      var t = c.getAttribute("data-job-type");
+      if (t === "live") liveTotal++;
+      else localTotal++;
+
+      if (c.getAttribute("data-fresher") === "true") fresherTotal++;
+
+      var src = (c.getAttribute("data-source") || "local").toLowerCase();
+      if (portalCounts[src] !== undefined) portalCounts[src]++;
+      else if (src in PORTAL_LABELS) portalCounts[src] = (portalCounts[src] || 0) + 1;
+      else if (t === "local") portalCounts["local"]++;
+    });
+
+    var countFresher = document.getElementById("count-fresher");
+    if (countFresher) countFresher.textContent = fresherTotal;
+    if (countAll) countAll.textContent = totalCardsCount;
+    if (countLive) countLive.textContent = liveTotal;
+    if (countLocal) countLocal.textContent = localTotal;
+    if (totalCountEl) totalCountEl.textContent = totalCardsCount;
+
+    // Render Portal Pills
+    function renderPortalPills() {
+      if (!portalPillsContainer) return;
+      portalPillsContainer.innerHTML = "";
+      ALL_PORTAL_KEYS.forEach(function (key) {
+        var isSelected = state.portals.has(key);
+        var count = portalCounts[key] || 0;
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer whitespace-nowrap " +
+          (isSelected
+            ? (key === "local"
+                ? "bg-[#EFECE4] border-[#D5D2C6] text-[#1C1E1B] font-semibold"
+                : "bg-[#E3F2EA] border-[#C8E4D5] text-[#1B5E43] font-semibold")
+            : "bg-white border-[#E5E3DC] text-[#7A776E] hover:border-[#D5D2C6] opacity-65");
+        btn.innerHTML = '<span>' + PORTAL_LABELS[key] + '</span>' +
+          '<span class="font-mono text-[10px] px-1.5 py-0.2 rounded-full ' +
+          (isSelected ? "bg-white/80" : "bg-[#F4F3EC]") + '">' + count + '</span>';
+        btn.addEventListener("click", function () {
+          if (state.portals.has(key)) {
+            state.portals.delete(key);
+          } else {
+            state.portals.add(key);
+          }
+          renderPortalPills();
+          applyFilters();
+        });
+        portalPillsContainer.appendChild(btn);
+      });
+
+      if (portalSummary) {
+        portalSummary.textContent = state.portals.size === ALL_PORTAL_KEYS.length
+          ? "All 9 active"
+          : (state.portals.size + " of 9 active");
+      }
+    }
+    renderPortalPills();
+
+    // Portal Quick Actions
+    var btnPortalAll = document.getElementById("btn-portal-all");
+    var btnPortalNone = document.getElementById("btn-portal-none");
+    var btnPortalScraped = document.getElementById("btn-portal-scraped");
+    var btnPortalCampus = document.getElementById("btn-portal-campus");
+
+    if (btnPortalAll) {
+      btnPortalAll.addEventListener("click", function () {
+        state.portals = new Set(ALL_PORTAL_KEYS);
+        renderPortalPills();
+        applyFilters();
+      });
+    }
+    if (btnPortalNone) {
+      btnPortalNone.addEventListener("click", function () {
+        state.portals.clear();
+        renderPortalPills();
+        applyFilters();
+      });
+    }
+    if (btnPortalScraped) {
+      btnPortalScraped.addEventListener("click", function () {
+        state.portals = new Set(SCRAPED_PORTAL_KEYS);
+        renderPortalPills();
+        applyFilters();
+      });
+    }
+    if (btnPortalCampus) {
+      btnPortalCampus.addEventListener("click", function () {
+        state.portals = new Set(["local"]);
+        renderPortalPills();
+        applyFilters();
+      });
+    }
+
+    // Dynamic Skill Match Cloud
+    var SKILLS_LIST = ["python", "fastapi", "react", "docker", "sql", "aws", "machine learning", "postgresql", "typescript", "git"];
+    function renderSkillCloud() {
+      if (!skillCloudContainer) return;
+      skillCloudContainer.innerHTML = "";
+      SKILLS_LIST.forEach(function (skill) {
+        var isSelected = state.skills.has(skill);
+        var chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer whitespace-nowrap " +
+          (isSelected
+            ? "bg-[#1D5C42] border-[#1D5C42] text-white font-semibold"
+            : "bg-[#FAF9F5] border-[#D5D2C6] text-[#4A483F] hover:bg-[#EFECE4]");
+        chip.innerHTML = '<span>' + skill + '</span>' +
+          (isSelected ? '<svg class="w-3 h-3 text-white shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>' : '');
+        chip.addEventListener("click", function () {
+          if (state.skills.has(skill)) {
+            state.skills.delete(skill);
+          } else {
+            state.skills.add(skill);
+          }
+          renderSkillCloud();
+          applyFilters();
+        });
+        skillCloudContainer.appendChild(chip);
+      });
+    }
+    renderSkillCloud();
+
+    function syncMasterColumn(visibleCards) {
+      var masterColumn = document.getElementById("master-list-column");
+      if (!masterColumn) return;
+      var navMap = {};
+      Array.from(masterColumn.querySelectorAll(".master-nav-item")).forEach(function (nav) {
+        navMap[nav.getAttribute("data-master-for")] = nav;
+        nav.classList.add("hidden");
+      });
+
+      var activeStillVisible = false;
+      visibleCards.forEach(function (card, idx) {
+        var jid = card.getAttribute("data-job-id");
+        if (jid === activeMasterJobId) activeStillVisible = true;
+        var nav = navMap[jid];
+        if (nav) {
+          nav.classList.remove("hidden");
+          var numEl = nav.querySelector(".master-idx-num");
+          if (numEl) {
+            var n = idx + 1;
+            numEl.textContent = n < 10 ? ("0" + n) : String(n);
+          }
+          masterColumn.appendChild(nav);
+        }
+      });
+
+      if (visibleCards.length > 0) {
+        var chosenId = activeStillVisible ? activeMasterJobId : visibleCards[0].getAttribute("data-job-id");
+        selectMasterCard(chosenId);
+      }
+    }
+
+    // 60fps Filter & Sort Execution
+    function applyFilters() {
+      var searchClean = state.search.trim().toLowerCase();
+      var activeFilters = 0;
+      if (searchClean) activeFilters++;
+      if (state.quickTab !== "all") activeFilters++;
+      if (state.salaryRange !== "all") activeFilters++;
+      if (state.disclosedOnly) activeFilters++;
+      if (state.eligibility !== "all") activeFilters++;
+      if (state.band !== "all") activeFilters++;
+      if (state.location !== "all") activeFilters++;
+      if (state.mode !== "all") activeFilters++;
+      if (state.exp !== "all") activeFilters++;
+      if (state.portals.size < ALL_PORTAL_KEYS.length) activeFilters++;
+      if (state.skills.size > 0) activeFilters++;
+      if (state.fresherOnly) activeFilters++;
+
+      if (activeFiltersBadge && activeFiltersCountEl) {
+        if (activeFilters > 0) {
+          activeFiltersBadge.classList.remove("hidden");
+          activeFiltersCountEl.textContent = activeFilters;
+        } else {
+          activeFiltersBadge.classList.add("hidden");
+        }
+      }
+
+      var visibleCards = [];
+
+      allCards.forEach(function (card) {
+        var dType = card.getAttribute("data-job-type");
+        var dSource = (card.getAttribute("data-source") || "local").toLowerCase();
+        var dTitle = card.getAttribute("data-title") || "";
+        var dCompany = card.getAttribute("data-company") || "";
+        var dLocation = card.getAttribute("data-location") || "";
+        var dSalaryMin = parseFloat(card.getAttribute("data-salary-min") || "0");
+        var dSalaryMax = parseFloat(card.getAttribute("data-salary-max") || "0");
+        var dSalaryDisclosed = card.getAttribute("data-salary-disclosed") === "true";
+        var dEligible = card.getAttribute("data-eligible") || "";
+        var dBand = card.getAttribute("data-band") || "";
+        var dMode = card.getAttribute("data-work-mode") || "";
+        var dExp = parseFloat(card.getAttribute("data-exp") || "0");
+        var dSkills = card.getAttribute("data-skills") || "";
+
+        // Dim 1: Search match
+        if (searchClean) {
+          var matchedSearch = dTitle.indexOf(searchClean) !== -1 ||
+                              dCompany.indexOf(searchClean) !== -1 ||
+                              dLocation.indexOf(searchClean) !== -1 ||
+                              dSkills.indexOf(searchClean) !== -1;
+          if (!matchedSearch) {
+            card.classList.add("hidden");
+            return;
+          }
+        }
+
+        // Quick Tab (Dim 0)
+        if (state.quickTab !== "all" && dType !== state.quickTab) {
+          card.classList.add("hidden");
+          return;
+        }
+
+        // Fresher Roles Only Filter
+        var dFresher = card.getAttribute("data-fresher") === "true";
+        if (state.fresherOnly && !dFresher) {
+          card.classList.add("hidden");
+          return;
+        }
+
+        // Dim 3: Hiring Portals
+        var srcKey = dSource in PORTAL_LABELS ? dSource : (dType === "local" ? "local" : "naukri");
+        if (!state.portals.has(srcKey)) {
+          card.classList.add("hidden");
+          return;
+        }
+
+        // Dim 2: Disclosed Only toggle
+        if (state.disclosedOnly && !dSalaryDisclosed) {
+          card.classList.add("hidden");
+          return;
+        }
+
+        // Dim 2: Salary Range Presets
+        if (state.salaryRange !== "all") {
+          var effectiveSal = dSalaryMax > 0 ? dSalaryMax : dSalaryMin;
+          if (state.salaryRange === "lt6" && !(effectiveSal > 0 && effectiveSal < 6)) {
+            card.classList.add("hidden");
+            return;
+          }
+          if (state.salaryRange === "6-10" && !(effectiveSal >= 6 && effectiveSal <= 10)) {
+            card.classList.add("hidden");
+            return;
+          }
+          if (state.salaryRange === "10-15" && !(effectiveSal >= 10 && effectiveSal <= 15)) {
+            card.classList.add("hidden");
+            return;
+          }
+          if (state.salaryRange === "15-25" && !(effectiveSal >= 15 && effectiveSal <= 25)) {
+            card.classList.add("hidden");
+            return;
+          }
+          if (state.salaryRange === "gte25" && !(effectiveSal >= 25)) {
+            card.classList.add("hidden");
+            return;
+          }
+        }
+
+        // Dim 4: Eligibility
+        if (state.eligibility !== "all" && dEligible !== state.eligibility) {
+          card.classList.add("hidden");
+          return;
+        }
+
+        // Dim 4: Score Band
+        if (state.band !== "all" && dBand !== state.band) {
+          card.classList.add("hidden");
+          return;
+        }
+
+        // Dim 5: Location
+        if (state.location !== "all") {
+          if (state.location === "remote") {
+            if (dMode !== "remote" && dLocation.indexOf("remote") === -1) {
+              card.classList.add("hidden");
+              return;
+            }
+          } else if (state.location === "other") {
+            var knownLocs = ["bengaluru", "hyderabad", "pune", "delhi", "mumbai", "chennai", "remote"];
+            var isKnown = knownLocs.some(function (k) { return dLocation.indexOf(k) !== -1; });
+            if (isKnown) {
+              card.classList.add("hidden");
+              return;
+            }
+          } else {
+            if (dLocation.indexOf(state.location) === -1) {
+              card.classList.add("hidden");
+              return;
+            }
+          }
+        }
+
+        // Dim 5: Work Mode
+        if (state.mode !== "all" && dMode !== state.mode) {
+          card.classList.add("hidden");
+          return;
+        }
+
+        // Dim 6: Experience Level
+        if (state.exp !== "all") {
+          // §21.2.3: a 1-year role marked NOT fresher (external, needs prior exp)
+          // is an experience role — route it exclusively to "1-3", never "0-1".
+          var dFresherAttr = card.getAttribute("data-fresher");
+          if (state.exp === "0-1") {
+            var leakTo13 = (dExp === 1 && dFresherAttr === "false");
+            if (!(dExp <= 1) || leakTo13) {
+              card.classList.add("hidden");
+              return;
+            }
+          }
+          if (state.exp === "1-3" && !(dExp >= 1 && dExp <= 3)) {
+            card.classList.add("hidden");
+            return;
+          }
+          if (state.exp === "3-5" && !(dExp >= 3 && dExp <= 5)) {
+            card.classList.add("hidden");
+            return;
+          }
+          if (state.exp === "5+" && !(dExp >= 5)) {
+            card.classList.add("hidden");
+            return;
+          }
+        }
+
+        // Dim 7: Skill Match Cloud (matches ANY selected skill)
+        if (state.skills.size > 0) {
+          var hasAnySkill = false;
+          state.skills.forEach(function (sk) {
+            if (dSkills.indexOf(sk) !== -1 || dTitle.indexOf(sk) !== -1) {
+              hasAnySkill = true;
+            }
+          });
+          if (!hasAnySkill) {
+            card.classList.add("hidden");
+            return;
+          }
+        }
+
+        card.classList.remove("hidden");
+        visibleCards.push(card);
+      });
+
+      // Update counter
+      if (visibleCountEl) visibleCountEl.textContent = visibleCards.length;
+
+      // Dim 8: Sort Visible Cards in DOM
+      if (visibleCards.length > 1) {
+        var sortMode = state.sort;
+        visibleCards.sort(function (a, b) {
+          if (sortMode === "score_desc") {
+            var sa = parseFloat(a.getAttribute("data-score") || "0");
+            var sb = parseFloat(b.getAttribute("data-score") || "0");
+            return sb - sa;
+          } else if (sortMode === "salary_desc") {
+            var ma = parseFloat(a.getAttribute("data-salary-max") || a.getAttribute("data-salary-min") || "0");
+            var mb = parseFloat(b.getAttribute("data-salary-max") || b.getAttribute("data-salary-min") || "0");
+            return mb - ma;
+          } else if (sortMode === "salary_asc") {
+            var la = parseFloat(a.getAttribute("data-salary-min") || a.getAttribute("data-salary-max") || "0");
+            var lb = parseFloat(b.getAttribute("data-salary-min") || b.getAttribute("data-salary-max") || "0");
+            return la - lb;
+          } else if (sortMode === "date_desc") {
+            var da = a.getAttribute("data-date") || "";
+            var db = b.getAttribute("data-date") || "";
+            return db.localeCompare(da);
+          } else if (sortMode === "company_asc") {
+            var ca = (a.getAttribute("data-company") || "").toLowerCase();
+            var cb = (b.getAttribute("data-company") || "").toLowerCase();
+            return ca.localeCompare(cb);
+          }
+          return 0;
+        });
+
+        // Reorder visible DOM nodes
+        visibleCards.forEach(function (node) {
+          cardsContainer.appendChild(node);
+        });
+      }
+
+      syncMasterColumn(visibleCards);
+
+      // Empty State Notice
+      if (noFilteredMatches) {
+        if (visibleCards.length === 0 && totalCardsCount > 0) {
+          noFilteredMatches.classList.remove("hidden");
+          cardsContainer.appendChild(noFilteredMatches);
+        } else {
+          noFilteredMatches.classList.add("hidden");
+        }
+      }
+    }
+
+    // Debounced Search Input (150ms)
+    var searchTimer = null;
+    if (searchInput) {
+      searchInput.addEventListener("input", function () {
+        var val = searchInput.value;
+        if (clearSearchBtn) {
+          if (val) clearSearchBtn.classList.remove("hidden");
+          else clearSearchBtn.classList.add("hidden");
+        }
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () {
+          state.search = val;
+          applyFilters();
+        }, 150);
+      });
+    }
+
+    if (clearSearchBtn) {
+      clearSearchBtn.addEventListener("click", function () {
+        if (searchInput) searchInput.value = "";
+        clearSearchBtn.classList.add("hidden");
+        state.search = "";
+        applyFilters();
+      });
+    }
+
+    // Quick Segment Tabs
+    tabBtns.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var f = btn.getAttribute("data-filter");
+        state.quickTab = f;
+        tabBtns.forEach(function (b) {
+          b.classList.remove("active", "bg-white", "text-[#1C1E1B]", "shadow-2xs", "border", "border-[#D5D2C6]");
+          b.classList.add("text-[#5C5A52]");
+        });
+        btn.classList.add("active", "bg-white", "text-[#1C1E1B]", "shadow-2xs", "border", "border-[#D5D2C6]");
+        btn.classList.remove("text-[#5C5A52]");
+        applyFilters();
+      });
+    });
+
+    // Control Listeners
+    if (salarySelect) {
+      salarySelect.addEventListener("change", function () {
+        state.salaryRange = salarySelect.value;
+        applyFilters();
+      });
+    }
+    if (disclosedCheckbox) {
+      disclosedCheckbox.addEventListener("change", function () {
+        state.disclosedOnly = disclosedCheckbox.checked;
+        applyFilters();
+      });
+    }
+    if (eligibilitySelect) {
+      eligibilitySelect.addEventListener("change", function () {
+        state.eligibility = eligibilitySelect.value;
+        applyFilters();
+      });
+    }
+    if (bandSelect) {
+      bandSelect.addEventListener("change", function () {
+        state.band = bandSelect.value;
+        applyFilters();
+      });
+    }
+    if (locationSelect) {
+      locationSelect.addEventListener("change", function () {
+        state.location = locationSelect.value;
+        applyFilters();
+      });
+    }
+    if (modeSelect) {
+      modeSelect.addEventListener("change", function () {
+        state.mode = modeSelect.value;
+        applyFilters();
+      });
+    }
+    if (expSelect) {
+      expSelect.addEventListener("change", function () {
+        state.exp = expSelect.value;
+        applyFilters();
+      });
+    }
+    if (sortSelect) {
+      sortSelect.addEventListener("change", function () {
+        state.sort = sortSelect.value;
+        applyFilters();
+      });
+    }
+
+    // Fresher Roles Only Quick Filter Pill Listener
+    if (fresherPill) {
+      fresherPill.addEventListener("click", function () {
+        state.fresherOnly = !state.fresherOnly;
+        if (fresherCheckbox) fresherCheckbox.checked = state.fresherOnly;
+        fresherPill.setAttribute("data-active", state.fresherOnly ? "true" : "false");
+        if (state.fresherOnly) {
+          fresherPill.className = "px-3.5 py-1.5 rounded-full border border-[#1D5C42] bg-[#E3F2EA] text-[#1B5E43] font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer text-xs whitespace-nowrap";
+        } else {
+          fresherPill.className = "px-3.5 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] transition-all inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold whitespace-nowrap";
+        }
+        applyFilters();
+      });
+    }
+
+    // Reset All Filters
+    if (resetBtn) {
+      resetBtn.addEventListener("click", function () {
+        state.search = "";
+        state.quickTab = "all";
+        state.salaryRange = "all";
+        state.disclosedOnly = false;
+        state.eligibility = "all";
+        state.band = "all";
+        state.location = "all";
+        state.mode = "all";
+        state.exp = "all";
+        state.portals = new Set(ALL_PORTAL_KEYS);
+        state.skills.clear();
+        state.fresherOnly = false;
+        state.sort = "score_desc";
+
+        if (searchInput) searchInput.value = "";
+        if (clearSearchBtn) clearSearchBtn.classList.add("hidden");
+        if (salarySelect) salarySelect.value = "all";
+        if (disclosedCheckbox) disclosedCheckbox.checked = false;
+        if (eligibilitySelect) eligibilitySelect.value = "all";
+        if (bandSelect) bandSelect.value = "all";
+        if (locationSelect) locationSelect.value = "all";
+        if (modeSelect) modeSelect.value = "all";
+        if (expSelect) expSelect.value = "all";
+        if (sortSelect) sortSelect.value = "score_desc";
+        if (fresherCheckbox) fresherCheckbox.checked = false;
+        if (fresherPill) {
+          fresherPill.setAttribute("data-active", "false");
+          fresherPill.className = "px-3.5 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] transition-all inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold whitespace-nowrap";
+        }
+
+        tabBtns.forEach(function (b) {
+          if (b.getAttribute("data-filter") === "all") {
+            b.classList.add("active", "bg-white", "text-[#1C1E1B]", "shadow-2xs", "border", "border-[#D5D2C6]");
+            b.classList.remove("text-[#5C5A52]");
+          } else {
+            b.classList.remove("active", "bg-white", "text-[#1C1E1B]", "shadow-2xs", "border", "border-[#D5D2C6]");
+            b.classList.add("text-[#5C5A52]");
+          }
+        });
+
+        renderPortalPills();
+        renderSkillCloud();
+        applyFilters();
+      });
+    }
+
+    // Initial Execution
+    // §21.2.3 form restore guard: browsers can restore checkbox/select values on
+    // navigation (bfcache) without firing our change listeners, leaving the DOM
+    // inputs out of sync with JS state. Read the restored inputs, adopt them into
+    // state, reconcile the pill visual, then apply so the view matches the DOM.
+    if (fresherCheckbox) {
+      state.fresherOnly = !!fresherCheckbox.checked;
+      if (fresherPill) {
+        fresherPill.setAttribute("data-active", state.fresherOnly ? "true" : "false");
+        if (state.fresherOnly) {
+          fresherPill.className = "px-3.5 py-1.5 rounded-full border border-[#1D5C42] bg-[#E3F2EA] text-[#1B5E43] font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer text-xs whitespace-nowrap";
+        } else {
+          fresherPill.className = "px-3.5 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] transition-all inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold whitespace-nowrap";
+        }
+      }
+    }
+    if (expSelect) {
+      state.exp = expSelect.value || "all";
+    }
+    applyFilters();
+  })();
+  </script>
+  {% endif %}
+
+  <!-- Live Scraper Modal Dialog with Telemetry Dashboard (ARCHITECTURE §16.2.B) -->
+  <div id="scrape-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-[#122019]/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-[24px] border border-[#E5E3DC] shadow-2xl max-w-xl w-full p-6 md:p-7 relative">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-4 border-b border-[#ECEAE2]">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-[#E3F2EA] border border-[#C8E4D5] flex items-center justify-center text-[#1D5C42] shrink-0">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Fetch Live Indian Tech Jobs</h3>
+            <p class="text-xs text-[#5C5A52]">Query live hiring boards (Naukri, LinkedIn, Indeed) via JobSpy</p>
+          </div>
+        </div>
+        <button id="close-scrape-modal" type="button" class="w-8 h-8 rounded-full text-[#7A776E] hover:text-[#1C1E1B] hover:bg-[#F4F3EC] flex items-center justify-center transition-colors cursor-pointer">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Scrape Form (Inputs) -->
+      <form id="scrape-form" class="mt-5 space-y-4" onsubmit="event.preventDefault(); submitScrape();">
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="scrape-term" class="block text-xs font-semibold uppercase tracking-wider text-[#4A483F] font-mono">Target Role / Keywords</label>
+            <span id="skill-diversity-badge" class="hidden inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold font-mono"></span>
+          </div>
+          <input id="scrape-term" type="text" value="Software Engineer" class="w-full px-3.5 py-2 text-xs border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] text-[#1C1E1B]" placeholder="e.g. Python Backend Developer, React Developer" required />
+          <p class="text-[11px] text-[#7A776E] mt-1">Separate multiple keywords with commas to scrape across diverse roles.</p>
+
+          <!-- AI Suggested Query Chips & Loading State -->
+          <div id="ai-query-container" class="mt-2.5">
+            <div id="query-loading-status" class="flex items-center gap-1.5 text-xs text-[#1D5C42] font-medium">
+              <svg class="animate-spin w-3.5 h-3.5 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+              </svg>
+              <span>Analyzing candidate skillset for targeted keywords...</span>
+            </div>
+            <div id="suggested-chips-wrapper" class="hidden space-y-1.5 mt-2">
+              <span id="suggested-chips-label" class="block text-[11px] font-semibold uppercase tracking-wider text-[#5C5A52] font-mono">Targeted Roles:</span>
+              <div id="suggested-chips" class="flex flex-wrap gap-1.5"></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label for="scrape-location" class="block text-xs font-semibold uppercase tracking-wider text-[#4A483F] font-mono mb-1.5">Location</label>
+          <input id="scrape-location" type="text" value="Bengaluru" class="w-full px-3.5 py-2 text-xs border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] text-[#1C1E1B]" placeholder="e.g. Bengaluru, Hyderabad, Pune, Remote" required />
+        </div>
+
+        <div>
+          <span class="block text-xs font-semibold uppercase tracking-wider text-[#4A483F] font-mono mb-1.5">Active Scraper Providers</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <label class="inline-flex items-center gap-2 text-xs text-[#1C1E1B] cursor-pointer p-2.5 rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] hover:bg-[#F4F3EC]">
+              <input type="checkbox" name="scrape-provider" value="jobspy" checked class="rounded border-[#C7C4B8] text-[#1D5C42] focus:ring-[#1D5C42]" />
+              <span>JobSpy Engine (Naukri, LinkedIn, Indeed)</span>
+            </label>
+            <label class="inline-flex items-center gap-2 text-xs text-[#1C1E1B] cursor-pointer p-2.5 rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] hover:bg-[#F4F3EC]">
+              <input type="checkbox" name="scrape-provider" value="rapid" checked class="rounded border-[#C7C4B8] text-[#1D5C42] focus:ring-[#1D5C42]" />
+              <span>Rapid Tech Scraper (Codebasics Tech Engine)</span>
+            </label>
+            <label class="inline-flex items-center gap-2 text-xs text-[#1C1E1B] cursor-pointer p-2.5 rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] hover:bg-[#F4F3EC]">
+              <input type="checkbox" name="scrape-provider" value="automation" class="rounded border-[#C7C4B8] text-[#1D5C42] focus:ring-[#1D5C42]" />
+              <span>Automation Scraper (Anandanair Tech Board)</span>
+            </label>
+            <label class="inline-flex items-center gap-2 text-xs text-[#1C1E1B] cursor-pointer p-2.5 rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] hover:bg-[#F4F3EC]">
+              <input type="checkbox" name="scrape-provider" value="proxy_api" class="rounded border-[#C7C4B8] text-[#1D5C42] focus:ring-[#1D5C42]" />
+              <span>Proxy API Gateway (Resilient Proxy)</span>
+            </label>
+            <label class="inline-flex items-center gap-2 text-xs text-[#1C1E1B] cursor-pointer p-2.5 rounded-xl border border-[#C8E4D5] bg-[#E3F2EA]/60 hover:bg-[#E3F2EA] sm:col-span-2">
+              <input type="checkbox" name="scrape-provider" value="stealth_harvester" checked class="rounded border-[#1D5C42] text-[#1D5C42] focus:ring-[#1D5C42]" />
+              <span class="font-medium text-[#1B5E43]">Stealth Harvester (8 Indian Portals: Naukri, LinkedIn, Indeed, Foundit, Internshala, Unstop, Instahyre, Hirist)</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <span class="block text-xs font-semibold uppercase tracking-wider text-[#4A483F] font-mono mb-1.5">Target Boards</span>
+          <div class="flex flex-wrap gap-4">
+            <label class="inline-flex items-center gap-2 text-xs text-[#1C1E1B] cursor-pointer">
+              <input type="checkbox" name="scrape-site" value="naukri" checked class="rounded border-[#C7C4B8] text-[#1D5C42] focus:ring-[#1D5C42]" />
+              <span>Naukri</span>
+            </label>
+            <label class="inline-flex items-center gap-2 text-xs text-[#1C1E1B] cursor-pointer">
+              <input type="checkbox" name="scrape-site" value="linkedin" checked class="rounded border-[#C7C4B8] text-[#1D5C42] focus:ring-[#1D5C42]" />
+              <span>LinkedIn</span>
+            </label>
+            <label class="inline-flex items-center gap-2 text-xs text-[#1C1E1B] cursor-pointer">
+              <input type="checkbox" name="scrape-site" value="indeed" checked class="rounded border-[#C7C4B8] text-[#1D5C42] focus:ring-[#1D5C42]" />
+              <span>Indeed</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label for="scrape-limit" class="block text-xs font-semibold uppercase tracking-wider text-[#4A483F] font-mono mb-1.5">Maximum Results</label>
+          <select id="scrape-limit" class="w-full px-3.5 py-2 text-xs border border-[#D5D2C6] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] text-[#1C1E1B] bg-[#FAF9F5]">
+            <option value="10">10 postings</option>
+            <option value="20" selected>20 postings</option>
+            <option value="30">30 postings</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="inline-flex items-center gap-2 text-xs text-[#1B5E43] cursor-pointer p-3 rounded-xl border border-[#C8E4D5] bg-[#E3F2EA]/50 hover:bg-[#E3F2EA] w-full transition-colors">
+            <input id="scrape-fresher-only" type="checkbox" name="scrape-fresher-only" checked class="rounded border-[#1D5C42] text-[#1D5C42] focus:ring-[#1D5C42] cursor-pointer" />
+            <span class="font-medium">Target Fresher &amp; Entry-Level Roles Only</span>
+          </label>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#ECEAE2]">
+          <button id="cancel-scrape-btn" type="button" class="btn-secondary-pill text-xs px-4 py-2">
+            Cancel
+          </button>
+          <button id="submit-scrape-btn" type="button" onclick="submitScrape()" class="btn-primary-pill text-xs px-5 py-2">
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+            </svg>
+            <span>Start Scraping</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Live Scrape Telemetry Dashboard (ARCHITECTURE §16.2.B) -->
+      <div id="scrape-telemetry" class="hidden mt-4 space-y-4">
+        <!-- Telemetry Header Strip: Status, Stopwatch, Discovered Counter -->
+        <div class="p-4 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span id="telemetry-status-pulse" class="w-2.5 h-2.5 rounded-full bg-[#1D5C42] animate-pulse"></span>
+              <span id="telemetry-status-title" class="text-xs font-bold font-mono text-[#1C1E1B] uppercase tracking-wider">Scraping In Progress</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] font-mono text-[#7A776E] uppercase tracking-wider">Elapsed:</span>
+              <span id="telemetry-stopwatch" class="px-2.5 py-0.5 rounded-full font-mono text-xs font-bold bg-white text-[#1C1E1B] border border-[#D5D2C6]">00:00</span>
+            </div>
+          </div>
+
+          <!-- Animated Progress Bar -->
+          <div class="space-y-1.5">
+            <div class="w-full bg-[#E5E3DC] rounded-full h-2 overflow-hidden">
+              <div id="telemetry-progress-bar" class="bg-[#1D5C42] h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div class="flex items-center justify-between text-[11px] font-mono text-[#5C5A52]">
+              <span id="telemetry-progress-text">0 / 8 Portals Scraped (0%)</span>
+              <span id="telemetry-jobs-discovered" class="font-bold text-[#1D5C42]">0 Jobs Discovered</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 8-Portal Real-Time Grid -->
+        <div>
+          <span class="block text-[11px] font-bold uppercase tracking-wider text-[#5C5A52] font-mono mb-2">Portal Execution Grid (8 Tech Portals)</span>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs" id="portal-telemetry-grid">
+            <!-- Naukri -->
+            <div id="telemetry-portal-naukri" class="p-2.5 rounded-xl border border-[#E5E3DC] bg-white space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-[#1C1E1B]">Naukri</span>
+                <span class="portal-status-icon text-[#7A776E]">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                </span>
+              </div>
+              <div class="portal-status-meta text-[11px] font-mono text-[#7A776E]">Queued</div>
+            </div>
+            <!-- LinkedIn -->
+            <div id="telemetry-portal-linkedin" class="p-2.5 rounded-xl border border-[#E5E3DC] bg-white space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-[#1C1E1B]">LinkedIn</span>
+                <span class="portal-status-icon text-[#7A776E]">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                </span>
+              </div>
+              <div class="portal-status-meta text-[11px] font-mono text-[#7A776E]">Queued</div>
+            </div>
+            <!-- Indeed -->
+            <div id="telemetry-portal-indeed" class="p-2.5 rounded-xl border border-[#E5E3DC] bg-white space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-[#1C1E1B]">Indeed</span>
+                <span class="portal-status-icon text-[#7A776E]">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                </span>
+              </div>
+              <div class="portal-status-meta text-[11px] font-mono text-[#7A776E]">Queued</div>
+            </div>
+            <!-- Foundit -->
+            <div id="telemetry-portal-foundit" class="p-2.5 rounded-xl border border-[#E5E3DC] bg-white space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-[#1C1E1B]">Foundit</span>
+                <span class="portal-status-icon text-[#7A776E]">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                </span>
+              </div>
+              <div class="portal-status-meta text-[11px] font-mono text-[#7A776E]">Queued</div>
+            </div>
+            <!-- Internshala -->
+            <div id="telemetry-portal-internshala" class="p-2.5 rounded-xl border border-[#E5E3DC] bg-white space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-[#1C1E1B]">Internshala</span>
+                <span class="portal-status-icon text-[#7A776E]">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                </span>
+              </div>
+              <div class="portal-status-meta text-[11px] font-mono text-[#7A776E]">Queued</div>
+            </div>
+            <!-- Unstop -->
+            <div id="telemetry-portal-unstop" class="p-2.5 rounded-xl border border-[#E5E3DC] bg-white space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-[#1C1E1B]">Unstop</span>
+                <span class="portal-status-icon text-[#7A776E]">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                </span>
+              </div>
+              <div class="portal-status-meta text-[11px] font-mono text-[#7A776E]">Queued</div>
+            </div>
+            <!-- Instahyre -->
+            <div id="telemetry-portal-instahyre" class="p-2.5 rounded-xl border border-[#E5E3DC] bg-white space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-[#1C1E1B]">Instahyre</span>
+                <span class="portal-status-icon text-[#7A776E]">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                </span>
+              </div>
+              <div class="portal-status-meta text-[11px] font-mono text-[#7A776E]">Queued</div>
+            </div>
+            <!-- Hirist -->
+            <div id="telemetry-portal-hirist" class="p-2.5 rounded-xl border border-[#E5E3DC] bg-white space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-[#1C1E1B]">Hirist</span>
+                <span class="portal-status-icon text-[#7A776E]">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                </span>
+              </div>
+              <div class="portal-status-meta text-[11px] font-mono text-[#7A776E]">Queued</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Telemetry Action Footer -->
+        <div id="telemetry-footer" class="pt-3 border-t border-[#ECEAE2] flex items-center justify-between">
+          <div id="telemetry-summary-msg" class="text-xs text-[#5C5A52] font-medium">Streaming live telemetry from harvest nodes...</div>
+          <button id="telemetry-done-btn" type="button" class="hidden btn-primary-pill text-xs px-4 py-2" onclick="location.reload()">
+            View Opportunities
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    var modal = document.getElementById("scrape-modal");
+    var openBtn = document.getElementById("open-scrape-modal");
+    var closeBtn = document.getElementById("close-scrape-modal");
+    var cancelBtn = document.getElementById("cancel-scrape-btn");
+    var scrapeForm = document.getElementById("scrape-form");
+    var scrapeTelemetry = document.getElementById("scrape-telemetry");
+
+    function openModal() {
+      if (modal) modal.classList.remove("hidden");
+      if (scrapeForm) scrapeForm.classList.remove("hidden");
+      if (scrapeTelemetry) scrapeTelemetry.classList.add("hidden");
+
+      var termInput = document.getElementById("scrape-term");
+      var loadingEl = document.getElementById("query-loading-status");
+      var chipsWrapper = document.getElementById("suggested-chips-wrapper");
+      var chipsLabel = document.getElementById("suggested-chips-label");
+      var chipsContainer = document.getElementById("suggested-chips");
+      var diversityBadge = document.getElementById("skill-diversity-badge");
+
+      if (loadingEl) loadingEl.classList.remove("hidden");
+      if (chipsWrapper) chipsWrapper.classList.add("hidden");
+      if (diversityBadge) diversityBadge.classList.add("hidden");
+
+      fetch("/api/students/{{ sid }}/suggest-job-queries")
+        .then(function (r) { if (r.ok) return r.json(); return null; })
+        .then(function (data) {
+          if (loadingEl) loadingEl.classList.add("hidden");
+          if (!data || !data.suggested_queries || data.suggested_queries.length === 0) {
+            if (termInput && !termInput.value) termInput.value = "Software Engineer";
+            return;
+          }
+          var queries = data.suggested_queries;
+          var isDiverse = data.is_diverse !== undefined ? data.is_diverse : (queries.length > 1);
+
+          if (diversityBadge) {
+            diversityBadge.classList.remove("hidden");
+            if (isDiverse) {
+              diversityBadge.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold font-mono bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]";
+              diversityBadge.textContent = queries.length + " Targeted Roles (Diverse Skillset)";
+            } else {
+              diversityBadge.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold font-mono bg-[#EFECE4] text-[#4A483F] border border-[#D5D2C6]";
+              diversityBadge.textContent = "1 Targeted Role (Focused Skillset)";
+            }
+          }
+
+          if (termInput) {
+            termInput.value = queries.join(", ");
+          }
+
+          if (chipsWrapper && chipsContainer) {
+            chipsContainer.innerHTML = "";
+            queries.forEach(function (q) {
+              var btn = document.createElement("button");
+              btn.type = "button";
+              btn.className = "inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border border-[#C8E4D5] bg-[#E3F2EA] text-[#1B5E43] hover:bg-[#D1EAD9] transition-colors cursor-pointer whitespace-nowrap";
+              btn.textContent = q;
+              btn.onclick = function () {
+                if (termInput) {
+                  var cur = termInput.value.split(/,\s*/).map(function (s) { return s.trim(); }).filter(Boolean);
+                  if (cur.indexOf(q) === -1) {
+                    cur.push(q);
+                  }
+                  termInput.value = cur.join(", ");
+                }
+              };
+              chipsContainer.appendChild(btn);
+            });
+            if (chipsLabel) {
+              chipsLabel.textContent = isDiverse
+                ? "Targeting " + queries.length + " Diverse Roles:"
+                : "Targeting Focused Role:";
+            }
+            chipsWrapper.classList.remove("hidden");
+          }
+        })
+        .catch(function () {
+          if (loadingEl) loadingEl.classList.add("hidden");
+          if (termInput && !termInput.value) termInput.value = "Software Engineer";
+        });
+    }
+
+    function closeModal() {
+      if (modal) modal.classList.add("hidden");
+    }
+
+    if (openBtn) openBtn.addEventListener("click", openModal);
+    if (closeBtn) closeBtn.addEventListener("click", closeModal);
+    if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
+
+    // Live Streaming Telemetry Scrape Engine
+    window.submitScrape = function () {
+      var termInput = document.getElementById("scrape-term");
+      var locInput = document.getElementById("scrape-location");
+      var limitSelect = document.getElementById("scrape-limit");
+
+      var termRaw = termInput ? termInput.value.trim() : "Software Engineer";
+      var rawTerms = termRaw.split(/,\s*/).map(function (s) { return s.trim(); }).filter(Boolean);
+      if (rawTerms.length === 0) rawTerms = ["Software Engineer"];
+
+      var loc = locInput ? locInput.value.trim() : "Bengaluru";
+      var limit = limitSelect ? parseInt(limitSelect.value, 10) : 20;
+
+      var siteBoxes = document.querySelectorAll("input[name='scrape-site']:checked");
+      var sites = [];
+      siteBoxes.forEach(function (box) { sites.push(box.value); });
+      if (sites.length === 0) sites = ["naukri", "linkedin", "indeed"];
+
+      var providerBoxes = document.querySelectorAll("input[name='scrape-provider']:checked");
+      var providers = [];
+      providerBoxes.forEach(function (box) { providers.push(box.value); });
+      if (providers.length === 0) providers = ["jobspy", "rapid", "stealth_harvester"];
+
+      var fresherOnlyEl = document.getElementById("scrape-fresher-only");
+      var fresherOnly = fresherOnlyEl ? fresherOnlyEl.checked : true;
+
+      // Switch to Telemetry Dashboard
+      if (scrapeForm) scrapeForm.classList.add("hidden");
+      if (scrapeTelemetry) scrapeTelemetry.classList.remove("hidden");
+
+      // Stopwatch Setup
+      var stopwatchEl = document.getElementById("telemetry-stopwatch");
+      var startTime = Date.now();
+      var stopwatchInterval = setInterval(function () {
+        var elapsedSec = Math.floor((Date.now() - startTime) / 1000);
+        var mm = String(Math.floor(elapsedSec / 60)).padStart(2, "0");
+        var ss = String(elapsedSec % 60).padStart(2, "0");
+        if (stopwatchEl) stopwatchEl.textContent = mm + ":" + ss;
+      }, 1000);
+
+      var progressBar = document.getElementById("telemetry-progress-bar");
+      var progressText = document.getElementById("telemetry-progress-text");
+      var jobsDiscoveredEl = document.getElementById("telemetry-jobs-discovered");
+      var statusTitle = document.getElementById("telemetry-status-title");
+      var statusPulse = document.getElementById("telemetry-status-pulse");
+      var summaryMsg = document.getElementById("telemetry-summary-msg");
+      var doneBtn = document.getElementById("telemetry-done-btn");
+
+      var totalExpectedPortals = 8;
+      var completedPortals = 0;
+      var totalJobsFound = 0;
+
+      var ICONS = {
+        running: '<svg class="animate-spin w-3.5 h-3.5 text-[#1D5C42]" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>',
+        done: '<svg class="w-3.5 h-3.5 text-[#1D5C42]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>',
+        warning: '<svg class="w-3.5 h-3.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>',
+        clock: '<svg class="w-3.5 h-3.5 text-[#7A776E]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>'
+      };
+
+      function updatePortalCard(portal, status, metaHtml, iconKey, borderClass) {
+        var card = document.getElementById("telemetry-portal-" + portal.toLowerCase());
+        if (!card) return;
+        var iconSpan = card.querySelector(".portal-status-icon");
+        var metaDiv = card.querySelector(".portal-status-meta");
+        if (iconSpan && ICONS[iconKey]) iconSpan.innerHTML = ICONS[iconKey];
+        if (metaDiv) metaDiv.innerHTML = metaHtml;
+        card.className = "p-2.5 rounded-xl border space-y-1 transition-all " + (borderClass || "border-[#E5E3DC] bg-white");
+      }
+
+      function handleEvent(name, data) {
+        if (name === "init") {
+          if (data && data.portals && data.portals.length) {
+            totalExpectedPortals = data.portals.length;
+          }
+        } else if (name === "portal_start") {
+          var pStart = (data && data.portal) || "";
+          updatePortalCard(pStart, "running", '<span class="text-[#1D5C42] font-semibold animate-pulse">Running...</span>', "running", "border-[#1D5C42] bg-[#F2F7F4]");
+        } else if (name === "portal_progress") {
+          var pProg = (data && data.portal) || "";
+          var jFound = (data && data.jobs_found) || 0;
+          var elS = (data && data.elapsed_s) || 0;
+          updatePortalCard(pProg, "progress", '<span class="text-[#1D5C42]">' + jFound + ' jobs &middot; ' + elS + 's</span>', "running", "border-[#1D5C42] bg-[#F2F7F4]");
+        } else if (name === "portal_done") {
+          var pDone = (data && data.portal) || "";
+          var pJobs = (data && data.jobs) || 0;
+          var pDur = (data && data.duration_s) || 0;
+          completedPortals++;
+          totalJobsFound += pJobs;
+          updatePortalCard(pDone, "done", '<span class="text-[#1B5E43] font-medium">' + pJobs + ' jobs &middot; ' + pDur + 's</span>', "done", "border-[#C8E4D5] bg-[#E3F2EA]/50");
+          updateProgress();
+        } else if (name === "portal_error") {
+          var pErr = (data && data.portal) || "";
+          var pMsg = (data && data.message) || "Notice";
+          completedPortals++;
+          updatePortalCard(pErr, "warning", '<span class="text-amber-700 truncate" title="' + pMsg + '">' + pMsg + '</span>', "warning", "border-amber-200 bg-amber-50/40");
+          updateProgress();
+        } else if (name === "ingest_start" || name === "ranking_start") {
+          // §20.2.5 — post-harvest ingestion/ranking replaces the stuck
+          // "SCRAPING IN PROGRESS" indicator with a live phase label.
+          if (statusTitle) {
+            statusTitle.textContent = "Ingesting & Ranking Matches...";
+            statusTitle.className = "text-xs font-bold font-mono text-[#1D5C42] uppercase tracking-wider";
+          }
+          if (statusPulse) {
+            statusPulse.className = "w-2.5 h-2.5 rounded-full bg-[#1D5C42] animate-pulse";
+          }
+          if (progressText) {
+            if (name === "ingest_start") {
+              progressText.textContent = "Ingesting " + ((data && data.total) || 0) + " jobs...";
+            } else {
+              progressText.textContent = "Ranking matches for " + ((data && data.students) || 0) + " students...";
+            }
+          }
+        } else if (name === "complete") {
+          clearInterval(stopwatchInterval);
+          completedPortals = totalExpectedPortals;
+          if (progressBar) progressBar.style.width = "100%";
+          if (statusPulse) {
+            statusPulse.className = "w-2.5 h-2.5 rounded-full bg-[#1D5C42]";
+          }
+          if (statusTitle) {
+            statusTitle.textContent = "Scrape & Ingestion Complete";
+            statusTitle.className = "text-xs font-bold font-mono text-[#1B5E43] uppercase tracking-wider";
+          }
+          var tot = (data && data.total_jobs !== undefined) ? data.total_jobs : totalJobsFound;
+          var ing = (data && data.new_ingested !== undefined) ? data.new_ingested : 0;
+          var elp = (data && data.elapsed_total_s !== undefined) ? data.elapsed_total_s : "";
+          if (summaryMsg) {
+            summaryMsg.innerHTML = '<span class="text-[#1B5E43] font-semibold">Completed in ' + elp + 's:</span> ' + tot + ' jobs discovered across 8 portals (' + ing + ' newly indexed).';
+          }
+          if (doneBtn) doneBtn.classList.remove("hidden");
+          if (window.toast) {
+            window.toast("Harvested " + tot + " live opportunities across 8 portals!", "success");
+          }
+          setTimeout(function () {
+            location.reload();
+          }, 2500);
+        }
+      }
+
+      function updateProgress() {
+        var pct = Math.min(100, Math.round((completedPortals / totalExpectedPortals) * 100));
+        if (progressBar) progressBar.style.width = pct + "%";
+        if (progressText) progressText.textContent = completedPortals + " / " + totalExpectedPortals + " Portals Scraped (" + pct + "%)";
+        if (jobsDiscoveredEl) jobsDiscoveredEl.textContent = totalJobsFound + " Jobs Discovered";
+      }
+
+      // Execute POST /api/jobs/scrape/stream via Fetch ReadableStream
+      fetch("/api/jobs/scrape/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          search_term: rawTerms[0],
+          search_terms: rawTerms,
+          location: loc,
+          sites: sites,
+          providers: providers,
+          results_wanted: limit,
+          fresher_only: fresherOnly,
+          live: true
+        })
+      })
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error("HTTP error " + response.status + ": " + response.statusText);
+        }
+        var reader = response.body.getReader();
+        var decoder = new TextDecoder("utf-8");
+        var buffer = "";
+
+        function readChunk() {
+          return reader.read().then(function (result) {
+            if (result.done) {
+              clearInterval(stopwatchInterval);
+              return;
+            }
+            buffer += decoder.decode(result.value, { stream: true });
+            var parts = buffer.split("\n\n");
+            buffer = parts.pop(); // keep tail fragment
+
+            parts.forEach(function (chunk) {
+              if (!chunk.trim()) return;
+              var lines = chunk.split("\n");
+              var evName = "message";
+              var evData = "";
+              lines.forEach(function (line) {
+                if (line.startsWith("event: ")) evName = line.slice(7).trim();
+                else if (line.startsWith("data: ")) evData = line.slice(6).trim();
+              });
+              if (evData) {
+                try {
+                  var parsed = JSON.parse(evData);
+                  handleEvent(evName, parsed);
+                } catch (e) {
+                  // Ignore JSON parse errors for heartbeats
+                }
+              }
+            });
+            return readChunk();
+          });
+        }
+        return readChunk();
+      })
+      .catch(function (err) {
+        clearInterval(stopwatchInterval);
+        if (summaryMsg) {
+          summaryMsg.innerHTML = '<span class="text-[#9E2A20] font-semibold">Stream Notice:</span> Falling back to synchronous ingestion (' + err.message + ')';
+        }
+        // Fallback to synchronous scrape
+        fetch("/api/jobs/scrape", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            search_term: rawTerms[0],
+            search_terms: rawTerms,
+            location: loc,
+            sites: sites,
+            providers: providers,
+            results_wanted: limit,
+            fresher_only: fresherOnly,
+            live: true
+          })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function () {
+          location.reload();
+        })
+        .catch(function (e) {
+          if (window.toast) window.toast("Scrape error: " + e.message, "error");
+          if (doneBtn) doneBtn.classList.remove("hidden");
+        });
+      });
+    };
+  })();
+  </script>
+</div>
+{% endblock %}

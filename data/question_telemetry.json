@@ -1,0 +1,212 @@
+{
+  "q-test-easy": {
+    "q_id": "q-test-easy",
+    "id": "q-test-easy",
+    "times_asked": 174,
+    "total_score": 16530.0,
+    "avg_score": 95.0,
+    "total_keyword_hit_ratio": 159.5,
+    "avg_keyword_hit_ratio": 0.917,
+    "last_difficulty": 1
+  },
+  "q-test-hard": {
+    "q_id": "q-test-hard",
+    "id": "q-test-hard",
+    "times_asked": 174,
+    "total_score": 3480.0,
+    "avg_score": 20.0,
+    "total_keyword_hit_ratio": 43.5,
+    "avg_keyword_hit_ratio": 0.25,
+    "last_difficulty": 2
+  },
+  "q-test-kw-mismatch": {
+    "q_id": "q-test-kw-mismatch",
+    "id": "q-test-kw-mismatch",
+    "times_asked": 174,
+    "total_score": 10034.0,
+    "avg_score": 57.7,
+    "total_keyword_hit_ratio": 23.19999999999995,
+    "avg_keyword_hit_ratio": 0.133,
+    "last_difficulty": 1
+  },
+  "q-roundtrip-test": {
+    "q_id": "q-roundtrip-test",
+    "id": "q-roundtrip-test",
+    "times_asked": 58,
+    "total_score": 4930.0,
+    "avg_score": 85.0,
+    "total_keyword_hit_ratio": 38.666666666666664,
+    "avg_keyword_hit_ratio": 0.667,
+    "last_difficulty": 1
+  },
+  "q-bk-fa-1": {
+    "q_id": "q-bk-fa-1",
+    "id": "q-bk-fa-1",
+    "times_asked": 432,
+    "total_score": 10516.0,
+    "avg_score": 24.3,
+    "total_keyword_hit_ratio": 0.0,
+    "avg_keyword_hit_ratio": 0.0,
+    "last_difficulty": 1
+  },
+  "q-bk-fa-0": {
+    "q_id": "q-bk-fa-0",
+    "id": "q-bk-fa-0",
+    "times_asked": 265,
+    "total_score": 7125.0,
+    "avg_score": 26.9,
+    "total_keyword_hit_ratio": 0.0,
+    "avg_keyword_hit_ratio": 0.0,
+    "last_difficulty": 0
+  },
+  "q-bk-gt-0": {
+    "q_id": "q-bk-gt-0",
+    "id": "q-bk-gt-0",
+    "times_asked": 266,
+    "total_score": 7125.0,
+    "avg_score": 26.8,
+    "total_keyword_hit_ratio": 0.0,
+    "avg_keyword_hit_ratio": 0.0,
+    "last_difficulty": 0
+  },
+  "q-bk-pg-0": {
+    "q_id": "q-bk-pg-0",
+    "id": "q-bk-pg-0",
+    "times_asked": 265,
+    "total_score": 7125.0,
+    "avg_score": 26.9,
+    "total_keyword_hit_ratio": 0.0,
+    "avg_keyword_hit_ratio": 0.0,
+    "last_difficulty": 0
+  },
+  "q-bk-py-0": {
+    "q_id": "q-bk-py-0",
+    "id": "q-bk-py-0",
+    "times_asked": 265,
+    "total_score": 21755.0,
+    "avg_score": 82.1,
+    "total_keyword_hit_ratio": 209.0,
+    "avg_keyword_hit_ratio": 0.789,
+    "last_difficulty": 0
+  },
+  "q-bk-gt-1": {
+    "q_id": "q-bk-gt-1",
+    "id": "q-bk-gt-1",
+    "times_asked": 266,
+    "total_score": 7125.0,
+    "avg_score": 26.8,
+    "total_keyword_hit_ratio": 0.0,
+    "avg_keyword_hit_ratio": 0.0,
+    "last_difficulty": 1
+  },
+  "q-bk-pg-1": {
+    "q_id": "q-bk-pg-1",
+    "id": "q-bk-pg-1",
+    "times_asked": 265,
+    "total_score": 11863.0,
+    "avg_score": 44.8,
+    "total_keyword_hit_ratio": 68.66666666666677,
+    "avg_keyword_hit_ratio": 0.259,
+    "last_difficulty": 1
+  },
+  "q-bk-py-1": {
+    "q_id": "q-bk-py-1",
+    "id": "q-bk-py-1",
+    "times_asked": 259,
+    "total_score": 10683.0,
+    "avg_score": 41.2,
+    "total_keyword_hit_ratio": 51.5,
+    "avg_keyword_hit_ratio": 0.199,
+    "last_difficulty": 1
+  },
+  "q-bk-rp-0": {
+    "q_id": "q-bk-rp-0",
+    "id": "q-bk-rp-0",
+    "times_asked": 6,
+    "total_score": 150.0,
+    "avg_score": 25.0,
+    "total_keyword_hit_ratio": 0.0,
+    "avg_keyword_hit_ratio": 0.0,
+    "last_difficulty": 0
+  },
+  "q-css-202": {
+    "q_id": "q-css-202",
+    "id": "q-css-202",
+    "times_asked": 1,
+    "total_score": 78.0,
+    "avg_score": 78.0,
+    "total_keyword_hit_ratio": 0.6,
+    "avg_keyword_hit_ratio": 0.6,
+    "last_difficulty": 1
+  },
+  "q-fe-css-2": {
+    "q_id": "q-fe-css-2",
+    "id": "q-fe-css-2",
+    "times_asked": 1,
+    "total_score": 91.0,
+    "avg_score": 91.0,
+    "total_keyword_hit_ratio": 1.0,
+    "avg_keyword_hit_ratio": 1.0,
+    "last_difficulty": 2
+  },
+  "q-fe-re-2": {
+    "q_id": "q-fe-re-2",
+    "id": "q-fe-re-2",
+    "times_asked": 1,
+    "total_score": 94.0,
+    "avg_score": 94.0,
+    "total_keyword_hit_ratio": 1.0,
+    "avg_keyword_hit_ratio": 1.0,
+    "last_difficulty": 2
+  },
+  "q-fe-re-4": {
+    "q_id": "q-fe-re-4",
+    "id": "q-fe-re-4",
+    "times_asked": 1,
+    "total_score": 93.0,
+    "avg_score": 93.0,
+    "total_keyword_hit_ratio": 1.0,
+    "avg_keyword_hit_ratio": 1.0,
+    "last_difficulty": 2
+  },
+  "q-fe-ts-2": {
+    "q_id": "q-fe-ts-2",
+    "id": "q-fe-ts-2",
+    "times_asked": 1,
+    "total_score": 80.0,
+    "avg_score": 80.0,
+    "total_keyword_hit_ratio": 1.0,
+    "avg_keyword_hit_ratio": 1.0,
+    "last_difficulty": 2
+  },
+  "q-next-003": {
+    "q_id": "q-next-003",
+    "id": "q-next-003",
+    "times_asked": 1,
+    "total_score": 84.0,
+    "avg_score": 84.0,
+    "total_keyword_hit_ratio": 1.0,
+    "avg_keyword_hit_ratio": 1.0,
+    "last_difficulty": 2
+  },
+  "q-react-202": {
+    "q_id": "q-react-202",
+    "id": "q-react-202",
+    "times_asked": 1,
+    "total_score": 92.0,
+    "avg_score": 92.0,
+    "total_keyword_hit_ratio": 0.6,
+    "avg_keyword_hit_ratio": 0.6,
+    "last_difficulty": 2
+  },
+  "q-ts-202": {
+    "q_id": "q-ts-202",
+    "id": "q-ts-202",
+    "times_asked": 1,
+    "total_score": 95.0,
+    "avg_score": 95.0,
+    "total_keyword_hit_ratio": 0.8,
+    "avg_keyword_hit_ratio": 0.8,
+    "last_difficulty": 2
+  }
+}

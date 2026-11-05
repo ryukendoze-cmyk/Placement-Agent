@@ -1,0 +1,3 @@
+Bharat Sharma
+Skills: Python, FastAPI, PostgreSQL, Docker
+Projects: Built a job portal REST API

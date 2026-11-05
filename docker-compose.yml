@@ -1,0 +1,43 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: ps06
+      POSTGRES_HOST_AUTH_METHOD: trust
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ps06"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  web:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres@db:5432/ps06
+      REDIS_URL: redis://redis:6379/0
+      TASK_BACKEND: redis
+      EMBEDDER: hashing
+      LLM_PROVIDER: mock
+    ports:
+      - "8010:8010"
+    command: sh -c "uv run python -m app.cli seed --demo-cohort && uv run uvicorn app.api.__main__:app --host 0.0.0.0 --port 8010"
+
+volumes:
+  pgdata:
