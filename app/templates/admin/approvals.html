@@ -114,13 +114,20 @@
         var rejectBtn = el("button", "inline-flex items-center justify-center whitespace-nowrap gap-1.5 px-4 py-2 rounded-full bg-[#FBECE9] hover:bg-[#F5D8D2] border border-[#F3D2CC] text-[#9E2A20] text-xs font-semibold transition-colors", "Reject");
         rejectBtn.type = "button";
 
+        var withdrawBtn = el("button", "inline-flex items-center justify-center whitespace-nowrap gap-1.5 px-4 py-2 rounded-full bg-[#FAF8F5] hover:bg-[#F2EFE9] border border-[#D5D2C6] text-[#5C5A52] text-xs font-semibold transition-colors", "Withdraw / Remove");
+        withdrawBtn.type = "button";
+
         endorseBtn.addEventListener("click", function () { decide(a.id, "endorse", note.value, endorseBtn, card); });
         approveBtn.addEventListener("click", function () { decide(a.id, "approve", note.value, approveBtn, card); });
         rejectBtn.addEventListener("click", function () { decide(a.id, "reject", note.value, rejectBtn, card); });
+        withdrawBtn.addEventListener("click", function () {
+          decide(a.id, "reject", (note.value ? (note.value + " (Withdrawn / Closed)") : "Withdrawn / Closed by Administrator"), withdrawBtn, card);
+        });
 
         actions.appendChild(endorseBtn);
         actions.appendChild(approveBtn);
         actions.appendChild(rejectBtn);
+        actions.appendChild(withdrawBtn);
         card.appendChild(actions);
       }
 

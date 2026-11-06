@@ -1,6 +1,7 @@
 import logging
 import zipfile
 from dataclasses import asdict
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -15,6 +16,8 @@ from app.matching.engine import job_eligibility, job_tier
 from app.matching.rank import rank_jobs
 from app.matching.simulator import simulate_counterfactual
 from app.models import (
+    ApprovalRequest,
+    AuditLog,
     Interview,
     Job,
     JobApplication,
@@ -492,6 +495,109 @@ def simulate_match(sid: str, job_id: str, request: Request,
                                    levels=levels, courses_for_skill=courses_for_skill)
 
 
+@router.delete("/api/students/{sid}/matches/{job_id}")
+@router.post("/api/students/{sid}/matches/{job_id}/dismiss")
+def dismiss_student_job_match(
+    sid: str,
+    job_id: str,
+    request: Request,
+    permanent: bool = False,
+    session: Session = Depends(get_session),
+    ctx=Depends(get_ctx),
+    role: str = Depends(require_role("student", "faculty_mentor", "tpo_admin")),
+):
+    """Remove/dismiss a job match for a student, or permanently delete the job if requested by faculty/TPO."""
+    enforce_student_scope(request, sid)
+    student = session.get(Student, sid)
+    if student is None:
+        raise HTTPException(404, "student not found")
+    job = session.get(Job, job_id)
+
+    # Permanent delete requested by faculty mentor or TPO admin
+    if permanent and role in ("faculty_mentor", "tpo_admin"):
+        if job is not None:
+            if hasattr(ctx, "vector_store") and ctx.vector_store:
+                try:
+                    ctx.vector_store.delete("job", job_id)
+                except Exception:
+                    pass
+            if hasattr(ctx, "job_vectors") and job_id in ctx.job_vectors:
+                ctx.job_vectors.pop(job_id, None)
+
+            session.execute(delete(JobApplication).where(JobApplication.job_id == job_id))
+            session.execute(delete(JobMatch).where(JobMatch.job_id == job_id))
+            session.execute(delete(Interview).where(Interview.job_id == job_id))
+            session.delete(job)
+            session.add(
+                AuditLog(
+                    id=f"aud-{uuid4().hex[:8]}",
+                    action="job.deleted_permanently",
+                    entity_type="job",
+                    entity_id=job_id,
+                    actor_role=role,
+                    detail={"deleted_by": role, "sid": sid, "job_title": job.title, "company": job.company},
+                )
+            )
+            session.commit()
+            return {"status": "deleted_permanently", "job_id": job_id}
+
+    # Dismiss for this student
+    m = session.exec(select(JobMatch).where(JobMatch.student_id == sid, JobMatch.job_id == job_id)).first()
+    if m is not None:
+        m.band = "dismissed"
+        m.score = -1
+        b = dict(m.breakdown or {})
+        b["dismissed"] = True
+        m.breakdown = b
+        session.add(m)
+    else:
+        session.add(
+            JobMatch(
+                id=f"m-{uuid4().hex[:8]}",
+                student_id=sid,
+                job_id=job_id,
+                score=-1,
+                band="dismissed",
+                breakdown={"dismissed": True},
+            )
+        )
+
+    # Withdraw any active application for this job by this student
+    active_apps = session.exec(
+        select(JobApplication).where(
+            JobApplication.student_id == sid,
+            JobApplication.job_id == job_id,
+            JobApplication.status != "withdrawn",
+        )
+    ).all()
+    for active_app in active_apps:
+        active_app.status = "withdrawn"
+        active_app.updated_at = datetime.now(timezone.utc)
+        active_app.notes = ((active_app.notes or "") + " [Application withdrawn with job dismissal]").strip()
+        session.add(active_app)
+        if active_app.approval_id:
+            ap = session.get(ApprovalRequest, active_app.approval_id)
+            if ap and ap.status == "pending_review":
+                ap.status = "rejected"
+                ap.review_note = "Job opportunity removed / dismissed by candidate"
+                ap.reviewed_at = datetime.now(timezone.utc)
+                session.add(ap)
+
+    session.add(
+        AuditLog(
+            id=f"aud-{uuid4().hex[:8]}",
+            action="job_match.dismissed",
+            entity_type="job_match",
+            entity_id=job_id,
+            actor_role=role,
+            detail={"student_id": sid, "job_id": job_id, "reason": "closed_or_not_wanted"},
+        )
+    )
+    session.commit()
+    return {"status": "dismissed", "student_id": sid, "job_id": job_id}
+
+
+
 @router.post("/api/plans/{plan_id}/items/{item_id}/complete")
 def complete_plan_item(
     plan_id: str,
@@ -649,3 +755,142 @@ def student_scrape_jobs_endpoint(
         "ingested": res["ingested_count"],
         "job_ids": res["job_ids"],
     }
+
+
+@router.post("/api/students/{sid}/scrape-jobs/stream")
+def student_scrape_jobs_stream_endpoint(
+    sid: str,
+    request: Request,
+    payload: dict[str, Any] | None = None,
+    session: Session = Depends(get_session),
+    ctx: Any = Depends(get_ctx),
+):
+    """Stream live scrape telemetry for a student workspace, then re-rank matches."""
+    import queue
+    import threading
+    import time
+
+    from fastapi.responses import StreamingResponse
+
+    from app.api.routes.jobs import SSE_HEADERS, _sse_chunk
+    from app.scraper.service import CompositeJobScraper
+
+    enforce_student_scope(request, sid)
+    student = session.get(Student, sid)
+    if student is None:
+        raise HTTPException(404, "student not found")
+    payload = payload or {}
+    terms_input = payload.get("terms") or payload.get("queries") or payload.get("search_terms")
+    term = payload.get("term") or payload.get("search_term")
+    location = payload.get("location") or "Bengaluru"
+    limit = int(payload.get("limit") or payload.get("results_wanted") or 20)
+    sites = payload.get("sites") or ["naukri", "linkedin", "indeed"]
+    fresher_only = payload.get("fresher_only", True)
+
+    terms: list[str] = []
+    if terms_input and isinstance(terms_input, list):
+        terms = [str(t).strip() for t in terms_input if str(t).strip()]
+    elif term:
+        if isinstance(term, list):
+            terms = [str(t).strip() for t in term if str(t).strip()]
+        elif isinstance(term, str) and "," in term:
+            terms = [t.strip() for t in term.split(",") if t.strip()]
+        elif isinstance(term, str) and term.strip():
+            terms = [term.strip()]
+
+    if not terms:
+        rows = session.exec(select(StudentSkill).where(StudentSkill.student_id == sid)).all()
+        skills = sorted(
+            rows,
+            key=lambda s: (_LEVEL_RANK.get(str(s.level).lower(), 0), int(s.mentions or 0)),
+            reverse=True,
+        )
+        suggested = suggest_job_queries_for_student(student, skills, getattr(ctx, "llm", None))
+        terms = suggested if suggested else ["Software Engineer"]
+
+    if fresher_only:
+        fresher_qualifiers = ["Fresher", "Junior", "Intern", "Entry Level"]
+        enriched_terms: list[str] = []
+        for t in terms:
+            if any(q.lower() in t.lower() for q in ("fresher", "junior", "intern", "entry level", "trainee", "associate")):
+                enriched_terms.append(t)
+            else:
+                for q in fresher_qualifiers:
+                    enriched_terms.append(f"{t} {q}")
+        terms = enriched_terms
+
+    search_term = terms if len(terms) > 1 else terms[0]
+    providers = payload.get("providers") if payload.get("providers") is not None else ["jobspy", "stealth_harvester"]
+    scraper = CompositeJobScraper()
+
+    def event_stream():
+        event_q: queue.Queue[tuple[str, Any] | None] = queue.Queue()
+
+        def on_event(name: str, data: Any) -> None:
+            if name == "complete":
+                return
+            event_q.put((name, data))
+
+        records: list[dict[str, Any]] = []
+        ingest_result: dict[str, Any] = {}
+        started_at = time.perf_counter()
+
+        def run_scrape() -> None:
+            try:
+                records.extend(
+                    scraper.fetch_jobs_streaming(
+                        search_term=search_term,
+                        location=location,
+                        sites=sites,
+                        results_wanted=limit,
+                        providers=providers,
+                        on_event=on_event,
+                        live=payload.get("live", True),
+                        fresher_only=fresher_only,
+                    )
+                )
+                with Session(ctx.engine) as scrape_session:
+                    event_q.put(("ingest_start", {"status": "ingesting", "total": len(records)}))
+                    res = ingest_scraped_jobs(records, scrape_session, ctx)
+                    ingest_result.update(res)
+                    try:
+                        st = scrape_session.get(Student, sid)
+                        if st:
+                            _rank_and_persist(scrape_session, ctx, sid, st, include_scraped=True)
+                    except Exception as err:
+                        logger.warning("Post-scrape student match generation failed: %s", err)
+
+                total_jobs = len(records)
+                new_ingested = int(ingest_result.get("ingested_count", 0))
+                elapsed_total = round(time.perf_counter() - started_at, 3)
+                event_q.put((
+                    "complete",
+                    {
+                        "total_jobs": total_jobs,
+                        "new_ingested": new_ingested,
+                        "elapsed_total_s": elapsed_total,
+                    },
+                ))
+            except Exception as exc:
+                event_q.put((
+                    "portal_error",
+                    {"portal": "stream", "status": "warning", "message": str(exc), "duration_s": 0.0},
+                ))
+                event_q.put((
+                    "complete",
+                    {"total_jobs": 0, "new_ingested": 0, "elapsed_total_s": round(time.perf_counter() - started_at, 3)},
+                ))
+            finally:
+                event_q.put(None)
+
+        worker = threading.Thread(target=run_scrape, daemon=True)
+        worker.start()
+
+        while True:
+            item = event_q.get()
+            if item is None:
+                break
+            ev_name, ev_data = item
+            yield _sse_chunk(ev_name, ev_data)
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers=SSE_HEADERS)

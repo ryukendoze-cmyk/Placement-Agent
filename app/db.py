@@ -229,23 +229,61 @@ def _sanitize_legacy_experience(engine: Engine) -> int:
     try:
         from sqlmodel import Session, select
 
-        from app.matching.engine import is_senior_job
+        from app.matching.engine import (
+            FRESHER_TITLE_RE,
+            MID_LEVEL_TITLE_RE,
+            is_senior_job,
+        )
         from app.models import Job
-        from app.scraper.normalizer import extract_experience_years
+        from app.scraper.normalizer import (
+            extract_experience_years,
+            fetch_external_job_description,
+        )
 
         updated = 0
         with Session(engine) as session:
-            jobs = session.exec(select(Job).where(Job.experience_years == 0)).all()
+            jobs = session.exec(select(Job)).all()
             for job in jobs:
-                combined = f"{job.title} {job.description}"
-                years = extract_experience_years(combined)
+                # If short LinkedIn description, attempt one-time fast enrichment
+                clean_body = (job.description or "").split("Apply URL:")[0].strip()
+                if len(clean_body) < 60 and job.job_url and "linkedin.com/jobs/view/" in job.job_url:
+                    fetched = fetch_external_job_description(job.job_url, timeout=3.0)
+                    if fetched:
+                        source_tag = getattr(job, "source", "linkedin") or "linkedin"
+                        engine_val = getattr(job, "scraper_engine", "jobspy") or "jobspy"
+                        job.description = (
+                            f"{fetched}\n\nApply URL: {job.job_url}\n"
+                            f"Source: {source_tag} (Scraped via {engine_val})"
+                        ).strip()
+
+                combined = f"{job.title} {job.description} {job.job_url}"
+                extracted = extract_experience_years(combined)
+                years = max(getattr(job, "experience_years", 0) or 0, extracted)
                 if years <= 0 and is_senior_job(job):
                     title_low = job.title.lower()
                     if "iii" in title_low or " 3" in title_low or " iv" in title_low or " 4" in title_low or "specialist" in title_low:
                         years = 5
                     else:
                         years = 3
-                if years > 0:
+                elif years <= 0 and MID_LEVEL_TITLE_RE.search(job.title):
+                    years = 2
+                if years <= 0 and (job.job_url or getattr(job, "source", "") != "local"):
+                    title_str = getattr(job, "title", "") or ""
+                    clean_len = len((job.description or "").split("Apply URL:")[0].strip())
+                    if clean_len < 50 and not FRESHER_TITLE_RE.search(title_str) and getattr(job, "source", "") not in ("internshala", "unstop"):
+                        years = 2
+                    elif not FRESHER_TITLE_RE.search(title_str):
+                        import re
+                        m_rng = re.search(r'(?i)\b(\d+)[- ]*to[- ]*(\d+)[- ]*(?:years?|yrs?|yoe)\b', combined)
+                        if m_rng:
+                            try:
+                                h = int(m_rng.group(2))
+                                if h >= 2:
+                                    years = max(years, max(1, h // 2))
+                            except (ValueError, TypeError):
+                                pass
+
+                if years > (job.experience_years or 0):
                     job.experience_years = years
                     session.add(job)
                     updated += 1

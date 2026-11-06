@@ -289,3 +289,109 @@ def list_admin_applications(
         payload["student_branch"] = student.branch if student else ""
         out.append(payload)
     return out
+
+
+@router.delete("/api/students/{sid}/applications/{app_id}")
+@router.post("/api/students/{sid}/applications/{app_id}/withdraw")
+def withdraw_student_application(
+    sid: str,
+    app_id: str,
+    request: Request,
+    session: Session = Depends(get_session),
+    role: str = Depends(_STUDENT_OR_ADMIN),
+):
+    """Withdraw or remove an active drive application (accessible to student, faculty mentor, or TPO admin)."""
+    enforce_student_scope(request, sid)
+    app_row = session.get(JobApplication, app_id)
+    if app_row is None or app_row.student_id != sid:
+        raise HTTPException(404, "application not found")
+
+    old_status = app_row.status
+    app_row.status = "withdrawn"
+    app_row.updated_at = datetime.now(timezone.utc)
+    app_row.notes = ((app_row.notes or "") + " [Application withdrawn / removed]").strip()
+    session.add(app_row)
+
+    # Cancel linked approval request if pending
+    if app_row.approval_id:
+        ap = session.get(ApprovalRequest, app_row.approval_id)
+        if ap and ap.status == "pending_review":
+            ap.status = "rejected"
+            ap.review_note = "Application withdrawn by candidate or administrator"
+            ap.reviewed_at = datetime.now(timezone.utc)
+            session.add(ap)
+
+    session.add(
+        AuditLog(
+            id=f"aud-{uuid4().hex[:8]}",
+            action="application.withdrawn",
+            entity_type="job_application",
+            entity_id=app_id,
+            actor_role=role,
+            detail={
+                "student_id": sid,
+                "job_id": app_row.job_id,
+                "previous_status": old_status,
+                "reason": "closed_or_not_wanted",
+            },
+        )
+    )
+    session.commit()
+    return {
+        "status": "withdrawn",
+        "application_id": app_id,
+        "student_id": sid,
+        "job_id": app_row.job_id,
+    }
+
+
+@router.delete("/api/admin/applications/{app_id}")
+def delete_admin_application(
+    app_id: str,
+    request: Request,
+    session: Session = Depends(get_session),
+    role: str = Depends(require_role("faculty_mentor", "tpo_admin")),
+):
+    """Remove or withdraw an application from the admin ledger."""
+    app_row = session.get(JobApplication, app_id)
+    if app_row is None:
+        raise HTTPException(404, "application not found")
+
+    user = get_current_user_optional(request)
+    if user and user.role == "faculty_mentor" and user.department:
+        student = session.get(Student, app_row.student_id)
+        if student and student.branch and student.branch.upper() != user.department.upper():
+            raise HTTPException(403, "not authorized for this student's department")
+
+    old_status = app_row.status
+    app_row.status = "withdrawn"
+    app_row.updated_at = datetime.now(timezone.utc)
+    session.add(app_row)
+
+    if app_row.approval_id:
+        ap = session.get(ApprovalRequest, app_row.approval_id)
+        if ap and ap.status == "pending_review":
+            ap.status = "rejected"
+            ap.review_note = "Application withdrawn by faculty or TPO administrator"
+            ap.reviewed_at = datetime.now(timezone.utc)
+            session.add(ap)
+
+    session.add(
+        AuditLog(
+            id=f"aud-{uuid4().hex[:8]}",
+            action="application.withdrawn",
+            entity_type="job_application",
+            entity_id=app_id,
+            actor_role=role,
+            detail={
+                "app_id": app_id,
+                "student_id": app_row.student_id,
+                "job_id": app_row.job_id,
+                "previous_status": old_status,
+                "reason": "closed_or_not_wanted",
+            },
+        )
+    )
+    session.commit()
+    return {"status": "withdrawn", "application_id": app_id}
+

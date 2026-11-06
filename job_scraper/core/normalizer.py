@@ -468,6 +468,11 @@ def to_placement_agent_job(raw: dict[str, Any]) -> dict[str, Any]:
             exp = 5.0
         else:
             exp = 3.0
+    elif (exp is None or float(exp) <= 0) and re.search(r"\b(?:mid[\s-]level|mid[\s-]senior|intermediate|(?:sde|engineer|developer|scientist|analyst|programmer)\s*[- ]*(?:ii|2)\b|(?:level|lvl|l|ic|e)[- ]*2\b)\b", title, re.I):
+        exp = 2.0
+    elif (exp is None or float(exp) <= 0) and len(description_body) < 50 and not re.search(r"\b(?:interns?|internship|trainees?|freshers?|graduate\s+engineer|graduate\s+trainee|entry[\s-]level|associate|junior|jr\.?)\b", title, re.I):
+        if source not in ("internshala", "unstop"):
+            exp = 2.0
 
     job = PlacementJob(
         id=generate_job_id(canonical),

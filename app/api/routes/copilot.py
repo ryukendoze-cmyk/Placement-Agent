@@ -1,3 +1,6 @@
+import logging
+import re
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
@@ -14,95 +17,247 @@ from app.security.ratelimit import check_rate_limit
 from app.security.rbac import current_role, enforce_student_scope, get_current_user_optional
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 QUICK_PROMPTS = [
+    "Rank my top job matches",
     "What score do I need for Dream drives?",
     "Am I eligible for Super-Dream offers?",
+    "What skills should I prioritize next?",
     "How many backlogs are allowed?",
-    "What does the resume-integrity policy say?",
 ]
 
 COPILOT_SYSTEM = (
     "TASK: copilot_answer\n"
-    "You are the JKLU Placement Copilot. Answer only from the provided student context and "
-    "retrieved SOP clauses. Cite relevant SOPs as [SOP-XX]. Respond with JSON: "
+    "You are the JKLU Placement Copilot, an intelligent AI placement assistant. "
+    "You have comprehensive access to the student's complete profile (verified competencies & proficiency levels, "
+    "ranked job matches, upskilling roadmap, application statuses, GPA, backlogs, and mock interview performance) "
+    "as well as retrieved institutional placement policies (SOP clauses).\n\n"
+    "CRITICAL PRESENTATION RULES (STUDENT-FACING):\n"
+    "1. WRITE JOB NAMES, NOT IDS: Always refer to jobs naturally using their clear human-readable title and company name "
+    "(e.g., 'OpenAI Training Program at Sgic Cloud Technologies' or 'Web Development Intern at Cook N Klean'). "
+    "NEVER write, mention, or output raw database job IDs (such as 'job-ext-127d15620c', 'job-ext-...', or 'job-001') in your answer. "
+    "Normal students do not know what these internal IDs mean—do NOT mention them.\n"
+    "2. When explaining job ranking, matches, or recommendations: explain their top job matches by role title, company, "
+    "salary tier, match score, matched skills, and any missing skills. Tell the student clearly which jobs they match best.\n"
+    "3. When asked to sort, prioritize, or guide next steps: evaluate their eligibility blockers (such as SOP-04 mock interview "
+    "gate, SOP-03 GPA/backlog limits) alongside their highest-compatibility jobs, and give a structured, prioritized action plan.\n"
+    "4. Ground all policy statements in retrieved SOP clauses and cite them explicitly as [SOP-XX] (e.g. [SOP-01], [SOP-04]). "
+    "Do NOT cite job IDs.\n\n"
+    "Respond ONLY with JSON: "
     '{"answer": str, "cited_sops": list[str]}.'
 )
 
 
-def _student_context(session, student_id: str | None) -> dict:
+def _student_context(session, student_id: str | None, ctx=None) -> dict:
     if not student_id:
         return {}
-    from app.models import Interview, Student
+    from sqlmodel import select
+
+    from app.models import (
+        Interview,
+        Job,
+        JobApplication,
+        JobMatch,
+        PlanItem,
+        Student,
+        StudentSkill,
+        UpskillPlan,
+    )
+
     student = session.get(Student, student_id)
     if student is None:
         return {}
-    from sqlmodel import select
+
+    # Mock interviews
     rows = session.exec(select(Interview).where(Interview.student_id == student_id,
                                                 Interview.finished == True)).all()  # noqa: E712
     scores = [int(r.score) for r in rows if r.score is not None]
+
+    # Verified Technical Competencies
+    ss_rows = session.exec(select(StudentSkill).where(StudentSkill.student_id == student_id)).all()
+    skills_list = []
+    for ss in ss_rows:
+        sk_name = ss.skill_id
+        category = "General"
+        if ctx is not None and hasattr(ctx, "taxonomy") and ctx.taxonomy:
+            t_skill = ctx.taxonomy.get_opt(ss.skill_id)
+            if t_skill:
+                sk_name = t_skill.name
+                category = t_skill.category
+        skills_list.append({
+            "id": ss.skill_id,
+            "name": sk_name,
+            "level": ss.level,
+            "category": category,
+            "mentions": ss.mentions,
+        })
+
+    skills_by_level = {
+        "advanced": [s["name"] for s in skills_list if s["level"] == "advanced"],
+        "intermediate": [s["name"] for s in skills_list if s["level"] == "intermediate"],
+        "basic": [s["name"] for s in skills_list if s["level"] == "basic"],
+    }
+
+    # Top Ranked Job Matches (titles & companies only, no raw database IDs)
+    top_matches = []
+    if ctx is not None:
+        try:
+            from app.agent import _rank_jobs_for
+            ranked = _rank_jobs_for(session, ctx, student_id, top=5)
+            for r in ranked:
+                top_matches.append({
+                    "title": r.get("title"),
+                    "company": r.get("company", ""),
+                    "tier": r.get("tier"),
+                    "score": r.get("score"),
+                    "band": r.get("band"),
+                    "eligible": r.get("eligible"),
+                    "eligibility_reasons": r.get("eligibility_reasons", []),
+                    "matched_required": [m.get("name", m.get("skill", "")) for m in r.get("matched_required", [])],
+                    "missing_required": [m.get("name", m.get("skill", "")) for m in r.get("missing_required", [])],
+                })
+        except Exception:
+            pass
+
+    if not top_matches:
+        try:
+            saved_matches = session.exec(
+                select(JobMatch, Job)
+                .where(JobMatch.student_id == student_id, JobMatch.job_id == Job.id)
+                .order_by(JobMatch.score.desc()).limit(5)
+            ).all()
+            for jm, j in saved_matches:
+                top_matches.append({
+                    "title": j.title,
+                    "company": j.company,
+                    "score": jm.score,
+                    "band": jm.band,
+                    "tier": getattr(j, "tier", "Standard"),
+                })
+        except Exception:
+            pass
+
+    # Upskilling plan
+    plan_data = None
+    try:
+        plan = session.exec(
+            select(UpskillPlan).where(UpskillPlan.student_id == student_id)
+            .order_by(UpskillPlan.created_at.desc())
+        ).first()
+        if plan:
+            items = session.exec(select(PlanItem).where(PlanItem.plan_id == plan.id).order_by(PlanItem.order)).all()
+            target_job = session.get(Job, plan.job_id) if plan.job_id else None
+            plan_data = {
+                "target_role": f"{target_job.title} at {target_job.company}" if target_job else "Target Role",
+                "total_hours": plan.total_hours,
+                "items": [
+                    {"skill": it.skill_id, "hours": it.hours, "status": it.status, "week": it.week}
+                    for it in items
+                ]
+            }
+    except Exception:
+        pass
+
+    # Applications
+    app_data = []
+    try:
+        apps = session.exec(
+            select(JobApplication).where(JobApplication.student_id == student_id)
+            .order_by(JobApplication.created_at.desc())
+        ).all()
+        for a in apps:
+            job_obj = session.get(Job, a.job_id) if a.job_id else None
+            app_data.append({
+                "role": f"{job_obj.title} at {job_obj.company}" if job_obj else "Campus Opening",
+                "status": a.status,
+                "tier": a.tier,
+                "match_score": a.match_score,
+            })
+    except Exception:
+        pass
+
     return {
+        "student_id": student.id,
         "name": student.name,
         "gpa": float(student.gpa or 0.0),
         "branch": student.branch,
+        "year": student.year,
         "backlogs": int(getattr(student, "backlogs", 0) or 0),
         "mock_interview_score": max(scores) if scores else None,
         "mock_interview_passed": bool(scores) and max(scores) >= 65,
+        "skills": skills_list,
+        "skills_by_level": skills_by_level,
+        "top_matches": top_matches,
+        "upskill_plan": plan_data,
+        "applications": app_data,
+        "interview_count": len(rows),
     }
 
 
-def _copilot_core(session, ctx, *, question: str, student_id: str | None,
-                  job_id: str | None, actor_role: str) -> dict:
-    """Shared retrieval + synthesis + citation-guard pipeline for ask endpoints.
+def _clean_job_ids(text: str) -> str:
+    """Strip raw internal job IDs (job-ext-... or job-001) so students only see readable role titles."""
+    if not text:
+        return ""
+    cleaned = re.sub(r"\[?\bjob-(?:ext-[0-9a-f]{8,12}|\d{3})\b\]?[:,\s-]*", "", text, flags=re.IGNORECASE)
+    cleaned = re.sub(r",\s*,+", ", ", cleaned)
+    cleaned = re.sub(r":\s*,", ": ", cleaned)
+    cleaned = re.sub(r"\(\s*\)", "", cleaned)
+    cleaned = re.sub(r"[ \t]+", " ", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+    return cleaned
 
-    Returns the full answer dict; ``copilot_ask`` returns it directly while the
-    streaming endpoint reuses it to build ``retrieval``/``complete`` events.
-    """
-    # 1) Retrieval
-    search = search_sops(question, top_k=3, embedder=ctx.embedder)
-    sources = search.get("results", [])
 
-    # 2) Student context (graceful if missing/invalid)
-    student_context = _student_context(session, student_id)
-
-    # 3) Optional eligibility summary (if both ids valid)
-    eligibility = {}
-    if student_id and job_id:
-        try:
-            eligibility = evaluate_student_eligibility(session, ctx, student_id, job_id)
-        except Exception:
-            eligibility = {}
-
-    # 4) Synthesis (MockLLM deterministic, or real LLM via get_llm)
+def _copilot_synthesis(session, ctx, *, question: str, student_id: str | None,
+                       job_id: str | None, actor_role: str,
+                       sources: list, student_context: dict,
+                       eligibility: dict, trace: list) -> dict:
+    """Run LLM synthesis with grounded placement context and verify SOP citations."""
     user = {"question": question, "student": student_context,
             "sources": sources, "eligibility": eligibility}
     import json as _json
     raw = ""
     if getattr(ctx, "llm", None) is not None:
-        raw = ctx.llm.complete(system=COPILOT_SYSTEM, user=_json.dumps(user), json_mode=True)
+        try:
+            logger.info("Copilot asking AI model for student=%s question=%r", student_id, question[:80])
+            raw = ctx.llm.complete(system=COPILOT_SYSTEM, user=_json.dumps(user), json_mode=True)
+            logger.info("Copilot AI model responded (length=%d)", len(raw))
+        except Exception as e:
+            logger.warning("Copilot AI model failed (%s); falling back to MockLLM.", e)
+            try:
+                from app.llm.mock import MockLLM
+                raw = MockLLM().complete(system=COPILOT_SYSTEM, user=_json.dumps(user), json_mode=True)
+            except Exception:
+                raw = ""
     try:
         parsed = _json.loads(raw) if raw else {}
     except Exception:
         parsed = {}
     answer = str(parsed.get("answer") or "").strip()
+    if not answer and raw:
+        cleaned_raw = raw.strip()
+        if cleaned_raw.startswith("```"):
+            cleaned_raw = "\n".join(ln for ln in cleaned_raw.splitlines() if not ln.strip().startswith("```")).strip()
+        try:
+            p2 = _json.loads(cleaned_raw)
+            if isinstance(p2, dict) and p2.get("answer"):
+                answer = str(p2["answer"]).strip()
+        except Exception:
+            pass
+        if not answer:
+            answer = cleaned_raw
     if not answer:
         answer = (f"Based on JKLU placement policy, your inquiry '{question}' is governed by the "
                   f"retrieved sections: {', '.join(s.get('sop_id','') for s in sources)}.")
+    answer = _clean_job_ids(answer)
     cited = [str(c) for c in (parsed.get("cited_sops") or [])]
 
-    # 5) Citation guard (annotate unknown, keep known)
+    # Citation guard (annotate unknown, keep known)
     from app.rag.policy_rag import sop_ids
     known = sop_ids()
     verify = verify_policy_citations(answer, known)
     # ensure cited_sops are all known; drop unknown ones from the trusted list
     cited = [c.upper() for c in cited if c.upper() in known]
-
-    # Build a mini trace
-    trace = [{
-        "thought": "Queried institutional placement policy for grounded clauses.",
-        "tool": "search_placement_policy_rag",
-        "top_sop": search.get("top_sop_id"),
-    }]
 
     return {
         "question": question,
@@ -122,14 +277,58 @@ def _copilot_core(session, ctx, *, question: str, student_id: str | None,
     }
 
 
+def _copilot_core(session, ctx, *, question: str, student_id: str | None,
+                  job_id: str | None, actor_role: str) -> dict:
+    """Shared retrieval + synthesis + citation-guard pipeline for ask endpoints."""
+    # 1) Retrieval
+    search = search_sops(question, top_k=3, embedder=ctx.embedder)
+    sources = search.get("results", [])
+
+    # 2) Student context (graceful if missing/invalid)
+    student_context = _student_context(session, student_id, ctx=ctx)
+
+    # 3) Optional eligibility summary (if both ids valid)
+    eligibility = {}
+    if student_id and job_id:
+        try:
+            eligibility = evaluate_student_eligibility(session, ctx, student_id, job_id)
+        except Exception:
+            eligibility = {}
+
+    # Build a grounded trace
+    trace = [{
+        "thought": "Queried institutional placement policy for grounded clauses.",
+        "tool": "search_placement_policy_rag",
+        "top_sop": search.get("top_sop_id"),
+    }]
+    if student_context:
+        skill_cnt = len(student_context.get("skills", []))
+        trace.append({
+            "thought": f"Inspected student profile for {student_context.get('name', 'student')} ({skill_cnt} verified skills, GPA {student_context.get('gpa')}).",
+            "tool": "inspect_student_profile",
+        })
+        if student_context.get("top_matches"):
+            top_m = student_context["top_matches"][0]
+            trace.append({
+                "thought": f"Evaluated top job matches (Lead: {top_m.get('title')} at {top_m.get('company', 'campus partner')}, score {top_m.get('score')}).",
+                "tool": "rank_and_explain_jobs",
+            })
+
+    return _copilot_synthesis(session, ctx, question=question,
+                              student_id=student_id, job_id=job_id,
+                              actor_role=actor_role,
+                              sources=sources, student_context=student_context,
+                              eligibility=eligibility, trace=trace)
+
+
 @router.post("/api/copilot/ask/stream")
 def copilot_ask_stream(payload: dict, request: Request,
                        session: Session = Depends(get_session), ctx=Depends(get_ctx),
                        _rl: None = Depends(check_rate_limit("copilot_ask"))):
     """Stream the copilot answer as SSE (Milestone 17).
 
-    Emits ``retrieval`` (sources + student context + eligibility + trace), then
-    ``token`` events carrying the answer synthesized by the streaming LLM path,
+    Emits ``retrieval`` (sources + student context + eligibility + trace) immediately, then
+    ``token`` events carrying the answer synthesized by the LLM path,
     then a final ``complete`` with the citation-verified annotated text.
     """
     from app.api.routes.jobs import SSE_HEADERS, _sse_chunk
@@ -147,34 +346,75 @@ def copilot_ask_stream(payload: dict, request: Request,
 
     def event_stream():
         try:
-            # Shared core computes retrieval + citations (authoritative answer).
-            result = _copilot_core(session, ctx, question=question,
-                                   student_id=student_id, job_id=job_id,
-                                   actor_role=actor_role)
-            yield _sse_chunk("retrieval", {
-                "sources": result["sources"],
-                "student_context": result["student_context"],
-                "eligibility": result["eligibility"],
-                "trace": result["trace"],
-            })
-            # Stream the answer text via the LLM streaming path.
-            llm = getattr(ctx, "llm", None)
-            if llm is not None and hasattr(llm, "stream"):
-                user_payload = {
-                    "question": question,
-                    "student": result["student_context"],
-                    "sources": result["sources"],
-                    "eligibility": result["eligibility"] or {},
-                }
-                import json as _json
-                chunks = llm.stream(system=COPILOT_SYSTEM,
-                                    user=_json.dumps(user_payload), json_mode=True)
+            # 1) Fast retrieval & context
+            search = search_sops(question, top_k=3, embedder=ctx.embedder)
+            sources = search.get("results", [])
+            student_context = _student_context(session, student_id, ctx=ctx)
+            eligibility = {}
+            if student_id and job_id:
                 try:
-                    for delta in chunks:
-                        yield _sse_chunk("token", {"delta": delta})
+                    eligibility = evaluate_student_eligibility(session, ctx, student_id, job_id)
                 except Exception:
-                    # fallback: emit the authoritative (verified) answer as one delta
-                    yield _sse_chunk("token", {"delta": result["answer"]})
+                    eligibility = {}
+
+            trace = [{
+                "thought": "Queried institutional placement policy for grounded clauses.",
+                "tool": "search_placement_policy_rag",
+                "top_sop": search.get("top_sop_id"),
+            }]
+            if student_context:
+                skill_cnt = len(student_context.get("skills", []))
+                trace.append({
+                    "thought": f"Inspected student profile for {student_context.get('name', 'student')} ({skill_cnt} verified skills, GPA {student_context.get('gpa')}).",
+                    "tool": "inspect_student_profile",
+                })
+                if student_context.get("top_matches"):
+                    top_m = student_context["top_matches"][0]
+                    trace.append({
+                        "thought": f"Evaluated top job matches (Lead: {top_m.get('title')} at {top_m.get('company', 'campus partner')}, score {top_m.get('score')}).",
+                        "tool": "rank_and_explain_jobs",
+                    })
+
+            # Emit retrieval event IMMEDIATELY so the user UI sees Agent Step Trace right away!
+            yield _sse_chunk("retrieval", {
+                "sources": sources,
+                "student_context": student_context,
+                "eligibility": eligibility,
+                "trace": trace,
+            })
+
+            # 2) AI Synthesis (runs with keep-alive pings so connection never drops)
+            import concurrent.futures
+            executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+            future = executor.submit(
+                _copilot_synthesis, session, ctx,
+                question=question, student_id=student_id,
+                job_id=job_id, actor_role=actor_role,
+                sources=sources, student_context=student_context,
+                eligibility=eligibility, trace=trace,
+            )
+            while not future.done():
+                try:
+                    result = future.result(timeout=2.0)
+                    break
+                except concurrent.futures.TimeoutError:
+                    yield ": ping\n\n"
+            else:
+                result = future.result()
+            executor.shutdown(wait=False)
+
+            # 3) Stream the answer text in clean, progressive chunks preserving newlines
+            ans = result.get("answer") or ""
+            lines = ans.splitlines(keepends=True)
+            for line in lines:
+                words = re.findall(r"\S+\s*", line)
+                if words:
+                    for i in range(0, len(words), 3):
+                        yield _sse_chunk("token", {"delta": "".join(words[i:i + 3])})
+                else:
+                    yield _sse_chunk("token", {"delta": line})
+
+            # 4) Complete event
             yield _sse_chunk("complete", {
                 "answer": result["answer"],
                 "citations": result["citations"],
@@ -188,6 +428,7 @@ def copilot_ask_stream(payload: dict, request: Request,
                 "actor_role": result["actor_role"],
             })
         except Exception as e:  # pragma: no cover - never break the SSE frame
+            logger.exception("copilot_ask_stream error: %s", e)
             yield _sse_chunk("error", {"message": str(e)})
         finally:
             session.close()
@@ -246,9 +487,11 @@ def copilot_page(request: Request, session: Session = Depends(get_session)):
     else:
         students = session.exec(select(Student).order_by(Student.created_at.desc())).all()
 
+    cohort_students = session.exec(select(Student).order_by(Student.created_at.desc())).all()
+
     return request.app.state.templates.TemplateResponse(
         request, "copilot.html",
-        {"students": students, "sid": (user.student_id if user and role == "student" else ""), "active": "copilot",
+        {"students": students, "cohort_students": cohort_students, "sid": (user.student_id if user and role == "student" else ""), "active": "copilot",
          "role": role, "user": user, "current_user": user,
          "student_name": student_name,
          "department": dept,

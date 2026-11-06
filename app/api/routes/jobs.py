@@ -5,19 +5,20 @@ import threading
 import time
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import func
+from sqlalchemy import delete, func
 from sqlmodel import Session, select
 
 from app.api.deps import get_ctx, get_session
-from app.models import Job, Student
+from app.models import AuditLog, Interview, Job, JobApplication, JobMatch, Student
 from app.scraper.pipeline import ingest_scraped_jobs
 from app.scraper.service import CompositeJobScraper
 from app.security.ratelimit import check_rate_limit
-from app.security.rbac import require_role
+from app.security.rbac import get_current_user_optional, require_role
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -366,3 +367,70 @@ def get_job(job_id: str, session: Session = Depends(get_session)):
             "source": getattr(j, "source", "local") or "local",
             "scraper_engine": getattr(j, "scraper_engine", "jobspy") or "jobspy",
             "is_fresher": getattr(j, "is_fresher", True)}
+
+
+@router.delete("/api/jobs/{job_id}")
+def delete_job_endpoint(
+    job_id: str,
+    request: Request,
+    session: Session = Depends(get_session),
+    ctx: Any = Depends(get_ctx),
+    role: str = Depends(require_role("student", "faculty_mentor", "tpo_admin")),
+):
+    """Remove or dismiss a job (closed, expired, or unwanted). Accessible to all roles."""
+    job = session.get(Job, job_id)
+    if job is None:
+        raise HTTPException(404, "job not found")
+
+    user = get_current_user_optional(request)
+    # If caller is student, dismiss for that student
+    if role == "student" and user and user.student_id:
+        sid = user.student_id
+        m = session.exec(select(JobMatch).where(JobMatch.student_id == sid, JobMatch.job_id == job_id)).first()
+        if m:
+            m.band = "dismissed"
+            m.score = -1
+            b = dict(m.breakdown or {})
+            b["dismissed"] = True
+            m.breakdown = b
+            session.add(m)
+        else:
+            session.add(
+                JobMatch(
+                    id=f"m-{uuid4().hex[:8]}",
+                    student_id=sid,
+                    job_id=job_id,
+                    score=-1,
+                    band="dismissed",
+                    breakdown={"dismissed": True},
+                )
+            )
+        session.commit()
+        return {"status": "dismissed", "job_id": job_id, "student_id": sid}
+
+    # Faculty mentor or TPO admin: remove permanently from catalog
+    if hasattr(ctx, "vector_store") and ctx.vector_store:
+        try:
+            ctx.vector_store.delete("job", job_id)
+        except Exception:
+            pass
+    if hasattr(ctx, "job_vectors") and job_id in ctx.job_vectors:
+        ctx.job_vectors.pop(job_id, None)
+
+    session.execute(delete(JobApplication).where(JobApplication.job_id == job_id))
+    session.execute(delete(JobMatch).where(JobMatch.job_id == job_id))
+    session.execute(delete(Interview).where(Interview.job_id == job_id))
+    session.delete(job)
+    session.add(
+        AuditLog(
+            id=f"aud-{uuid4().hex[:8]}",
+            action="job.deleted",
+            entity_type="job",
+            entity_id=job_id,
+            actor_role=role,
+            detail={"title": job.title, "company": job.company, "reason": "closed_or_not_wanted"},
+        )
+    )
+    session.commit()
+    return {"status": "deleted", "job_id": job_id}
+

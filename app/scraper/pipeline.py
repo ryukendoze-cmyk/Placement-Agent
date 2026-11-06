@@ -14,6 +14,7 @@ from sqlmodel import Session, select
 from app.models import Interview, Job, JobMatch, PlanItem, UpskillPlan
 from app.scraper.normalizer import (
     extract_experience_years,
+    is_ai_normalizer_circuit_open,
     is_senior_job,
     normalize_job_with_ai,
     normalize_scraped_job,
@@ -198,15 +199,16 @@ def sanitize_legacy_salaries(session: Session) -> int:
         return 0
 
 
-def sanitize_legacy_experience(session: Session, ctx: Any) -> int:
+def sanitize_legacy_experience(session: Session, ctx: Any = None) -> int:
     """Repair legacy ``job-ext-%`` rows whose ``experience_years`` was left at 0 (ARCHITECTURE §20.2.4).
 
     Earlier static ingestion defaulted ``experience_years = 0`` without parsing the
     description, so historical jobs carrying "1-3 years" (etc.) in their text were
-    mis-scored. This scans every ``job-ext-%`` job with ``experience_years == 0``,
-    extracts the true floor via ``extract_experience_years(description)``, updates
-    the field when > 0, then re-triggers match re-ranking for affected students so
-    scores/eligibility reflect the corrected experience.
+    mis-scored. This scans every job, extracts the true floor via
+    ``extract_experience_years(title + description + job_url)``, enriches short
+    LinkedIn postings via fast public detail fetches, and updates the field when > 0,
+    then re-triggers match re-ranking for affected students so scores/eligibility
+    reflect the corrected experience.
 
     Args:
         session: Active SQLModel database session.
@@ -217,19 +219,50 @@ def sanitize_legacy_experience(session: Session, ctx: Any) -> int:
     """
     updated_ids: list[str] = []
     try:
-        jobs = session.exec(
-            select(Job).where(Job.id.startswith("job-ext-"), Job.experience_years == 0)
-        ).all()
+        from app.matching.engine import FRESHER_TITLE_RE, MID_LEVEL_TITLE_RE
+        from app.scraper.normalizer import fetch_external_job_description
+
+        jobs = session.exec(select(Job)).all()
         for job in jobs:
-            combined = f"{getattr(job, 'title', '') or ''} {getattr(job, 'description', '') or ''}"
-            years = extract_experience_years(combined)
+            clean_body = (job.description or "").split("Apply URL:")[0].strip()
+            if len(clean_body) < 60 and job.job_url and "linkedin.com/jobs/view/" in job.job_url:
+                fetched = fetch_external_job_description(job.job_url, timeout=3.0)
+                if fetched:
+                    source_tag = getattr(job, "source", "linkedin") or "linkedin"
+                    engine_val = getattr(job, "scraper_engine", "jobspy") or "jobspy"
+                    job.description = (
+                        f"{fetched}\n\nApply URL: {job.job_url}\n"
+                        f"Source: {source_tag} (Scraped via {engine_val})"
+                    ).strip()
+
+            combined = f"{getattr(job, 'title', '') or ''} {getattr(job, 'description', '') or ''} {getattr(job, 'job_url', '') or ''}"
+            extracted = extract_experience_years(combined)
+            years = max(getattr(job, "experience_years", 0) or 0, extracted)
             if years <= 0 and is_senior_job(job):
                 title_low = (getattr(job, 'title', '') or '').lower()
                 if "iii" in title_low or " 3" in title_low or " iv" in title_low or " 4" in title_low or "specialist" in title_low:
                     years = 5
                 else:
                     years = 3
-            if years > 0:
+            elif years <= 0 and MID_LEVEL_TITLE_RE.search(getattr(job, "title", "") or ""):
+                years = 2
+            if years <= 0 and (getattr(job, "job_url", "") or getattr(job, "source", "") != "local"):
+                title_str = getattr(job, "title", "") or ""
+                clean_len = len((getattr(job, "description", "") or "").split("Apply URL:")[0].strip())
+                if clean_len < 50 and not FRESHER_TITLE_RE.search(title_str) and getattr(job, "source", "") not in ("internshala", "unstop"):
+                    years = 2
+                elif not FRESHER_TITLE_RE.search(title_str):
+                    import re
+                    m_rng = re.search(r'(?i)\b(\d+)[- ]*to[- ]*(\d+)[- ]*(?:years?|yrs?|yoe)\b', combined)
+                    if m_rng:
+                        try:
+                            h = int(m_rng.group(2))
+                            if h >= 2:
+                                years = max(years, max(1, h // 2))
+                        except (ValueError, TypeError):
+                            pass
+
+            if years > (job.experience_years or 0):
                 job.experience_years = years
                 session.add(job)
                 updated_ids.append(job.id)
@@ -245,7 +278,7 @@ def sanitize_legacy_experience(session: Session, ctx: Any) -> int:
         return 0
 
     # Re-rank affected students so corrected experience flows into scores/eligibility.
-    if updated_ids:
+    if updated_ids and ctx is not None:
         try:
             from app.api.routes.students import _rank_and_persist
             from app.models import Student
@@ -339,6 +372,7 @@ def ingest_scraped_jobs(
     if type(session).__module__.split(".")[0] != "unittest":
         purge_dummy_jobs(session, ctx)
         sanitize_legacy_salaries(session)
+        sanitize_legacy_experience(session, ctx)
 
     # Pre-index existing database records for cross-provider dedup
     existing_jobs = list(session.exec(select(Job)).all())
@@ -361,18 +395,23 @@ def ingest_scraped_jobs(
     # concurrently and transactional integrity is preserved.
     valid_raw = [r for r in raw_jobs if r and isinstance(r, dict)]
     llm = getattr(ctx, "llm", None) if ctx is not None else None
-    if llm is not None and valid_raw:
-        max_workers = min(3, max(1, len(valid_raw)))
+    is_mock = type(llm).__name__ == "MockLLM" if llm is not None else False
+    if llm is not None and valid_raw and (is_mock or not is_ai_normalizer_circuit_open()):
+        max_workers = min(5, max(1, len(valid_raw)))
+        normalized: list[Job] = []
         try:
             with ThreadPoolExecutor(max_workers=max_workers) as pool:
-                futures = [
-                    pool.submit(normalize_job_with_ai, raw, tax, llm)
-                    for raw in valid_raw
-                ]
-                normalized = [f.result() for f in futures]
+                futures = []
+                for raw in valid_raw:
+                    if not is_mock and is_ai_normalizer_circuit_open():
+                        normalized.append(normalize_scraped_job(raw, tax))
+                    else:
+                        futures.append(pool.submit(normalize_job_with_ai, raw, tax, llm))
+                for f in futures:
+                    normalized.append(f.result())
         except Exception as exc:  # noqa: BLE001 - never drop the batch on pool failure
             logger.warning("Concurrent AI normalization failed (%s); normalizing inline", exc)
-            normalized = [normalize_job_with_ai(raw, tax, llm) for raw in valid_raw]
+            normalized = [normalize_scraped_job(raw, tax) for raw in valid_raw]
     else:
         normalized = [normalize_scraped_job(raw, tax) for raw in valid_raw]
 
@@ -418,6 +457,9 @@ def ingest_scraped_jobs(
 
     # Commit merged SQLModel entities
     session.commit()
+    # Sanitize experience on newly ingested rows and re-rank matches immediately
+    if type(session).__module__.split(".")[0] != "unittest":
+        sanitize_legacy_experience(session, ctx)
     jobs = list(ingested_by_id.values())
     if jobs:
         try:

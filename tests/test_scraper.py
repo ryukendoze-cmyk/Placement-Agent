@@ -1224,6 +1224,25 @@ class TestSkillTargetedScrapeEndpoints:
             data = scrape_resp.json()
             assert "fetched" in data or "ingested" in data or "status" in data
 
+    def test_post_student_scrape_jobs_stream_endpoint(self, client, client_engine):
+        """POST /api/students/{sid}/scrape-jobs/stream streams SSE telemetry and completes."""
+        client_c, engine = client_engine
+        resp = client_c.post("/api/students", json=_student_with_skills())
+        assert resp.status_code in (200, 201)
+        sid = resp.json()["id"]
+
+        df = _synthetic_df()
+        with patch("app.scraper.service.scrape_jobs", return_value=df):
+            r = client_c.post(
+                f"/api/students/{sid}/scrape-jobs/stream",
+                json={"search_term": "Python", "location": "Bengaluru", "results_wanted": 2, "live": False},
+            )
+            assert r.status_code == 200
+            assert "text/event-stream" in r.headers["content-type"]
+            body = r.text
+            assert "event: init" in body
+            assert "event: complete" in body
+
     def test_post_scrape_jobs_endpoint_multiple_terms(self, client, client_engine):
         """API POST /api/jobs/scrape supports search_terms list and returns terms_used."""
         client_c, engine = client_engine

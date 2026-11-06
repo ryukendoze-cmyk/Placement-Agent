@@ -70,6 +70,7 @@ class JobSpyScraper:
         results_wanted: int = 20,
         hours_old: int = 168,
         country_indeed: str = "India",
+        fetch_description: bool = True,
     ) -> list[dict[str, Any]]:
         """Fetch job postings from live platforms with resilient error handling and NaN sanitization.
 
@@ -80,6 +81,7 @@ class JobSpyScraper:
             results_wanted: Maximum number of results requested.
             hours_old: Filter to jobs posted within this timeframe in hours.
             country_indeed: Target country for Indeed queries.
+            fetch_description: Whether to fetch full job descriptions from detail pages.
 
         Returns:
             List of sanitized job dictionaries or an empty list if scraping fails.
@@ -112,6 +114,7 @@ class JobSpyScraper:
                     results_wanted=results_wanted,
                     hours_old=hours_old,
                     country_indeed=country_indeed,
+                    fetch_description=fetch_description,
                 )
             except Exception as exc:
                 logger.warning(
@@ -147,6 +150,7 @@ class JobSpyScraper:
                     results_wanted=per_term_results,
                     hours_old=hours_old,
                     country_indeed=country_indeed,
+                    fetch_description=fetch_description,
                 )
             except Exception as exc:
                 logger.warning(
@@ -435,11 +439,13 @@ class CompositeJobScraper:
 
         all_jobs: list[dict[str, Any]] = []
         if unit_portals is not None:
-            # One provider (stealth harvester) drives all portal units.
-            target = [p for p in target_providers if getattr(p, "name", "") == "stealth_harvester"]
-            if not target:
-                target = target_providers
             for unit in units:
+                target = [
+                    p for p in target_providers
+                    if unit in getattr(p, "supported_sites", []) or getattr(p, "name", "") == "stealth_harvester"
+                ]
+                if not target:
+                    target = target_providers
                 self._stream_unit(
                     unit, target, search_term, location, results_wanted, sites, kwargs, emit, all_jobs, is_portal=True
                 )

@@ -179,6 +179,7 @@ class JobSpyProvider(BaseJobScraperProvider):
             filtered = [s for s in sites if str(s).lower() in allowed]
             sites = filtered or None
 
+        fetch_description = bool(kwargs.get("fetch_description", True))
         records = self._scraper.fetch_jobs(
             search_term=search_term,
             location=location,
@@ -186,6 +187,7 @@ class JobSpyProvider(BaseJobScraperProvider):
             results_wanted=results_wanted,
             hours_old=hours_old,
             country_indeed=country_indeed,
+            fetch_description=fetch_description,
         )
         for rec in records:
             rec.setdefault("scraper_engine", self.name)
@@ -739,7 +741,7 @@ class StealthHarvesterProvider(BaseJobScraperProvider):
             jobs: list[dict[str, Any]] = []
             if self._live_enabled(kwargs):
                 jobs.extend(self._run_live(terms, location, results_wanted, kwargs))
-            jobs.extend(self._read_output_files(kwargs.get("sites")))
+            jobs.extend(self._read_output_files(kwargs.get("sites") or kwargs.get("portals")))
 
             merged = self._dedupe(jobs)
             for job in merged:
@@ -805,11 +807,11 @@ class StealthHarvesterProvider(BaseJobScraperProvider):
         try:
             if loop is not None and loop.is_running():
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    out = pool.submit(asyncio.run, coro).result()
+                    out = pool.submit(asyncio.run, coro).result(timeout=15.0)
             else:
-                out = asyncio.run(coro)
+                out = asyncio.run(asyncio.wait_for(coro, timeout=15.0))
         except Exception as exc:  # noqa: BLE001 - zero-crash guarantee
-            logger.warning("Stealth harvester live run failed: %s", exc)
+            logger.warning("Stealth harvester live run failed or timed out: %s", exc)
             return []
 
         records = out.get("normalized") if isinstance(out, dict) else None

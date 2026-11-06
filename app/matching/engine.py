@@ -42,8 +42,16 @@ SENIOR_TITLE_RE = re.compile(
     r")\b",
     re.IGNORECASE,
 )
+MID_LEVEL_TITLE_RE = re.compile(
+    r"\b("
+    r"mid[\s-]level|mid[\s-]senior|intermediate|"
+    r"(?:sde|engineer|developer|scientist|analyst|programmer)\s*[- ]*(?:ii|2)\b|"
+    r"(?:level|lvl|l|ic|e)[- ]*2\b"
+    r")\b",
+    re.IGNORECASE,
+)
 FRESHER_TITLE_RE = re.compile(
-    r"\b(intern|internship|trainee|fresher|graduate\s+engineer|graduate\s+trainee|"
+    r"\b(interns?|internship|trainees?|freshers?|graduate\s+engineer|graduate\s+trainee|"
     r"get|entry[\s-]level|associate|junior|jr\.?|sde[\s-]?[1i]\b|analyst\s+1|engineer\s+1)\b",
     re.IGNORECASE,
 )
@@ -83,13 +91,16 @@ def is_fresher_job(job) -> bool:
     - If is_senior_job -> False.
     - External scraped roles (job-ext-): ANY exp > 0 -> False.
     - Campus / local roles: exp > 1.0 -> False; 0 < exp <= 1 -> True.
-    - If exp_val <= 0.0 -> True.
+    - If exp_val <= 0.0 -> True ONLY IF title/description/URL do not require experience.
     """
     if not job:
         return False
     if (isinstance(job, dict) and "year" in job) or hasattr(job, "year"):
         return is_campus_fresher(job)
     if is_senior_job(job):
+        return False
+    title = str((job.get("title") if isinstance(job, dict) else getattr(job, "title", "")) or "")
+    if MID_LEVEL_TITLE_RE.search(title):
         return False
     exp = (job.get("experience_years") if isinstance(job, dict) else getattr(job, "experience_years", 0)) or 0
     try:
@@ -102,19 +113,39 @@ def is_fresher_job(job) -> bool:
     source = str((job.get("source") if isinstance(job, dict) else getattr(job, "source", "")) or "").strip().lower()
     is_external = bool(job_id.startswith("job-ext-") or (source and source != "local"))
 
-    # STRICT RULE: For external scraped jobs, ANY experience > 0 disqualifies.
-    # This is the critical fix — external jobs listing even 1 year experience
-    # are NOT fresher roles.
+    # STRICT RULE: For external scraped jobs, ANY recorded experience > 0 disqualifies.
     if is_external and exp_val > 0:
         return False
 
     # For campus/local jobs, allow up to 1 year as fresher
-    if exp_val > 1.0:
+    if not is_external and exp_val > 1.0:
         return False
-    if exp_val <= 0.0:
-        return True
 
-    # 0.0 < exp_val <= 1.0 for campus/local roles -> fresher
+    # CRITICAL FAILSAFE: If exp_val <= 0 (or campus <= 1.0), inspect title, description, and job_url.
+    # A job whose text, URL, or title specifies required experience (e.g. "2-to-4-years", "4+ Years",
+    # "2-4 Years of experience") MUST NEVER pass as a fresher role, even if raw scraper or DB left exp at 0.
+    from app.scraper.normalizer import extract_experience_years
+    desc = str((job.get("description") if isinstance(job, dict) else getattr(job, "description", "")) or "")
+    url = str((job.get("job_url") if isinstance(job, dict) else getattr(job, "job_url", "")) or "")
+    combined = f"{title} {desc} {url}".strip()
+
+    if combined:
+        extracted = extract_experience_years(combined)
+        if is_external and extracted > 0:
+            return False
+        if not is_external and extracted > 1.0:
+            return False
+
+        if is_external and not FRESHER_TITLE_RE.search(title):
+            m_range = re.search(r"(?i)\b(\d+)[- ]*to[- ]*(\d+)[- ]*(?:years?|yrs?|yoe)\b", combined)
+            if m_range:
+                try:
+                    high = int(m_range.group(2))
+                    if high >= 2:
+                        return False
+                except (ValueError, TypeError):
+                    pass
+
     return True
 
 

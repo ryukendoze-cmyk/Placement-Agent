@@ -309,6 +309,26 @@ def test_api_copilot_ask_with_student_context():
         body = r.json()
         assert body["student_context"]["gpa"] == 7.2
         assert body["student_context"]["name"]
+        assert "skills" in body["student_context"]
+        assert "skills_by_level" in body["student_context"]
+        assert "top_matches" in body["student_context"]
+
+
+def test_api_copilot_ask_rank_jobs_full_student_info():
+    client = _make_client()
+    with client:
+        sid = _seed_student(client, gpa=8.5, branch="CSE")
+        r = client.post("/api/copilot/ask", json={
+            "question": "Rank my top job matches and tell me which ones fit best",
+            "student_id": sid,
+        })
+        assert r.status_code == 200
+        body = r.json()
+        assert body["student_context"]["student_id"] == sid
+        assert body["student_context"]["name"]
+        assert body["answer"]
+        assert any(sop in body["citations"]["verified"] for sop in ("SOP-01", "SOP-03", "SOP-04"))
+        assert len(body["trace"]) >= 2
 
 
 def test_api_copilot_ask_missing_question_400():

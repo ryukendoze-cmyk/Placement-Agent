@@ -40,9 +40,10 @@ def _tpl(request: Request, name: str, session: Session, sid: str = "", active: s
     if user is not None and user.role == "faculty_mentor" and user.department:
         dept = user.department.strip().lower()
         students = [s for s in students if str(s.branch or "").strip().lower() == dept]
+    all_cohort = _students_menu(session)
     return request.app.state.templates.TemplateResponse(
         request, name,
-        {**ctx, "students": students, "sid": sid, "active": active, "role": role,
+        {**ctx, "students": students, "cohort_students": all_cohort, "sid": sid, "active": active, "role": role,
          "user": user, "current_user": user, "user_name": (user.name if user else ""),
          "department": department,
          "user_department": (user.department if user else None),
@@ -156,6 +157,10 @@ def matches_page(sid: str, request: Request, session: Session = Depends(get_sess
             pass
     cards = []
     for m in rows:
+        if getattr(m, "band", None) == "dismissed" or getattr(m, "score", 0) < 0:
+            continue
+        if m.breakdown and m.breakdown.get("dismissed"):
+            continue
         job = session.get(Job, m.job_id)
         if job is None:
             continue

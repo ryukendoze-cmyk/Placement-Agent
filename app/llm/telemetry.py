@@ -147,13 +147,13 @@ class TelemetryLLM:
         self.primary: LLMClient = get_llm(settings)
         self.mock = MockLLM()
 
-    def complete(self, system: str, user: str, json_mode: bool = False) -> str:
+    def complete(self, system: str, user: str, json_mode: bool = False, **kwargs) -> str:
         if self.tracker.should_use_fallback(self.provider):
             self.tracker.record_fallback(self.provider)
-            return self.mock.complete(system, user, json_mode=json_mode)
+            return self.mock.complete(system, user, json_mode=json_mode, **kwargs)
         t0 = time.perf_counter()
         try:
-            out = self.primary.complete(system, user, json_mode=json_mode)
+            out = self.primary.complete(system, user, json_mode=json_mode, **kwargs)
         except Exception:
             self.tracker.record(self.provider, system, "",
                                 latency_ms=(time.perf_counter() - t0) * 1000.0,

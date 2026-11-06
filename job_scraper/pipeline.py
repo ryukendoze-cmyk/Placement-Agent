@@ -57,7 +57,7 @@ def _build_registry() -> dict[str, Any]:
 EXTRACTOR_REGISTRY: dict[str, Any] = _build_registry()
 
 # Inter-portal politeness gap (seconds).
-PORTAL_GAP_SECONDS = 5.0
+PORTAL_GAP_SECONDS = 0.5
 
 
 def _normalize_raw_jobs(raw_jobs: list[RawScrapedJob]) -> tuple[list[dict], list[dict]]:
@@ -116,11 +116,14 @@ async def run_pipeline(
                 extractor = factory(session)
                 for kw in keywords:
                     try:
-                        jobs = await extractor.search(
-                            keyword=kw,
-                            location=location,
-                            freshness_days=days_old,
-                            limit=limit,
+                        jobs = await asyncio.wait_for(
+                            extractor.search(
+                                keyword=kw,
+                                location=location,
+                                freshness_days=days_old,
+                                limit=limit,
+                            ),
+                            timeout=8.0,
                         )
                         result.jobs.extend(jobs)
                     except Exception as exc:
@@ -160,8 +163,10 @@ async def run_pipeline(
     out_dir.mkdir(parents=True, exist_ok=True)
     raw_path = out_dir / RAW_OUTPUT
     norm_path = out_dir / NORMALIZED_OUTPUT
-    raw_path.write_text(json.dumps(raw_dicts, indent=2, ensure_ascii=False), encoding="utf-8")
-    norm_path.write_text(json.dumps(normalized, indent=2, ensure_ascii=False), encoding="utf-8")
+    if raw_dicts or not raw_path.exists():
+        raw_path.write_text(json.dumps(raw_dicts, indent=2, ensure_ascii=False), encoding="utf-8")
+    if normalized or not norm_path.exists():
+        norm_path.write_text(json.dumps(normalized, indent=2, ensure_ascii=False), encoding="utf-8")
     logger.info(
         "wrote %d raw / %d normalized jobs to %s",
         len(raw_dicts), len(normalized), out_dir,

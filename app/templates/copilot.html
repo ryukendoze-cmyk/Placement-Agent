@@ -167,6 +167,7 @@
 
   function pillify(text) {
     var esc = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    esc = esc.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     return esc.replace(/\[((?:SOP|JOB)-[A-Z0-9]+)\]/gi,
       '<span class="citation-pill" data-sop="$1" title="Open the policy clause">$1</span>');
   }
@@ -175,7 +176,7 @@
     var wrap = document.createElement("div");
     wrap.className = "flex " + (side === "user" ? "justify-end" : "justify-start");
     var b = document.createElement("div");
-    b.className = "max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed " +
+    b.className = "max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-line " +
       (side === "user"
         ? "bg-[#1D5C42] text-white"
         : "bg-[#FAF9F5] text-[#1C1E1B] border border-[#E5E3DC]");
@@ -234,6 +235,7 @@
               try { data = JSON.parse(payload); } catch (e) { return; }
               if (name === "retrieval") {
                 renderTrace(data.trace);
+                bubble.innerHTML = '<span class="text-[#6E6C64] italic">Consulting Placement AI and analyzing eligibility...</span>';
               } else if (name === "token") {
                 text += (data.delta || "");
                 bubble.innerHTML = pillify(text || "...");

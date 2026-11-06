@@ -4,7 +4,7 @@ import re
 
 
 class MockLLM:
-    def complete(self, system: str, user: str, json_mode: bool = False) -> str:
+    def complete(self, system: str, user: str, json_mode: bool = False, **kwargs) -> str:
         tokens = system.split()
         task = ""
         for i, token in enumerate(tokens):
@@ -521,6 +521,16 @@ class MockLLM:
             out = [i for i in ids if i in src_ids]
             return out or src_ids[:2]
 
+        stripped = q.strip().rstrip("?!., ")
+        if stripped in ("what", "what do you mean", "why", "hello", "hi", "hey", "who are you", "help", "help me"):
+            c = cite("SOP-01", "SOP-04")
+            sname = student.get("name", "Student")
+            answer = (f"Hello {sname}! I am your Placement Copilot. I can sort and rank your top job matches, "
+                      f"analyze your verified competencies and weaknesses, or check institutional placement rules. "
+                      f"Under [SOP-01] and [SOP-04], I can guide your pathway toward Dream and Super-Dream placements. "
+                      f"Try asking: 'Rank my top job matches' or 'What skills of mine are weak?'.")
+            return {"answer": answer, "cited_sops": [i.strip("[]") for i in c]}
+
         if any(k in q for k in ("mock", "interview")):
             c = cite("SOP-04", "SOP-01")
             answer = ("[SOP-04] requires a mock-interview score of >= 65 to be nominated for "
@@ -542,10 +552,74 @@ class MockLLM:
         elif any(k in q for k in ("resume", "fake", "fabricat", "cheat", "integrity")):
             c = cite("SOP-08")
             answer = "[SOP-08] mandates zero fabrication: every resume claim needs verifiable evidence; violations cause debarment."
+        elif any(k in q for k in ("rank", "job", "match", "sort", "recommend", "priorit")):
+            top_matches = student.get("top_matches") or []
+            c = cite("SOP-01", "SOP-04")
+            lines = []
+            if top_matches:
+                items = []
+                for i, m in enumerate(top_matches[:3], 1):
+                    co = f" at {m['company']}" if m.get("company") else ""
+                    tier = m.get("tier", "Standard")
+                    items.append(f"{i}. {m.get('title', 'Role')}{co} (Match Score: {m.get('score', 0)}, Tier: {tier})")
+                match_txt = " ".join(items)
+                lines.append(f"Here are your top job matches sorted by profile compatibility: {match_txt}. [SOP-01] classifies placement tiers.")
+            else:
+                skills = student.get("skills_by_level", {}).get("advanced", [])
+                skill_str = (", ".join(skills[:4])) if skills else "technical skills"
+                lines.append(f"Evaluating your profile with key skills in {skill_str}. [SOP-01] governs job tier classification.")
+
+            if any(k in q for k in ("prepar", "standing", "fit", "ready", "gate")):
+                if mock is not None and mock < 65:
+                    lines.append(f"On preparedness: your mock interview score is {mock}/100, which is below the 65 verified score required under [SOP-04] for Dream (8-14.99 LPA) and Super-Dream (15+ LPA) roles. You are currently eligible for Standard tier roles; completing a re-interview will unlock recruiter shortlists for higher tiers.")
+                elif mock is not None:
+                    lines.append(f"On preparedness: your mock interview score is {mock}/100, which satisfies the [SOP-04] readiness requirement for Dream drives.")
+            elif mock is not None and mock < 65:
+                lines.append(f"Note: Under [SOP-04], you require a mock interview score >= 65 for Dream/Super-Dream nomination (your current score: {mock}).")
+
+            answer = " ".join(lines)
+        elif any(k in q for k in ("weak", "skill", "gap", "prepar", "strength", "improv", "learn", "competenc")):
+            c = cite("SOP-01", "SOP-04")
+            by_level = student.get("skills_by_level") or {}
+            basic_skills = by_level.get("basic") or []
+            adv_skills = by_level.get("advanced") or []
+            top_m = (student.get("top_matches") or [{}])[0]
+            missing = top_m.get("missing_required") or []
+
+            lines = []
+            if basic_skills:
+                lines.append(f"Based on your profile, your verified skills currently at 'Basic' proficiency include: {', '.join(basic_skills[:6])}.")
+            if missing:
+                lines.append(f"For your lead job match ({top_m.get('title', 'top role')}), key missing required skills include: {', '.join(missing[:4])}.")
+            if adv_skills:
+                lines.append(f"Your strongest skills (Advanced) are: {', '.join(adv_skills[:5])}.")
+
+            # If the user requested details, provide structured actionable steps
+            if any(k in q for k in ("detail", "talk", "explain", "how", "plan", "roadmap", "priorit")):
+                lines.append("\nRecommended Upskilling Action Plan:")
+                if missing:
+                    for i, m_sk in enumerate(missing[:3], 1):
+                        lines.append(f"{i}. {m_sk} (High Priority): Build and commit a hands-on project demonstrating core operations, indexing, and REST integration to earn verified evidence under [SOP-08].")
+                if basic_skills:
+                    for i, b_sk in enumerate(basic_skills[:2], len(missing[:3]) + 1):
+                        lines.append(f"{i}. Elevate {b_sk}: Advance from Basic to Intermediate by passing technical mock evaluations and adding production-style tests.")
+
+            if mock is not None and mock < 65:
+                lines.append(f"\nMost critically, under [SOP-04], your AI mock interview score is {mock}/100, which is below the mandatory 65 cutoff required to unblock Dream and Super-Dream drive nominations.")
+            else:
+                lines.append("\nUnder [SOP-01], leveling up these foundational skills will unlock higher placement tiers (Dream 8-14.99 LPA and Super-Dream 15+ LPA).")
+            answer = "\n".join(lines)
         else:
             c = src_ids[:2]
-            answer = f"Based on JKLU placement policy {', '.join('[' + i + ']' for i in c)}, " \
-                     f"your inquiry is governed by the retrieved sections."
+            sop_summaries = []
+            for s in sources[:2]:
+                if isinstance(s, dict) and s.get("rule_text"):
+                    sop_summaries.append(f"[{s.get('sop_id')}]: {s.get('rule_text')}")
+            if sop_summaries:
+                answer = "Based on institutional policy: " + " ".join(sop_summaries)
+            else:
+                answer = f"Based on JKLU placement policy {', '.join('[' + i + ']' for i in c)}, " \
+                         f"your inquiry is governed by the retrieved sections."
 
         cited = [i.strip("[]") for i in c]
         return {"answer": answer, "cited_sops": cited}

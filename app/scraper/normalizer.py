@@ -8,11 +8,13 @@ import json
 import logging
 import math
 import re
+import time
 import uuid
 from typing import Any
 
 from app.matching.engine import (
     FRESHER_TITLE_RE,
+    MID_LEVEL_TITLE_RE,
     SENIOR_TITLE_RE,
     is_fresher_job,
     is_senior_job,
@@ -26,12 +28,17 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "CORE_FALLBACK_SKILLS",
     "DEFAULT_BRANCHES",
+    "EXP_COLON_RE",
+    "EXP_PHRASE_RE",
     "EXP_PLUS_SINGLE_RE",
     "EXP_RANGE_RE",
+    "EXP_URL_SLUG_RE",
     "FRESHER_TITLE_RE",
     "JOB_NORMALIZER_SYSTEM",
+    "MID_LEVEL_TITLE_RE",
     "SENIOR_TITLE_RE",
     "extract_experience_years",
+    "fetch_external_job_description",
     "is_fresher_job",
     "is_senior_job",
     "normalize_job_with_ai",
@@ -42,6 +49,49 @@ __all__ = [
 BOUND = r"(?<![a-z0-9]){alias}(?![a-z0-9])"
 CORE_FALLBACK_SKILLS = ["python", "sql", "git"]
 DEFAULT_BRANCHES = ["CSE", "IT", "ECE"]
+
+
+def fetch_external_job_description(url: str, timeout: float = 4.0) -> str:
+    """Safely fetch public job description for external postings when raw scraper returned empty body."""
+    if not url:
+        return ""
+    try:
+        import httpx
+        from bs4 import BeautifulSoup
+
+        resp = httpx.get(
+            url,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                )
+            },
+            follow_redirects=True,
+            timeout=timeout,
+        )
+        if resp.status_code == 200 and resp.text:
+            soup = BeautifulSoup(resp.text, "lxml")
+            if "linkedin.com" in url:
+                desc_el = soup.select_one(".description__text, .show-more-less-html__markup")
+                if desc_el:
+                    return desc_el.get_text("\n", strip=True)
+            elif "internshala.com" in url:
+                blocks = []
+                for el in soup.select(".text-container, .internship_details, #about_internship"):
+                    txt = el.get_text(" ", strip=True)
+                    if txt and len(txt) > 20:
+                        blocks.append(txt)
+                if blocks:
+                    return "\n\n".join(dict.fromkeys(blocks))
+            else:
+                for sel in (".job-description", "#job-description", ".description", "#jobDescriptionText"):
+                    desc_el = soup.select_one(sel)
+                    if desc_el:
+                        return desc_el.get_text("\n", strip=True)
+    except Exception as exc:
+        logger.debug("Fast detail enrichment failed for %s: %s", url, exc)
+    return ""
 
 
 def _clean_html(raw_html: str) -> str:
@@ -93,6 +143,12 @@ _EXP_DIGIT = r"(?:[0-9]|1[0-9]|20)"
 EXP_RANGE_RE = re.compile(
     rf"(?i)\b({_EXP_DIGIT})\s*(?:[-\u2013\u2014]|to)\s*({_EXP_DIGIT})\s*(?:years?|yrs?|yoe)\b"
 )
+EXP_URL_SLUG_RE = re.compile(
+    rf"(?i)\b({_EXP_DIGIT})[- ]*to[- ]*({_EXP_DIGIT})[- ]*(?:years?|yrs?|yoe)\b"
+)
+EXP_PHRASE_RE = re.compile(
+    rf"(?i)\b(?:min(?:imum)?|at\s+least|requires?|experience\s+of)\s+(?:of\s+)?({_EXP_DIGIT})\+?\s*(?:years?|yrs?|yoe)\b"
+)
 EXP_PLUS_SINGLE_RE = re.compile(
     rf"(?i)\b({_EXP_DIGIT})\+?\s*(?:years?|yrs?|yoe)\b"
 )
@@ -105,27 +161,65 @@ def extract_experience_years(text: str | None) -> int:
     """Deterministically extract minimum required experience years from text (ARCHITECTURE §21.2.1)."""
     if not text:
         return 0
-    # Range pattern: e.g. "1-3 years", "1 to 2 years", "3-9 YOE", "1 - 3 yrs"
-    range_match = EXP_RANGE_RE.search(text)
-    if range_match:
+
+    found_years: list[int] = []
+
+    # 1. Plus / single pattern: e.g. "4+ years", "5+ YOE", "2+ yrs"
+    # Matches explicit minimums like "4+ Years" in title or description.
+    for m in EXP_PLUS_SINGLE_RE.finditer(text):
         try:
-            return int(range_match.group(1))
+            val = int(m.group(1))
+            if "+" in m.group(0) and val > 0:
+                found_years.append(val)
         except (ValueError, TypeError):
             pass
 
-    # Plus / single pattern: e.g. "2+ years", "5+ YOE", "2 YOE", "3 yrs"
-    plus_match = EXP_PLUS_SINGLE_RE.search(text)
-    if plus_match:
+    # 2. Minimum phrase pattern: e.g. "minimum of 2 years", "at least 3 years", "requires 2+ years"
+    for m in EXP_PHRASE_RE.finditer(text):
         try:
-            return int(plus_match.group(1))
+            val = int(m.group(1))
+            if val > 0:
+                found_years.append(val)
         except (ValueError, TypeError):
             pass
 
-    # Colon / labeled pattern: e.g. "Experience: 3", "Exp: 2", "Min Exp: 4"
-    colon_match = EXP_COLON_RE.search(text)
-    if colon_match:
+    # 3. Colon / labeled pattern: e.g. "Experience: 3", "Exp: 2", "Min Exp: 4"
+    for m in EXP_COLON_RE.finditer(text):
         try:
-            return int(colon_match.group(1))
+            val = int(m.group(1))
+            if val > 0:
+                found_years.append(val)
+        except (ValueError, TypeError):
+            pass
+
+    # 4. Range patterns in text and URL slugs: e.g. "1-3 years", "2 to 4 years", "2-to-4-years"
+    for regex in (EXP_RANGE_RE, EXP_URL_SLUG_RE):
+        for m in regex.finditer(text):
+            try:
+                low = int(m.group(1))
+                high = int(m.group(2))
+                if low > 0:
+                    found_years.append(low)
+                elif low == 0 and high >= 2:
+                    # Wide range (0 to 5 years, 0 to 4 years, etc.)
+                    # If text contains an explicit fresher title/indicator (Intern, Fresher, Trainee, Graduate),
+                    # it is genuinely 0-exp friendly.
+                    # Otherwise (e.g. Software Developer, Backend Engineer), it is an experienced role.
+                    from app.matching.engine import FRESHER_TITLE_RE
+                    if not FRESHER_TITLE_RE.search(text):
+                        found_years.append(max(1, high // 2))
+            except (ValueError, TypeError):
+                pass
+
+    if found_years:
+        return min(found_years)
+
+    # 5. Fallback for single pattern without plus if explicit: e.g. "2 YOE", "3 yrs"
+    for m in EXP_PLUS_SINGLE_RE.finditer(text):
+        try:
+            val = int(m.group(1))
+            if val > 0 and ("yoe" in m.group(0).lower() or "yrs" in m.group(0).lower()):
+                return val
         except (ValueError, TypeError):
             pass
 
@@ -255,6 +349,12 @@ def normalize_scraped_job(raw: dict[str, Any], taxonomy: Taxonomy) -> Job:
     company = str(raw.get("company") or "").strip() or "Tech Employer"
 
     raw_desc = str(raw.get("description") or "")
+    if len(raw_desc.strip()) < 60 and job_url:
+        fetched_desc = fetch_external_job_description(job_url)
+        if fetched_desc:
+            raw_desc = fetched_desc
+            raw["description"] = fetched_desc
+
     clean_desc = _clean_html(raw_desc)
     if job_url:
         engine_val = str(raw.get("scraper_engine") or "jobspy")
@@ -314,6 +414,13 @@ def normalize_scraped_job(raw: dict[str, Any], taxonomy: Taxonomy) -> Job:
             exp = 5
         else:
             exp = 3
+    elif exp <= 0 and MID_LEVEL_TITLE_RE.search(title):
+        exp = 2
+    elif exp <= 0 and (job_url or source != "local"):
+        # If external scraped posting has sparse description (< 50 chars) and does NOT have a fresher title:
+        # Do not default to 0 fresher experience! A generic unverified engineering role is at least mid-level.
+        if len(clean_desc) < 50 and not FRESHER_TITLE_RE.search(title) and source not in ("internshala", "unstop"):
+            exp = 2
 
     return Job(
         id=job_id,
@@ -375,6 +482,40 @@ Respond ONLY with valid JSON conforming to this schema:
 """
 
 
+_CIRCUIT_FAILURES = 0
+_CIRCUIT_OPEN_UNTIL = 0.0
+
+
+def reset_ai_normalizer_circuit() -> None:
+    global _CIRCUIT_OPEN_UNTIL, _CIRCUIT_FAILURES
+    _CIRCUIT_OPEN_UNTIL = 0.0
+    _CIRCUIT_FAILURES = 0
+
+
+def is_ai_normalizer_circuit_open() -> bool:
+    global _CIRCUIT_OPEN_UNTIL
+    return time.time() < _CIRCUIT_OPEN_UNTIL
+
+
+def trip_ai_normalizer_circuit(duration_seconds: float = 300.0) -> None:
+    global _CIRCUIT_OPEN_UNTIL, _CIRCUIT_FAILURES
+    _CIRCUIT_OPEN_UNTIL = time.time() + duration_seconds
+    _CIRCUIT_FAILURES = 0
+    logger.warning("AI normalizer circuit breaker TRIPPED for %.1fs due to consecutive errors", duration_seconds)
+
+
+def record_ai_normalizer_failure(exc: Exception | None = None) -> None:
+    global _CIRCUIT_FAILURES
+    _CIRCUIT_FAILURES += 1
+    if _CIRCUIT_FAILURES >= 3:
+        trip_ai_normalizer_circuit(300.0)
+
+
+def record_ai_normalizer_success() -> None:
+    global _CIRCUIT_FAILURES
+    _CIRCUIT_FAILURES = 0
+
+
 def normalize_job_with_ai(
     raw_job: dict[str, Any],
     taxonomy: Taxonomy,
@@ -385,19 +526,29 @@ def normalize_job_with_ai(
     Falls back immediately to normalize_scraped_job(raw_job, taxonomy) on any failure,
     timeout, missing LLM, or invalid output (Dual-Path Graceful Degradation).
     """
-    if llm is None:
+    is_mock = type(llm).__name__ == "MockLLM" if llm is not None else False
+    if llm is None or (is_ai_normalizer_circuit_open() and not is_mock):
         return normalize_scraped_job(raw_job, taxonomy)
 
     try:
         title = str(raw_job.get("title") or "").strip()
         company = str(raw_job.get("company") or "").strip()
+        job_url = str(raw_job.get("job_url") or raw_job.get("url") or "").strip()
         raw_desc = str(raw_job.get("description") or "")
-        clean_desc = _clean_html(raw_desc)[:4000]
+        if len(raw_desc.strip()) < 60 and job_url:
+            fetched = fetch_external_job_description(job_url)
+            if fetched:
+                raw_desc = fetched
+                raw_job["description"] = fetched
+
+        clean_desc = _clean_html(raw_desc)[:8000]
 
         prompt_payload = {
             "title": title,
             "company": company,
             "description": clean_desc,
+            "job_url": job_url,
+            "source": str(raw_job.get("site") or raw_job.get("source") or ""),
             "location": str(raw_job.get("location") or ""),
             "min_amount": raw_job.get("min_amount"),
             "max_amount": raw_job.get("max_amount"),
@@ -414,6 +565,7 @@ def normalize_job_with_ai(
             JOB_NORMALIZER_SYSTEM,
             user_content,
             json_mode=True,
+            timeout=15.0,
         )
 
         clean_json = (response_text or "").strip()
@@ -469,7 +621,24 @@ def normalize_job_with_ai(
                 salary_lpa = stat_sal
                 salary_disclosed = stat_disc
 
-        # Experience parsing
+        # Deterministic experience extraction on full combined text (title + desc + url + tags)
+        combined_text = f"{title} {clean_desc} {job_url} {raw_job.get('tags') or ''}".strip()
+        det_exp = extract_experience_years(combined_text)
+        title_low = title.lower()
+        if det_exp <= 0 and is_senior_job({"title": title}):
+            if "iii" in title_low or " 3" in title_low or " iv" in title_low or " 4" in title_low or "specialist" in title_low:
+                det_exp = 5
+            else:
+                det_exp = 3
+        elif det_exp <= 0 and MID_LEVEL_TITLE_RE.search(title):
+            det_exp = 2
+        elif det_exp <= 0 and (job_url or raw_job.get("site") or raw_job.get("source")):
+            # Sparse description and non-fresher title on external posting
+            clean_body = clean_desc.split("Apply URL:")[0].strip()
+            if len(clean_body) < 50 and not FRESHER_TITLE_RE.search(title) and str(raw_job.get("site") or raw_job.get("source") or "").lower() not in ("internshala", "unstop"):
+                det_exp = 2
+
+        # Experience parsing from AI
         exp = 0
         exp_years = ai_data.get("experience_years")
         is_fresher = ai_data.get("is_fresher_friendly")
@@ -479,38 +648,13 @@ def normalize_job_with_ai(
             except (TypeError, ValueError):
                 exp = 0
 
-        if is_fresher is False and exp <= 0:
-            # Check raw fields and description first
-            try:
-                raw_exp = raw_job.get("experience_years") or raw_job.get("min_experience")
-                exp = int(float(raw_exp)) if raw_exp is not None else 0
-            except (TypeError, ValueError):
-                exp = 0
-            if exp <= 0:
-                exp = extract_experience_years(
-                    (raw_job.get("description") or "") + " " + (raw_job.get("title") or "")
-                )
-            if exp <= 0:
-                title_low = title.lower()
-                if is_senior_job({"title": title}):
-                    if "iii" in title_low or " 3" in title_low or " iv" in title_low or " 4" in title_low or "specialist" in title_low:
-                        exp = 5
-                    else:
-                        exp = 3
-                else:
-                    exp = 2  # Not fresher friendly -> at least 2 years
+        # Deterministic extraction always supersedes LLM hallucination for experience
+        if det_exp > 0:
+            exp = max(exp, det_exp)
+        elif is_fresher is False and exp <= 0:
+            exp = 2
         elif is_fresher is True:
-            # Double check against senior title regex
-            if is_senior_job({"title": title}):
-                exp = 3
-            else:
-                exp = 0
-        elif exp <= 0:
-            exp = extract_experience_years(
-                (raw_job.get("description") or "") + " " + (raw_job.get("title") or "")
-            )
-            if exp <= 0 and is_senior_job({"title": title}):
-                exp = 3
+            exp = 0
 
         # Construct and return base Job with AI overrides
         job = normalize_scraped_job(raw_job, taxonomy)
@@ -518,9 +662,13 @@ def normalize_job_with_ai(
         job.preferred_skills = valid_preferred
         job.salary_lpa = salary_lpa
         job.salary_disclosed = salary_disclosed
-        job.experience_years = exp
+        job.experience_years = max(exp, det_exp, getattr(job, "experience_years", 0))
+        if job_url:
+            job.job_url = job_url
+        record_ai_normalizer_success()
         return job
 
     except Exception as exc:
+        record_ai_normalizer_failure()
         logger.warning("normalize_job_with_ai failed, falling back to static normalizer: %s", exc)
         return normalize_scraped_job(raw_job, taxonomy)
