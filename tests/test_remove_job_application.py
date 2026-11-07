@@ -134,3 +134,20 @@ def test_delete_admin_application_endpoint(client, client_engine):
     with Session(eng) as s:
         app_row = s.get(JobApplication, app_id)
         assert app_row.status == "withdrawn"
+
+
+def test_direct_withdraw_application_alias_endpoint(client, client_engine):
+    c, eng = client_engine
+    sid, jid = _seed_job_and_student(c, eng)
+
+    app_id = f"app-{uuid4().hex[:8]}"
+    with Session(eng) as s:
+        s.add(JobApplication(id=app_id, student_id=sid, job_id=jid, status="submitted", tier="standard"))
+        s.commit()
+
+    resp = c.post(f"/api/applications/{app_id}/withdraw")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == "withdrawn"
+    with Session(eng) as s:
+        assert s.get(JobApplication, app_id).status == "withdrawn"
+

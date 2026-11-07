@@ -185,6 +185,28 @@ def _finalize(session: Session, row: Interview, summary, turn=None,
         student = session.get(Student, row.student_id) if row.student_id else None
     try:
         _rank_and_persist(session, ctx, row.student_id, student, include_scraped=True)
+        # Closed-loop application sync: update match_score on active JobApplications
+        from app.models import JobApplication
+        active_apps = session.exec(
+            select(JobApplication).where(
+                JobApplication.student_id == row.student_id,
+                JobApplication.status.in_(
+                    ["submitted", "awaiting_mentor_endorsement", "awaiting_tpo_approval"]
+                ),
+            )
+        ).all()
+        if active_apps:
+            match_by_job = {
+                m.job_id: m.score
+                for m in session.exec(
+                    select(JobMatch).where(JobMatch.student_id == row.student_id)
+                ).all()
+            }
+            for app_row in active_apps:
+                if app_row.job_id in match_by_job:
+                    app_row.match_score = float(match_by_job[app_row.job_id])
+                    session.add(app_row)
+            session.commit()
     except Exception:
         logger.warning("match re-rank after interview finalization failed", exc_info=True)
     content = {
@@ -277,7 +299,9 @@ def answer_interview(iid: str, request: Request, payload: dict,
         raise HTTPException(409, "interview already finished")
     if ctx.llm is None:
         raise HTTPException(503, "LLM not configured")
-    text = (payload or {}).get("text") or (payload or {}).get("answer", "")
+    from app.security.pii import scrub_for_llm
+    raw_text = (payload or {}).get("text") or (payload or {}).get("answer", "")
+    text, _ = scrub_for_llm(str(raw_text))
     # M18.1: allow enabling adaptive follow-ups per-answer (also settable at creation).
     adaptive = bool((payload or {}).get("adaptive_followup")) or bool(
         getattr(row, "adaptive_followup", False))
@@ -379,7 +403,9 @@ def interview_page(iid: str, request: Request, session: Session = Depends(get_se
 
 
 @router.get("/api/interview/questions/quality")
-def get_question_quality_audit():
+def get_question_quality_audit(
+    role: str = Depends(require_role("faculty_mentor", "tpo_admin")),
+):
     audit_data = audit_question_bank()
     telemetry_data = QuestionTelemetryManager().analyze_feedback_loop()
     return {

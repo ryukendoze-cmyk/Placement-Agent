@@ -429,3 +429,50 @@ def test_endorse_requires_mentor_or_tpo(client_engine):
     hdr = {"X-Demo-Role": "student", "X-Demo-Student-ID": sid}
     r = client.post(f"/api/approvals/{ap_id}/endorse", json={}, headers=hdr)
     assert r.status_code == 403, r.text
+
+
+def test_separation_of_duties_blocks_faculty_mentor_from_final_approval(client_engine):
+    """Faculty mentor can endorse (Tier 1) but cannot final-approve (Tier 2) a drive nomination."""
+    client, eng = client_engine
+    sid = _seed_client_student(client, gpa=6.0, branch="CSE")
+    with Session(eng) as db:
+        _make_job(db, job_id="job-sod-1", salary=[20, 25], min_gpa=9.0, branches=["ECE"])
+    r = client.post(
+        f"/api/students/{sid}/applications",
+        json={"job_id": "job-sod-1", "request_waiver": True, "note": "strong projects"},
+    )
+    assert r.status_code in (200, 201), r.text
+    ap_id = r.json()["application"]["approval_id"]
+
+    mentor_hdr = {"X-Demo-Role": "faculty_mentor", "X-Demo-Department": "CSE"}
+    # Tier 1 endorsement succeeds for faculty_mentor
+    r_end = client.post(f"/api/approvals/{ap_id}/endorse", json={"note": "endorsed"}, headers=mentor_hdr)
+    assert r_end.status_code == 200, r_end.text
+
+    # Tier 2 final approval is blocked (403) for faculty_mentor (separation of duties)
+    r_blk = client.post(f"/api/approvals/{ap_id}/approve", json={"note": "self-approve"}, headers=mentor_hdr)
+    assert r_blk.status_code == 403, r_blk.text
+
+    # Tier 2 final approval succeeds for tpo_admin
+    tpo_hdr = {"X-Demo-Role": "tpo_admin"}
+    r_ok = client.post(f"/api/approvals/{ap_id}/approve", json={"note": "tpo sign-off"}, headers=tpo_hdr)
+    assert r_ok.status_code == 200, r_ok.text
+
+
+def test_copilot_and_student_delete_emit_audit_logs(client_engine):
+    """Verify copilot.asked and student.deleted events are recorded in AuditLog."""
+    client, eng = client_engine
+    sid = _seed_client_student(client, name="Audit Check", gpa=8.2)
+    r_cop = client.post(
+        "/api/copilot/ask",
+        json={"question": "What is the CGPA cutoff for Dream tier drives?", "student_id": sid},
+    )
+    assert r_cop.status_code == 200, r_cop.text
+    audits = _audits(eng)
+    assert any(a.action == "copilot.asked" for a in audits)
+
+    r_del = client.delete(f"/api/students/{sid}", headers={"X-Demo-Role": "tpo_admin"})
+    assert r_del.status_code == 200, r_del.text
+    audits_after = _audits(eng)
+    assert any(a.action == "student.deleted" and a.entity_id == sid for a in audits_after)
+

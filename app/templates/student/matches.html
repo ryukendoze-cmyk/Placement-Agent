@@ -42,6 +42,15 @@
         </svg>
         <span>Fetch Live Jobs</span>
       </button>
+      <button id="purge-live-jobs-header-btn" type="button"
+              onclick="purgeAllLiveJobs(this)"
+              class="btn-secondary-pill text-xs px-3.5 py-2 text-[#9E2A20] hover:bg-[#FDF0ED] border-[#F5D0C8] hover:border-[#9E2A20] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+              title="Remove all current live market jobs from the database">
+        <svg class="w-3.5 h-3.5 text-[#9E2A20] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+        </svg>
+        <span>Remove All Live Jobs</span>
+      </button>
       {% if has_matches %}
       <button hx-get="/api/students/{{ sid }}/matches" hx-indicator="#rerun-spinner" hx-on::after-request="location.reload()"
               class="btn-primary-pill text-xs px-4 py-2">
@@ -52,6 +61,92 @@
       {% endif %}
     </div>
   </div>
+
+  <!-- Student Campus Drive Applications & 2-Tier HITL Status Tracker (M19) -->
+  <div id="student-applications-panel" class="editorial-card p-5 hidden">
+    <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#ECEAE2]">
+      <div class="flex items-center gap-2.5">
+        <span class="w-2 h-2 rounded-full bg-[#1D5C42]"></span>
+        <h2 class="font-serif-display text-base font-semibold text-[#1C1E1B]">My Campus Drive Applications &amp; 2-Tier HITL Status</h2>
+        <span id="student-apps-count" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#E3F2EA] text-[#1B5E43]">0</span>
+      </div>
+      <span class="text-[11px] font-mono text-[#7A776E]">Tier 1: Faculty Mentor Endorsement &rarr; Tier 2: TPO Final Sign-Off</span>
+    </div>
+    <div id="student-applications-list" class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+  </div>
+  <script>
+  (function () {
+    var sid = "{{ sid }}";
+    if (!sid) return;
+    var panel = document.getElementById("student-applications-panel");
+    var listEl = document.getElementById("student-applications-list");
+    var countEl = document.getElementById("student-apps-count");
+    function escHtml(s) {
+      return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+    function loadStudentApplications() {
+      fetch("/api/students/" + encodeURIComponent(sid) + "/applications")
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .then(function (apps) {
+          if (!Array.isArray(apps) || !apps.length) {
+            if (panel) panel.classList.add("hidden");
+            return;
+          }
+          if (panel) panel.classList.remove("hidden");
+          if (countEl) countEl.textContent = String(apps.length);
+          if (!listEl) return;
+          listEl.innerHTML = "";
+          apps.forEach(function (a) {
+            var st = a.status || "submitted";
+            var badgeCls = "bg-[#EFECE4] text-[#4A483F]";
+            var stageLabel = "Submitted";
+            if (st === "nominated") { badgeCls = "bg-[#E3F2EA] text-[#1B5E43]"; stageLabel = "Nominated (TPO Approved)"; }
+            else if (st === "awaiting_tpo_approval") { badgeCls = "bg-[#FEF6E7] text-[#9A5B13]"; stageLabel = "Tier 2: Awaiting TPO Approval"; }
+            else if (st === "awaiting_mentor_endorsement") { badgeCls = "bg-[#FEF6E7] text-[#9A5B13]"; stageLabel = "Tier 1: Awaiting Mentor Endorsement"; }
+            else if (st === "rejected" || st === "withdrawn") { badgeCls = "bg-[#FDF0ED] text-[#9E2A20]"; stageLabel = st.toUpperCase(); }
+            var card = document.createElement("div");
+            card.className = "rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] p-3.5 text-xs flex flex-col justify-between gap-2";
+            var sops = (a.cited_sops || []).join(", ");
+            var canWithdraw = (st !== "withdrawn" && st !== "rejected");
+            card.innerHTML =
+              '<div class="flex items-start justify-between gap-2">' +
+                '<div>' +
+                  '<p class="font-semibold text-[#1C1E1B]">' + escHtml(a.job_title || a.job_id) + ' <span class="text-[#7A776E] font-normal">&middot; ' + escHtml(a.company || "Campus Drive") + '</span></p>' +
+                  '<p class="text-[11px] font-mono text-[#5C5A52] mt-0.5">Match Score: <strong>' + Math.round(Number(a.match_score || 0)) + '%</strong>' +
+                  (sops ? ' &middot; Policy: ' + escHtml(sops) : '') + '</p>' +
+                '</div>' +
+                '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold whitespace-nowrap ' + badgeCls + '">' + escHtml(stageLabel) + '</span>' +
+              '</div>' +
+              '<div class="flex items-center justify-between pt-2 border-t border-[#ECEAE2] text-[11px] text-[#7A776E]">' +
+                '<span>' + (a.endorsed_by ? ('Endorsed by ' + escHtml(a.endorsed_by)) : (a.eligible ? 'Direct Eligibility' : 'Waiver Path')) + '</span>' +
+                (canWithdraw ? '<button type="button" data-withdraw-id="' + escHtml(a.id) + '" class="withdraw-app-btn text-[#9E2A20] hover:underline font-semibold cursor-pointer">Withdraw</button>' : '') +
+              '</div>';
+            listEl.appendChild(card);
+          });
+          listEl.querySelectorAll(".withdraw-app-btn").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              var appId = btn.getAttribute("data-withdraw-id");
+              if (!appId) return;
+              btn.disabled = true;
+              fetch("/api/students/" + encodeURIComponent(sid) + "/applications/" + encodeURIComponent(appId) + "/withdraw", { method: "POST" })
+                .then(function (r) {
+                  if (!r.ok) throw new Error("HTTP " + r.status);
+                  if (window.toast) window.toast("Application withdrawn.", "info");
+                  loadStudentApplications();
+                })
+                .catch(function (e) {
+                  btn.disabled = false;
+                  if (window.toast) window.toast("Could not withdraw: " + e.message, "error");
+                });
+            });
+          });
+        })
+        .catch(function () {});
+    }
+    window.reloadStudentApplications = loadStudentApplications;
+    loadStudentApplications();
+  })();
+  </script>
 
   {% if not has_matches %}
   <!-- Empty State -->
@@ -210,6 +305,8 @@
           <button id="btn-portal-scraped" type="button" class="px-2.5 py-0.5 rounded-full text-[#1B5E43] hover:bg-[#E3F2EA] cursor-pointer whitespace-nowrap">Scraped Only</button>
           <span class="text-[#C7C4B8]">&middot;</span>
           <button id="btn-portal-campus" type="button" class="px-2.5 py-0.5 rounded-full text-[#4A483F] hover:bg-[#EFECE4] cursor-pointer whitespace-nowrap">Campus Only</button>
+          <span class="text-[#C7C4B8]">&middot;</span>
+          <button id="btn-purge-live-portal" type="button" onclick="purgeAllLiveJobs(this)" class="px-2.5 py-0.5 rounded-full text-[#9E2A20] hover:bg-[#FDF0ED] cursor-pointer whitespace-nowrap font-medium" title="Remove all live market jobs from database">Clear Live Jobs</button>
         </div>
       </div>
       <div id="portal-pills" class="flex flex-wrap gap-1.5">
@@ -1618,16 +1715,26 @@
         </div>
 
         <!-- Modal Actions -->
-        <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#ECEAE2]">
-          <button id="cancel-scrape-btn" type="button" class="btn-secondary-pill text-xs px-4 py-2">
-            Cancel
-          </button>
-          <button id="submit-scrape-btn" type="button" onclick="submitScrape()" class="btn-primary-pill text-xs px-5 py-2">
-            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+        <div class="flex items-center justify-between gap-3 pt-4 border-t border-[#ECEAE2]">
+          <button id="modal-purge-live-btn" type="button" onclick="purgeAllLiveJobs(this)"
+                  class="btn-secondary-pill text-xs px-3.5 py-2 text-[#9E2A20] hover:bg-[#FDF0ED] border-[#F5D0C8] hover:border-[#9E2A20] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                  title="Purge all scraped live jobs from database">
+            <svg class="w-3.5 h-3.5 text-[#9E2A20] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
             </svg>
-            <span>Start Scraping</span>
+            <span>Remove All Live Jobs</span>
           </button>
+          <div class="flex items-center gap-3">
+            <button id="cancel-scrape-btn" type="button" class="btn-secondary-pill text-xs px-4 py-2">
+              Cancel
+            </button>
+            <button id="submit-scrape-btn" type="button" onclick="submitScrape()" class="btn-primary-pill text-xs px-5 py-2">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+              </svg>
+              <span>Start Scraping</span>
+            </button>
+          </div>
         </div>
       </form>
 
@@ -1846,6 +1953,63 @@
     if (openBtn) openBtn.addEventListener("click", openModal);
     if (closeBtn) closeBtn.addEventListener("click", closeModal);
     if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
+
+    if (window.location.hash === "#scrape" && openBtn) {
+      openModal();
+    }
+
+    function purgeAllLiveJobs(btn) {
+      if (!confirm("Are you sure you want to remove ALL current live market jobs from the database? On-campus institutional jobs will remain untouched.")) {
+        return;
+      }
+      var allPurgeBtns = document.querySelectorAll("#purge-live-jobs-header-btn, #modal-purge-live-btn, #btn-purge-live-portal");
+      allPurgeBtns.forEach(function (b) {
+        b.disabled = true;
+        b.classList.add("opacity-60", "cursor-wait");
+      });
+      var sid = "{{ sid }}";
+      var url = sid ? ("/api/students/" + sid + "/matches/live") : "/api/jobs/live";
+      fetch(url, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" }
+      })
+      .then(function (r) {
+        return r.json().then(function (j) { return { ok: r.ok, status: r.status, j: j }; });
+      })
+      .then(function (res) {
+        if (res.ok) {
+          var count = (res.j && res.j.purged !== undefined) ? res.j.purged : 0;
+          if (window.toast) {
+            window.toast("Successfully removed " + count + " live job(s) from database.", "success");
+          }
+          if (typeof closeModal === "function") {
+            closeModal();
+          }
+          setTimeout(function () {
+            location.reload();
+          }, 500);
+        } else {
+          allPurgeBtns.forEach(function (b) {
+            b.disabled = false;
+            b.classList.remove("opacity-60", "cursor-wait");
+          });
+          var msg = (res.j && (res.j.detail || JSON.stringify(res.j))) || ("HTTP " + res.status);
+          if (window.toast) {
+            window.toast("Could not remove live jobs: " + msg, "error");
+          }
+        }
+      })
+      .catch(function (err) {
+        allPurgeBtns.forEach(function (b) {
+          b.disabled = false;
+          b.classList.remove("opacity-60", "cursor-wait");
+        });
+        if (window.toast) {
+          window.toast("Error removing live jobs: " + err, "error");
+        }
+      });
+    }
+    window.purgeAllLiveJobs = purgeAllLiveJobs;
 
     // Live Streaming Telemetry Scrape Engine
     window.submitScrape = function () {

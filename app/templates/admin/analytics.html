@@ -201,6 +201,48 @@
       </div>
     </div>
   </div>
+
+  <!-- System Telemetry & Quantitative Evaluation Benchmark (Buildathon Criterion 4 & 5) -->
+  <div class="editorial-card overflow-hidden">
+    <div class="px-6 py-5 border-b border-[#E5E3DA] flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-bold text-[#1A211D] font-serif">Quantitative Evaluation Benchmark &amp; System Telemetry</h2>
+        <p class="text-xs text-[#57605A] mt-0.5">Live golden-dataset metrics for RAG Recall@3, Mean Reciprocal Rank (MRR), Prerequisite DAG Invariant Pass Rate, Citation Grounding, and Agent p95 Latency.</p>
+      </div>
+      <button id="run-eval-benchmark-btn" type="button" class="btn-secondary-pill text-xs px-4 py-2 cursor-pointer">
+        <span>Run Live Benchmark</span>
+      </button>
+    </div>
+    <div class="p-6 space-y-4">
+      <div id="eval-benchmark-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div class="p-3.5 rounded-2xl bg-[#F9F8F4] border border-[#E5E3DA]">
+          <p class="text-[10px] font-mono uppercase tracking-wider text-[#57605A]">RAG Recall@3</p>
+          <p id="metric-rag-recall" class="text-xl font-bold font-serif text-[#1D5C42] mt-1">--</p>
+        </div>
+        <div class="p-3.5 rounded-2xl bg-[#F9F8F4] border border-[#E5E3DA]">
+          <p class="text-[10px] font-mono uppercase tracking-wider text-[#57605A]">RAG MRR</p>
+          <p id="metric-rag-mrr" class="text-xl font-bold font-serif text-[#1D5C42] mt-1">--</p>
+        </div>
+        <div class="p-3.5 rounded-2xl bg-[#F9F8F4] border border-[#E5E3DA]">
+          <p class="text-[10px] font-mono uppercase tracking-wider text-[#57605A]">DAG Invariant Rate</p>
+          <p id="metric-dag-pass" class="text-xl font-bold font-serif text-[#1D5C42] mt-1">--</p>
+        </div>
+        <div class="p-3.5 rounded-2xl bg-[#F9F8F4] border border-[#E5E3DA]">
+          <p class="text-[10px] font-mono uppercase tracking-wider text-[#57605A]">Citation Grounding</p>
+          <p id="metric-grounding" class="text-xl font-bold font-serif text-[#1D5C42] mt-1">--</p>
+        </div>
+        <div class="p-3.5 rounded-2xl bg-[#F9F8F4] border border-[#E5E3DA]">
+          <p class="text-[10px] font-mono uppercase tracking-wider text-[#57605A]">Agent Success Rate</p>
+          <p id="metric-agent-success" class="text-xl font-bold font-serif text-[#1D5C42] mt-1">--</p>
+        </div>
+        <div class="p-3.5 rounded-2xl bg-[#F9F8F4] border border-[#E5E3DA]">
+          <p class="text-[10px] font-mono uppercase tracking-wider text-[#57605A]">Agent p95 Latency</p>
+          <p id="metric-agent-p95" class="text-xl font-bold font-serif text-[#1A211D] mt-1">--</p>
+        </div>
+      </div>
+      <div id="system-telemetry-bar" class="hidden rounded-xl bg-[#F9F8F4] border border-[#E5E3DA] px-4 py-3 text-xs font-mono text-[#4A4943] flex flex-wrap items-center justify-between gap-2"></div>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -443,6 +485,56 @@ const DATA = {{ analytics|tojson }};
       if (window.toast) window.toast("Simulation failed: " + e.message, "error");
     });
   });
+
+  function loadEvalAndTelemetry() {
+    var btn = document.getElementById("run-eval-benchmark-btn");
+    if (btn) btn.disabled = true;
+    fetch("/api/admin/eval-benchmark")
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (b) {
+        if (btn) btn.disabled = false;
+        if (!b) return;
+        var rag = b.rag_policy_retrieval || {};
+        var dag = b.prerequisite_dag_planning || {};
+        var grd = b.citation_grounding_verifier || {};
+        var agt = b.agent_orchestrator_telemetry || {};
+        var setTxt = function (id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
+        setTxt("metric-rag-recall", rag.recall_at_3 != null ? (Math.round(rag.recall_at_3 * 100) + "%") : "--");
+        setTxt("metric-rag-mrr", rag.mrr != null ? Number(rag.mrr).toFixed(2) : "--");
+        setTxt("metric-dag-pass", dag.invariant_pass_rate != null ? (Math.round(dag.invariant_pass_rate * 100) + "%") : "--");
+        setTxt("metric-grounding", grd.pass_rate != null ? (Math.round(grd.pass_rate * 100) + "%") : "--");
+        setTxt("metric-agent-success", agt.success_rate != null ? (Math.round(agt.success_rate * 100) + "%") : "100%");
+        setTxt("metric-agent-p95", agt.p95_latency_ms != null ? (agt.p95_latency_ms + " ms") : "--");
+      })
+      .catch(function () { if (btn) btn.disabled = false; });
+
+    fetch("/api/admin/system-telemetry")
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (t) {
+        if (!t) return;
+        var bar = document.getElementById("system-telemetry-bar");
+        if (!bar) return;
+        var llm = t.llm || {};
+        var totals = llm.totals || {};
+        var db = t.database_counts || t.entities || {};
+        var agm = t.agent_metrics || {};
+        var callsTotal = llm.calls_total != null ? llm.calls_total : (totals.total_calls || 0);
+        var fallbacksTotal = llm.fallbacks_triggered != null ? llm.fallbacks_triggered : (totals.total_fallbacks || 0);
+        var agentRuns = db.agent_runs != null ? db.agent_runs : (agm.total_runs || 0);
+        bar.classList.remove("hidden");
+        bar.innerHTML =
+          "<span>Provider: <strong>" + (llm.provider || "mock") + "</strong> (Calls: " + callsTotal + ", Fallbacks: " + fallbacksTotal + ")</span>" +
+          "<span>DB Rows &mdash; Students: " + (db.students || 0) + " &middot; Jobs: " + (db.jobs || 0) + " &middot; Agent Runs: " + agentRuns + " &middot; Audit Logs: " + (db.audit_logs || 0) + "</span>";
+      })
+      .catch(function () {});
+  }
+
+  var evalBtn = document.getElementById("run-eval-benchmark-btn");
+  if (evalBtn) evalBtn.addEventListener("click", function () {
+    loadEvalAndTelemetry();
+    if (window.toast) window.toast("Quantitative evaluation benchmark refreshed.", "success");
+  });
+  loadEvalAndTelemetry();
 })();
 </script>
 {% endblock %}

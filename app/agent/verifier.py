@@ -71,6 +71,41 @@ def _referenced_ids(text: str) -> list[tuple[str, str]]:
     return found
 
 
+_SOP_MOCK_CLAIM = re.compile(
+    r"SOP-04[^.\n]{0,80}?\b(?:score|cutoff|threshold|minimum|requires?|at\s+least|>=)\s*(?:of\s*|is\s*)?(\d{1,3})\b",
+    re.IGNORECASE,
+)
+_SOP_SUPER_BACKLOG_CLAIM = re.compile(
+    r"SOP-03[^.\n]{0,80}?\b(?:allows?|permits?)\s+(\d+)\s+(?:active\s+)?backlogs?\s+for\s+super[- ]?dream",
+    re.IGNORECASE,
+)
+
+
+def verify_sop_numeric_claims(text: str) -> list[str]:
+    """Check numeric policy claims anchored to SOP citations against official parameters.
+
+    Returns a list of unverified claim tokens (empty when all numeric claims match SOPs).
+    """
+    if not isinstance(text, str) or not text:
+        return []
+    mismatches: list[str] = []
+    for m in _SOP_MOCK_CLAIM.finditer(text):
+        try:
+            val = int(m.group(1))
+            if val != 65 and val != 100:
+                mismatches.append(f"SOP-04:mock_threshold={val}!=65")
+        except ValueError:
+            pass
+    for m in _SOP_SUPER_BACKLOG_CLAIM.finditer(text):
+        try:
+            val = int(m.group(1))
+            if val != 0:
+                mismatches.append(f"SOP-03:super_dream_backlogs={val}!=0")
+        except ValueError:
+            pass
+    return mismatches
+
+
 def verify_text(text: str, known: set[str]) -> dict:
     """Split `text` into verified/unverified citations; annotate unverified ones.
 
@@ -94,6 +129,12 @@ def verify_text(text: str, known: set[str]) -> dict:
                 # annotate every occurrence (word-bounded, skipping ones already marked)
                 annotated = re.sub(rf"\b{re.escape(tok)}\b(?!\s*\[UNVERIFIED:)",
                                    f"{tok} {marker}", annotated)
+    for num_err in verify_sop_numeric_claims(text):
+        if num_err not in unverified:
+            unverified.append(num_err)
+        marker = f"[UNVERIFIED: {num_err}]"
+        if marker not in annotated:
+            annotated = f"{annotated} {marker}"
     total = len(verified) + len(unverified)
     score = round(100 * len(verified) / total) if total else 100
     return {"verified": verified, "unverified": unverified,

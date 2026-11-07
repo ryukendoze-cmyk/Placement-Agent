@@ -25,6 +25,7 @@
 <script>
 (function () {
   var box = document.getElementById("approvals");
+  var activeRole = "{{ role|default('tpo_admin') }}";
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -105,11 +106,18 @@
         note.className = "note-input flex-1 min-w-[14rem] text-xs rounded-full border border-[#D4D1C7] bg-[#FBFBF9] px-4 py-2 text-[#1A211D] placeholder:text-[#8E9690] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]";
         actions.appendChild(note);
 
-        var endorseBtn = el("button", "btn-secondary-pill text-xs", "Endorse");
+        var isNomination = (a.kind === "job_application_nomination" || a.kind === "nomination");
+        var mentorBlockedFromFinalApprove = (activeRole === "faculty_mentor" && (isNomination || a.endorsed_by === "faculty_mentor"));
+
+        var endorseBtn = el("button", (activeRole === "faculty_mentor" ? "btn-primary-pill text-xs" : "btn-secondary-pill text-xs"), "Endorse (Tier 1)");
         endorseBtn.type = "button";
 
-        var approveBtn = el("button", "btn-primary-pill text-xs", "Approve & Execute");
+        var approveBtn = el("button", (mentorBlockedFromFinalApprove ? "btn-secondary-pill text-xs opacity-60 cursor-not-allowed" : "btn-primary-pill text-xs"),
+                            mentorBlockedFromFinalApprove ? "Approve & Execute (TPO Only)" : "Approve & Execute (Tier 2)");
         approveBtn.type = "button";
+        if (mentorBlockedFromFinalApprove) {
+          approveBtn.title = "Separation of duties: TPO administrator sign-off is required for final drive nomination.";
+        }
 
         var rejectBtn = el("button", "inline-flex items-center justify-center whitespace-nowrap gap-1.5 px-4 py-2 rounded-full bg-[#FBECE9] hover:bg-[#F5D8D2] border border-[#F3D2CC] text-[#9E2A20] text-xs font-semibold transition-colors", "Reject");
         rejectBtn.type = "button";

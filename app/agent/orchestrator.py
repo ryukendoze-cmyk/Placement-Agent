@@ -52,15 +52,44 @@ REPLAN_SYSTEM = (
     "Respond ONLY with JSON: {\"steps\": [{\"thought\": str, \"tool\": str, \"args\": {...}}]}."
 )
 
+REPAIR_SYSTEM = (
+    "TASK: repair_step\n"
+    "You are an autonomous placement agent repairing a failed tool call. "
+    "Given the tool name, input schema, previous args, and error message, "
+    "return corrected arguments as JSON: {\"args\": {...}, \"thought\": str}."
+)
+
 #: Max dynamically-injected observation steps (bounds runaway replanning).
 MAX_INJECTED_STEPS = 3
 #: Hard cap on executed steps per run (M16: dynamic queue guard).
 MAX_EXECUTED_STEPS = 8
 
-_REF = re.compile(r"\$(first|last|prev)\.([A-Za-z0-9_]+)|\$([A-Za-z][A-Za-z0-9_]*)\.([A-Za-z0-9_]+)")
+_REF = re.compile(r"\$(first|last|prev)\.([A-Za-z0-9_.]+)|\$([A-Za-z][A-Za-z0-9_]*)\.([A-Za-z0-9_.]+)")
 
 #: Goal markers that mean "this run cares about drive eligibility/application".
 _ELIGIBILITY_MARKERS = ("eligib", "apply", "nomina", "drive")
+
+
+def _sanitize_goal_text(session, raw_text: str, *, entity_id: str, actor_role: str, source: str = "agent_goal") -> str:
+    """Scrub PII and neutralize prompt-injection patterns before LLM calls."""
+    text = str(raw_text or "")
+    try:
+        from ..security.pii import scrub_for_llm
+        text, _ = scrub_for_llm(text)
+    except Exception:
+        pass
+    try:
+        from ..security.prompt_guard import sanitize_untrusted_text
+        text, flags = sanitize_untrusted_text(text, source=source)
+        if flags and session is not None:
+            from ..security.audit import log_audit
+            log_audit(session, action="security.prompt_injection_blocked",
+                      entity_type="agent_run", entity_id=entity_id,
+                      actor_role=actor_role or "student",
+                      detail={"flags": flags, "source": source})
+    except Exception:
+        pass
+    return text
 
 
 def _safe_json(raw):
@@ -75,25 +104,46 @@ def _safe_json(raw):
         return None
 
 
+def _traverse_path(bucket, path: str):
+    """Traverse a single key or dotted path (including list indices) inside ``bucket``."""
+    if not isinstance(bucket, dict):
+        return False, None
+    if path in bucket:
+        return True, bucket[path]
+    if "." in path:
+        cur = bucket
+        for part in path.split("."):
+            if isinstance(cur, dict) and part in cur:
+                cur = cur[part]
+            elif isinstance(cur, list) and part.isdigit() and 0 <= int(part) < len(cur):
+                cur = cur[int(part)]
+            else:
+                return False, None
+        return True, cur
+    return False, None
+
+
 def _resolve(value, memory: dict):
-    """Resolve `$last.key`, `$prev.key`, `$first.key`, `$<tool>.key` recursively."""
+    """Resolve `$last.key`, `$prev.key`, `$first.key`, `$<tool>.key`, and nested paths recursively."""
     if isinstance(value, str):
         m = _REF.fullmatch(value.strip())
         if not m:
             return value
         src, key, toolname, toolkey = m.group(1), m.group(2), m.group(3), m.group(4)
         if toolkey:
-            bucket = memory.get(toolname)
+            bucket = memory.get(toolname) or memory.get(f"_{toolname}")
             key = toolkey
         else:
             src = src or "last"
+            non_step_vals = [v for k, v in memory.items() if not str(k).startswith("_")]
             if src == "first":
-                bucket = next(iter(memory.values()), None)
+                bucket = non_step_vals[0] if non_step_vals else None
             else:
                 # last (or prev) completed tool output
-                bucket = list(memory.values())[-1] if memory else None
-        if isinstance(bucket, dict) and key in bucket:
-            return bucket[key]
+                bucket = non_step_vals[-1] if non_step_vals else None
+        found, resolved_val = _traverse_path(bucket, key)
+        if found:
+            return resolved_val
         # alias top-level keys that come from a *list* of matches
         if isinstance(bucket, dict) and "matches" in bucket and key == "missing_required":
             return bucket.get("missing_required", [])
@@ -126,28 +176,101 @@ def _synthesize(llm, goal, facts, refs) -> dict:
     return parsed
 
 
-def _execute_loop(ctx, session, *, run, goal, student_id: str | None,
-                  plan_steps: list, memory: dict,
-                  started: float, actor_role: str, initial_error_recovered: str,
-                  emit=None) -> object:
-    """Shared execution engine for ``run_agent`` / ``run_agent_stream``.
+def _replan_from_observation(llm, goal: str, student_id: str | None,
+                             tool_name: str, output: dict,
+                             queued_tools: set[str]) -> list[dict]:
+    """Use REPLAN_SYSTEM + deterministic SOP guardrails to inject follow-up steps."""
+    injected_steps: list[dict] = []
+    if llm is not None:
+        try:
+            user_payload = json.dumps({
+                "goal": goal,
+                "student_id": student_id,
+                "last_tool": tool_name,
+                "observation": output,
+                "queued_tools": sorted(queued_tools),
+            }, default=str)
+            raw = llm.complete(system=REPLAN_SYSTEM, user=user_payload, json_mode=True)
+            parsed = _safe_json(raw)
+            cand = parsed.get("steps") if isinstance(parsed, dict) else None
+            if isinstance(cand, list):
+                for s in cand:
+                    if isinstance(s, dict) and s.get("tool") in TOOL_REGISTRY and s.get("tool") not in queued_tools:
+                        injected_steps.append(s)
+        except Exception:
+            pass
 
-    Runs the bounded dynamic-queue loop (M16), then verification + synthesis.
-    ``emit`` is an optional ``lambda event, payload: None`` sink invoked at each
-    lifecycle phase (Milestone 17 streaming); pass ``None`` for the plain path.
-    Returns the finalized ``AgentRun`` (already committed).
+    if injected_steps:
+        return injected_steps[:2]
 
-    IMPORTANT: any step whose tool output sets ``requires_user_input`` pauses the
-    run mid-loop (``status=awaiting_input``), commits, and returns early - the
-    caller must handle that state identically in both sync and streaming modes.
+    # Deterministic fallback when LLM returns no steps
+    g = str(goal or "").lower()
+    wants_drive = any(mk in g for mk in _ELIGIBILITY_MARKERS)
+    if (tool_name == "rank_and_explain_jobs" and wants_drive
+            and student_id and output.get("top_job_id")
+            and "check_drive_eligibility" not in queued_tools):
+        return [{
+            "thought": "Observation: top match identified; checking institutional SOP eligibility.",
+            "tool": "check_drive_eligibility",
+            "args": {"student_id": student_id, "job_id": "$rank_and_explain_jobs.top_job_id"},
+        }]
+    if (tool_name == "check_drive_eligibility"
+            and output.get("eligible") is False
+            and student_id):
+        suggested = " ".join(str(s) for s in (output.get("suggested_actions") or []))
+        mock_blocked = "SOP-04" in suggested
+        if mock_blocked and "inspect_interview_history" not in queued_tools:
+            return [{
+                "thought": "Observation: blocked by the mock-interview gate (SOP-04); reviewing interview history to close it.",
+                "tool": "inspect_interview_history",
+                "args": {"student_id": student_id},
+            }]
+        if "persist_upskilling_plan" not in queued_tools:
+            return [{
+                "thought": "Observation: eligibility blocked; building a proficiency-aware remediation plan.",
+                "tool": "persist_upskilling_plan",
+                "args": {"student_id": student_id, "job_id": "$check_drive_eligibility.job_id"},
+            }]
+    return []
+
+
+def _repair_failed_step(llm, tool_name: str, args: dict, student_id: str | None,
+                        error_str: str, memory: dict) -> dict:
+    """Ask LLM (TASK: repair_step) to repair failed tool arguments."""
+    spec = TOOL_REGISTRY.get(tool_name)
+    schema = spec.input_schema if spec else {}
+    repair = _safe_json(llm.complete(
+        system=REPAIR_SYSTEM,
+        user=json.dumps({
+            "tool": tool_name,
+            "schema": schema,
+            "args": args,
+            "student_id": student_id,
+            "error": error_str,
+        }, default=str),
+        json_mode=True)) if llm is not None else None
+    raw_retry_args = None
+    if isinstance(repair, dict):
+        if isinstance(repair.get("args"), dict):
+            raw_retry_args = repair["args"]
+        elif isinstance(repair.get("steps"), list) and repair["steps"]:
+            first_step = repair["steps"][0]
+            if isinstance(first_step, dict) and isinstance(first_step.get("args"), dict):
+                raw_retry_args = first_step["args"]
+    return _resolve(raw_retry_args if raw_retry_args is not None else args, memory)
+
+
+def _execute_loop_iter(ctx, session, *, run, goal, student_id: str | None,
+                       plan_steps: list, memory: dict,
+                       started: float, actor_role: str, initial_error_recovered: str):
+    """Real-time generator execution engine for ``run_agent`` and ``run_agent_stream``.
+
+    Yields ``(event_name, payload)`` tuples live at each step transition so SSE
+    clients receive ``step_started`` and ``step_completed`` in real time without
+    buffering. Mutates and commits ``run`` in place.
     """
     from ..models import AgentStep
 
-    _emit = emit if emit is not None else (lambda _n, _p: None)
-
-    # 2) Execute (M16: dynamic queue with observation-driven re-planning).
-    # A step that injects new work APPENDS to `plan_steps`, so the while-condition
-    # picks it up; step_order stays contiguous because we iterate by index.
     step_idx = 0
     executed = 0
     injected = 0
@@ -161,8 +284,8 @@ def _execute_loop(ctx, session, *, run, goal, student_id: str | None,
         args = _resolve(raw_step.get("args") or {}, memory)
         thought = raw_step.get("thought") or f"Call {tool_name}."
         step_start = time.time()
-        _emit("step_started", {"step_order": executed, "tool_name": tool_name,
-                               "thought": thought, "tool_input": args})
+        yield ("step_started", {"step_order": executed, "tool_name": tool_name,
+                                "thought": thought, "tool_input": args})
         step = AgentStep(id=f"step-{uuid4().hex[:8]}", run_id=run.id, step_order=executed,
                          thought=thought, tool_name=tool_name, tool_input=args,
                          tool_output={}, verification_passed=False, error_recovered="",
@@ -181,11 +304,9 @@ def _execute_loop(ctx, session, *, run, goal, student_id: str | None,
             except Exception as e:
                 # retry once with a repair prompt, else deterministic fallback
                 try:
-                    repair = _safe_json(getattr(ctx, "llm", None).complete(
-                        system="TASK: repair_step",
-                        user=json.dumps({"tool": tool_name, "args": args, "error": str(e)}),
-                        json_mode=True)) if getattr(ctx, "llm", None) else None
-                    retry_args = _resolve((repair or {}).get("args", args), memory)
+                    retry_args = _repair_failed_step(
+                        getattr(ctx, "llm", None), tool_name, args, student_id, str(e), memory
+                    )
                     output = call_tool(tool_name, ctx, session, **retry_args)
                     recovered = f"recovered after repair: {e}"
                 except Exception as e2:
@@ -195,7 +316,6 @@ def _execute_loop(ctx, session, *, run, goal, student_id: str | None,
             # sandbox tools must set requires_hitl -> mark run awaiting approval
             if isinstance(output, dict) and output.get("requires_hitl"):
                 awaiting_approval = True
-                # link the freshly-created approval back to this run for provenance
                 appr_id = output.get("approval_id")
                 if appr_id:
                     from ..models import ApprovalRequest as _AR
@@ -205,21 +325,28 @@ def _execute_loop(ctx, session, *, run, goal, student_id: str | None,
                         session.add(_ap)
             step.tool_output = output
             step.error_recovered = recovered
-            # step-level grounding: produced usable output with no error/fallback marker
             step.verification_passed = (
                 isinstance(output, dict) and bool(output)
                 and not output.get("error") and not output.get("fallback")
             )
-            memory[tool_name] = output if isinstance(output, dict) else {}
+            out_dict = output if isinstance(output, dict) else {}
+            if tool_name in memory:
+                # Preserve earlier invocation under indexed alias before moving tool_name to tail
+                idx = 1
+                while f"_{tool_name}_{idx}" in memory:
+                    idx += 1
+                memory[f"_{tool_name}_{idx}"] = memory.pop(tool_name)
+            memory[f"_step_{executed}"] = out_dict
+            memory[tool_name] = out_dict
         session.add(step)
         step.latency_ms = int((time.time() - step_start) * 1000)
         if recovered:
             error_recovered = error_recovered or recovered
-        _emit("step_completed", {"step_order": executed, "tool_name": tool_name,
-                                 "tool_output": output,
-                                 "verification_passed": step.verification_passed,
-                                 "error_recovered": step.error_recovered,
-                                 "latency_ms": step.latency_ms})
+        yield ("step_completed", {"step_order": executed, "tool_name": tool_name,
+                                  "tool_output": output,
+                                  "verification_passed": step.verification_passed,
+                                  "error_recovered": step.error_recovered,
+                                  "latency_ms": step.latency_ms})
 
         if not isinstance(output, dict):
             continue
@@ -236,50 +363,17 @@ def _execute_loop(ctx, session, *, run, goal, student_id: str | None,
             session.flush()
             _audit_run(session, run, actor_role, len(plan_steps), plan_steps)
             session.commit()
-            return run
+            return
 
         # --- M16: observation-driven re-planning (bounded) ----------------
-        if injected < MAX_INJECTED_STEPS:
-            g = str(goal or "").lower()
-            wants_drive = any(mk in g for mk in _ELIGIBILITY_MARKERS)
+        if injected < MAX_INJECTED_STEPS and executed < MAX_EXECUTED_STEPS:
             queued = {s.get("tool") for s in plan_steps[step_idx:]}
-
-            if (tool_name == "rank_and_explain_jobs" and wants_drive
-                    and student_id and output.get("top_job_id")
-                    and "check_drive_eligibility" not in queued
-                    and executed < MAX_EXECUTED_STEPS):
-                plan_steps.append({
-                    "thought": ("Observation: top match identified; checking "
-                                "institutional SOP eligibility."),
-                    "tool": "check_drive_eligibility",
-                    "args": {"student_id": student_id,
-                             "job_id": "$rank_and_explain_jobs.top_job_id"},
-                })
-                injected += 1
-            elif (tool_name == "check_drive_eligibility"
-                    and output.get("eligible") is False
-                    and student_id
-                    and executed < MAX_EXECUTED_STEPS):
-                suggested = " ".join(str(s) for s in (output.get("suggested_actions") or []))
-                mock_blocked = "SOP-04" in suggested
-                queued_after = {s.get("tool") for s in plan_steps[step_idx:]}
-                if mock_blocked and "inspect_interview_history" not in queued_after:
-                    plan_steps.append({
-                        "thought": ("Observation: blocked by the mock-interview gate "
-                                    "(SOP-04); reviewing interview history to close it."),
-                        "tool": "inspect_interview_history",
-                        "args": {"student_id": student_id},
-                    })
-                    injected += 1
-                elif ("persist_upskilling_plan" not in queued_after
-                        and executed < MAX_EXECUTED_STEPS):
-                    plan_steps.append({
-                        "thought": ("Observation: eligibility blocked; building a "
-                                    "proficiency-aware remediation plan."),
-                        "tool": "persist_upskilling_plan",
-                        "args": {"student_id": student_id,
-                                 "job_id": "$check_drive_eligibility.job_id"},
-                    })
+            new_obs_steps = _replan_from_observation(
+                getattr(ctx, "llm", None), goal, student_id, tool_name, output, queued
+            )
+            for ns in new_obs_steps:
+                if injected < MAX_INJECTED_STEPS and len(plan_steps) < MAX_EXECUTED_STEPS:
+                    plan_steps.append(ns)
                     injected += 1
 
     run.plan_json = plan_steps
@@ -289,17 +383,17 @@ def _execute_loop(ctx, session, *, run, goal, student_id: str | None,
     refs = []
     for v in memory.values():
         if isinstance(v, dict):
-            for key in ("top_job_id", "job_id", "course_id", "approval_id"):
+            for key in ("top_job_id", "job_id", "course_id", "approval_id", "plan_id"):
                 if v.get(key):
                     refs.append(str(v[key]))
     refs = list(dict.fromkeys(refs))  # dedupe before synthesis
-    # Register run-generated (ephemeral) ids so the verifier doesn't flag the
-    # agent's own outputs as hallucinations: the run id and any approval ids.
     known = build_known_entities(session)
     known = set(known) | {run.id}
     for v in memory.values():
         if isinstance(v, dict) and v.get("approval_id"):
             known.add(str(v["approval_id"]))
+        if isinstance(v, dict) and v.get("plan_id"):
+            known.add(str(v["plan_id"]))
     verify_result = verify_text(json.dumps(facts, default=str), known)
     synthesis = _synthesize(getattr(ctx, "llm", None), goal, facts, refs)
     final_answer = (synthesis.get("summary", "") or "") + "\n\n" + "\n".join(
@@ -319,9 +413,23 @@ def _execute_loop(ctx, session, *, run, goal, student_id: str | None,
         "failed" if run.fallback_triggered and not memory else "completed")
     session.add(run)
     session.flush()
-    _emit("verification_done", {"citations": run.citations})
+    yield ("verification_done", {"citations": run.citations})
     _audit_run(session, run, actor_role, len(plan_steps), plan_steps)
     session.commit()
+
+
+def _execute_loop(ctx, session, *, run, goal, student_id: str | None,
+                  plan_steps: list, memory: dict,
+                  started: float, actor_role: str, initial_error_recovered: str,
+                  emit=None) -> object:
+    """Shared execution engine wrapper for ``run_agent``."""
+    _emit = emit if emit is not None else (lambda _n, _p: None)
+    for ev_name, ev_payload in _execute_loop_iter(
+        ctx, session, run=run, goal=goal, student_id=student_id,
+        plan_steps=plan_steps, memory=memory, started=started,
+        actor_role=actor_role, initial_error_recovered=initial_error_recovered
+    ):
+        _emit(ev_name, ev_payload)
     return run
 
 
@@ -334,8 +442,6 @@ def run_agent(ctx, session, *, goal: str, student_id: str | None = None,
     provider = getattr(ctx, "llm", None)
     provider_name = type(provider).__name__ if provider is not None else "none"
 
-    # Validate the student reference BEFORE touching the DB so a bogus id can never
-    # raise IntegrityError (500) at flush time - we degrade to an unsourced run instead.
     student_ref_error = ""
     if student_id is not None:
         from ..models import Student as _Student
@@ -343,7 +449,10 @@ def run_agent(ctx, session, *, goal: str, student_id: str | None = None,
             student_ref_error = f"student '{student_id}' not found"
             student_id = None
 
-    run = AgentRun(id=f"run-{uuid4().hex[:8]}", student_id=student_id, actor_role=actor_role,
+    run_id = f"run-{uuid4().hex[:8]}"
+    goal = _sanitize_goal_text(session, goal, entity_id=run_id, actor_role=actor_role, source="agent_goal")
+
+    run = AgentRun(id=run_id, student_id=student_id, actor_role=actor_role,
                    goal=goal, status="running", plan_json=[], final_answer="",
                    citations={}, total_latency_ms=0, provider_used=provider_name,
                    fallback_triggered=False)
@@ -374,22 +483,7 @@ def run_agent(ctx, session, *, goal: str, student_id: str | None = None,
 
 def run_agent_stream(ctx, session, *, goal: str, student_id: str | None = None,
                      actor_role: str = "student"):
-    """Run the agent and yield ``(event_name, payload)`` tuples (Milestone 17).
-
-    Same lifecycle as ``run_agent`` but surfaces each phase as a structured event
-    so an SSE endpoint can forward them live:
-
-    1. ``run_started``  - run id created
-    2. ``plan_created`` - deterministic/LLM plan committed to ``run.plan_json``
-    3. ``step_started`` / ``step_completed`` - per tool call
-    4. ``verification_done`` - citations verified
-    5. ``complete`` - final ``_run_payload``-shaped dict
-
-    A clarification pause (``awaiting_input``) stops the event stream after the
-    ``step_completed`` event that triggered it - no ``complete`` is emitted (the
-    caller sees ``status=awaiting_input`` via the terminal ``awaiting_input``
-    event, then resumes with ``POST /api/agent/runs/{id}/reply``).
-    """
+    """Run the agent and yield ``(event_name, payload)`` tuples in real time (Milestone 17)."""
     from sqlmodel import select as _select
 
     from ..models import AgentRun, AgentStep
@@ -406,7 +500,10 @@ def run_agent_stream(ctx, session, *, goal: str, student_id: str | None = None,
             student_ref_error = f"student '{student_id}' not found"
             student_id = None
 
-    run = AgentRun(id=f"run-{uuid4().hex[:8]}", student_id=student_id, actor_role=actor_role,
+    run_id = f"run-{uuid4().hex[:8]}"
+    goal = _sanitize_goal_text(session, goal, entity_id=run_id, actor_role=actor_role, source="agent_goal")
+
+    run = AgentRun(id=run_id, student_id=student_id, actor_role=actor_role,
                    goal=goal, status="running", plan_json=[], final_answer="",
                    citations={}, total_latency_ms=0, provider_used=provider_name,
                    fallback_triggered=False)
@@ -430,32 +527,24 @@ def run_agent_stream(ctx, session, *, goal: str, student_id: str | None = None,
         run.fallback_triggered = True
     yield ("plan_created", {"run_id": run.id, "plan": plan_steps})
 
-    # The shared engine runs synchronously and pushes lifecycle events into
-    # ``events`` via the emit sink; we drain them after it returns (the buffer
-    # preserves emission order), then yield the terminal ``complete`` event.
-    events: list[tuple[str, dict]] = []
-
-    final_run = _execute_loop(ctx, session, run=run, goal=goal, student_id=student_id,
-                              plan_steps=plan_steps, memory=memory, started=started,
-                              actor_role=actor_role,
-                              initial_error_recovered=student_ref_error,
-                              emit=lambda n, p: events.append((n, p)))
-
-    for name, payload in events:
+    # Stream each step event live as it happens (no buffering)
+    for name, payload in _execute_loop_iter(
+        ctx, session, run=run, goal=goal, student_id=student_id,
+        plan_steps=plan_steps, memory=memory, started=started,
+        actor_role=actor_role, initial_error_recovered=student_ref_error
+    ):
         yield (name, payload)
 
-    if final_run.status == "awaiting_input":
-        # Clarification pause: terminal event carries the stored question; no
-        # `complete` (the run is not finished) - caller resumes via /reply.
-        yield ("awaiting_input", {"run_id": final_run.id,
-                                  "question": final_run.final_answer,
-                                  "status": final_run.status})
+    if run.status == "awaiting_input":
+        yield ("awaiting_input", {"run_id": run.id,
+                                  "question": run.final_answer,
+                                  "status": run.status})
         return
 
-    steps = session.exec(_select(AgentStep).where(AgentStep.run_id == final_run.id)
+    steps = session.exec(_select(AgentStep).where(AgentStep.run_id == run.id)
                          .order_by(AgentStep.step_order)).all()
     from ..api.routes.agent import _run_payload
-    yield ("complete", _run_payload(final_run, steps))
+    yield ("complete", _run_payload(run, steps))
 
 
 def _audit_run(session, run, actor_role, step_count, plan_steps=None) -> None:
@@ -475,14 +564,7 @@ def _audit_run(session, run, actor_role, step_count, plan_steps=None) -> None:
 
 
 def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
-    """Resume a paused ``awaiting_input`` run with the user's clarification (M16).
-
-    Appends the reply to the goal, records an ``AgentStep`` documenting the reply,
-    re-plans with the clarification included, executes the new steps, verifies
-    citations, and marks the run ``completed`` (or ``awaiting_approval``).
-    Raises ``ValueError`` for unknown run ids and for runs not awaiting input
-    (callers map these to 404 / 409).
-    """
+    """Resume a paused ``awaiting_input`` run with the user's clarification (M16)."""
     from sqlmodel import select as _select
 
     from ..models import AgentRun, AgentStep
@@ -496,6 +578,7 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
     reply = str(user_reply or "").strip()
     if not reply:
         raise ValueError("reply is required")
+    reply = _sanitize_goal_text(session, reply, entity_id=run.id, actor_role=run.actor_role, source="agent_reply")
 
     started = time.time()
     run.goal = f"{run.goal} (User clarification: {reply})"
@@ -518,8 +601,12 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
                           latency_ms=0))
     session.flush()
 
-    # Re-plan with the clarified goal and execute only the NEW steps.
+    # Restore memory from prior completed tool steps so $first/$last/$<tool> refs resolve!
     memory: dict[str, dict] = {}
+    for ps in prior_steps:
+        if ps.tool_name not in ("ask_clarifying_question", "user_reply") and isinstance(ps.tool_output, dict) and ps.tool_output:
+            memory[ps.tool_name] = ps.tool_output
+
     awaiting_approval = False
     error_recovered = ""
     known = build_known_entities(session)
@@ -528,7 +615,6 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
     try:
         new_steps = _plan(getattr(ctx, "llm", None), run.goal, run.student_id,
                           run.actor_role)
-        # keep the original trace first; append only genuinely new work
         added = [s for s in new_steps if s.get("tool") not in existing_tools] or new_steps
     except Exception as e:
         run.fallback_triggered = True
@@ -543,8 +629,8 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
 
     step_idx = 0
     executed = 0
+    injected = 0
     while step_idx < len(plan_steps) and executed < MAX_EXECUTED_STEPS:
-        # only execute steps appended in this resume (skip the completed history)
         if step_idx < len(prior_plan):
             step_idx += 1
             continue
@@ -570,9 +656,16 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
             try:
                 output = call_tool(tool_name, ctx, session, **args)
             except Exception as e:
-                run.fallback_triggered = True
-                recovered = f"tool failed: {e}"
-                output = {"error": str(e), "tool": tool_name, "fallback": True}
+                try:
+                    retry_args = _repair_failed_step(
+                        getattr(ctx, "llm", None), tool_name, args, run.student_id, str(e), memory
+                    )
+                    output = call_tool(tool_name, ctx, session, **retry_args)
+                    recovered = f"recovered after repair: {e}"
+                except Exception as e2:
+                    run.fallback_triggered = True
+                    recovered = f"tool failed after repair: {e2}"
+                    output = {"error": str(e2), "tool": tool_name, "fallback": True}
             if isinstance(output, dict) and output.get("requires_hitl"):
                 awaiting_approval = True
                 appr_id = output.get("approval_id")
@@ -587,7 +680,15 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
             step.verification_passed = (
                 isinstance(output, dict) and bool(output)
                 and not output.get("error") and not output.get("fallback"))
-            memory[tool_name] = output if isinstance(output, dict) else {}
+            out_dict = output if isinstance(output, dict) else {}
+            if tool_name in memory:
+                # Preserve earlier invocation under indexed alias before moving tool_name to tail
+                idx = 1
+                while f"_{tool_name}_{idx}" in memory:
+                    idx += 1
+                memory[f"_{tool_name}_{idx}"] = memory.pop(tool_name)
+            memory[f"_step_{executed}"] = out_dict
+            memory[tool_name] = out_dict
         session.add(step)
         step.latency_ms = int((time.time() - step_start) * 1000)
         if recovered:
@@ -603,6 +704,16 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
             _audit_run(session, run, run.actor_role, len(plan_steps), plan_steps)
             session.commit()
             return run
+
+        if isinstance(output, dict) and injected < MAX_INJECTED_STEPS and executed < MAX_EXECUTED_STEPS:
+            queued = {s.get("tool") for s in plan_steps[step_idx:]}
+            new_obs_steps = _replan_from_observation(
+                getattr(ctx, "llm", None), run.goal, run.student_id, tool_name, output, queued
+            )
+            for ns in new_obs_steps:
+                if injected < MAX_INJECTED_STEPS and executed + len(plan_steps[step_idx:]) < MAX_EXECUTED_STEPS:
+                    plan_steps.append(ns)
+                    injected += 1
 
     # Verify + Synthesize over the merged facts
     run.plan_json = plan_steps

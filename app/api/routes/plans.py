@@ -103,10 +103,12 @@ def create_plan(sid: str, request: Request, payload: dict | None = None,
         session.delete(prior)
         session.commit()
 
+    from app.security.rbac import current_role
+
     plan, _items = build_plan(session, sid, job, job_score, llm=ctx.llm,
                               levels=levels)
     log_audit(session, action="plan.generated", entity_type="plan", entity_id=plan.id,
-              actor_role="student",
+              actor_role=current_role(request),
               detail={"student_id": sid, "job_id": job.id,
                       "total_hours": plan.total_hours,
                       "proficiency_gaps": len(job_score.proficiency_gaps or [])},

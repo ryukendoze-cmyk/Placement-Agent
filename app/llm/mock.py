@@ -72,8 +72,14 @@ class MockLLM:
             hits = len(matched)
             denom = max(1, len(keywords))
             keyword_score = round(70 * hits / denom)
-            words = len(answer.split())
+            word_list = answer.split()
+            words = len(word_list)
+            unique_ratio = (len(set(word_list)) / words) if words > 0 else 1.0
             length_bonus = 30 if words >= 12 else max(0, round(30 * words / 12))
+            if words >= 6 and unique_ratio < 0.4:
+                # Anti-gaming guard: penalize repetitive keyword stuffing
+                length_bonus = min(length_bonus, 5)
+                keyword_score = round(keyword_score * unique_ratio)
             score = max(0, min(100, keyword_score + length_bonus))
             technical = score
             depth = max(0, min(100, round(0.6 * length_bonus + 0.4 * keyword_score)))
@@ -147,12 +153,21 @@ class MockLLM:
         if task == "plan_steps":
             return json.dumps(self._plan_steps(user))
 
+        if task == "replan_steps":
+            return json.dumps(self._replan_steps(user))
+
         if task == "repair_step":
             payload = json.loads(user) if user else {}
             tool = payload.get("tool", "")
-            # retry the same tool with its original args (recovery path)
-            return json.dumps({"steps": [{"thought": f"Retrying {tool} with corrected arguments.",
-                                          "tool": tool, "args": payload.get("args", {})}]})
+            repaired_args = dict(payload.get("args") or {})
+            if payload.get("student_id") and not repaired_args.get("student_id"):
+                repaired_args["student_id"] = payload["student_id"]
+            return json.dumps({
+                "args": repaired_args,
+                "thought": f"Retrying {tool} with corrected arguments.",
+                "steps": [{"thought": f"Retrying {tool} with corrected arguments.",
+                           "tool": tool, "args": repaired_args}],
+            })
 
         if task == "synthesize":
             payload = json.loads(user) if user else {}
@@ -671,12 +686,76 @@ class MockLLM:
         def sid(default=None):
             return student_id or default
 
-        if any(k in goal for k in ("resume", "bullet", "ats", "xray", "improve")):
+        if any(k in goal for k in ("purge live", "remove live", "clear live", "delete live")):
+            steps = [
+                S("Purge external live-scraped market jobs from the database.",
+                  "purge_live_market_jobs", {}),
+            ]
+        elif any(k in goal for k in ("live market", "external job", "search live", "market job")):
+            steps = [
+                S("Inspect the student's verified skills and academic standing.",
+                  "inspect_student_profile", {"student_id": sid()}),
+                S("Search live market jobs matching the student's profile and query.",
+                  "search_live_market_jobs", {"student_id": sid(), "query": "software engineer"}),
+            ]
+        elif any(k in goal for k in ("prerequisite", "dag", "topological", "dependency order")):
+            steps = [
+                S("Inspect the student's verified skills and current proficiency levels.",
+                  "inspect_student_profile", {"student_id": sid()}),
+                S("Rank jobs to determine the target missing skills.",
+                  "rank_and_explain_jobs", {"student_id": sid(), "top": 3}),
+                S("Order missing skills topologically along the prerequisite DAG.",
+                  "generate_prerequisite_roadmap", {"target_skills": "$last.missing_required"}),
+            ]
+        elif any(k in goal for k in ("interview history", "past interview", "rubric breakdown")):
+            steps = [
+                S("Inspect the student's completed mock interview history and rubric breakdown.",
+                  "inspect_interview_history", {"student_id": sid()}),
+                S("Inspect the student's profile to correlate weak interview skills with resume evidence.",
+                  "inspect_student_profile", {"student_id": sid()}),
+            ]
+        elif any(k in goal for k in ("persist plan", "save plan", "persist upskilling")):
+            steps = [
+                S("Inspect the student's verified skills and standing.",
+                  "inspect_student_profile", {"student_id": sid()}),
+                S("Rank jobs to identify the top target role.",
+                  "rank_and_explain_jobs", {"student_id": sid(), "top": 3}),
+                S("Build and persist a prerequisite-ordered upskilling plan for the top match.",
+                  "persist_upskilling_plan",
+                  {"student_id": sid(), "job_id": "$rank_and_explain_jobs.top_job_id"}),
+            ]
+        elif any(k in goal for k in ("submit application", "submit drive application")):
+            steps = [
+                S("Inspect the student's profile before submitting a drive application.",
+                  "inspect_student_profile", {"student_id": sid()}),
+                S("Rank jobs to select the best target drive.",
+                  "rank_and_explain_jobs", {"student_id": sid(), "top": 3}),
+                S("Submit the campus drive application with SOP eligibility verification.",
+                  "submit_drive_application",
+                  {"student_id": sid(), "job_id": "$rank_and_explain_jobs.top_job_id"}),
+            ]
+        elif any(k in goal for k in ("resume", "bullet", "ats", "xray", "improve")):
             steps = [
                 S("Retrieve the student's stored resume text and skill evidence.", "inspect_student_profile",
                   {"student_id": sid()}),
                 S("Run the ATS X-Ray and draft grounded STAR improvements.", "audit_resume_bullets",
                   {"student_id": sid()}),
+            ]
+            # Multi-intent composition: if the user ALSO asked for interview history or policy or roadmap
+            if any(k in goal for k in ("interview history", "past interview")):
+                steps.append(S("Review completed mock interview history.", "inspect_interview_history",
+                               {"student_id": sid()}))
+            if any(k in goal for k in ("policy", "sop", "handbook")):
+                steps.append(S("Retrieve governing placement SOP clauses.", "search_placement_policy_rag",
+                               {"query": goal, "top_k": 3}))
+        elif any(k in goal for k in ("simulate drive", "prospective drive", "cohort drive")):
+            steps = [
+                S("Simulate cohort eligibility and bootcamp ROI for the prospective drive.",
+                  "simulate_placement_drive",
+                  {"title": "Prospective Campus Drive", "min_gpa": 7.0,
+                   "required_skills": ["python", "sql"]}),
+                S("Query aggregate cohort skill gaps to cross-check bottlenecks.",
+                  "query_cohort_bottlenecks", {"top_n": 5}),
             ]
         elif any(k in goal for k in ("cohort", "bottleneck", "intervention", "batch", "workshop", "bootcamp")):
             steps = [
@@ -756,3 +835,43 @@ class MockLLM:
                                             "job_id": "$rank_and_explain_jobs.top_job_id",
                                             "readiness": 0}}))
         return {"steps": steps[:5]}
+
+    def _replan_steps(self, user: str) -> dict:
+        """Observation-driven replanner for TASK: replan_steps."""
+        try:
+            payload = json.loads(user) if user else {}
+        except Exception:
+            payload = {}
+        goal = str(payload.get("goal") or "").lower()
+        student_id = payload.get("student_id")
+        last_tool = str(payload.get("last_tool") or "")
+        observation = payload.get("observation") if isinstance(payload.get("observation"), dict) else {}
+        queued = set(payload.get("queued_tools") or [])
+
+        wants_drive = any(mk in goal for mk in ("eligib", "apply", "nomina", "drive"))
+        steps = []
+        if (last_tool == "rank_and_explain_jobs" and wants_drive
+                and student_id and observation.get("top_job_id")
+                and "check_drive_eligibility" not in queued):
+            steps.append({
+                "thought": "Observation: top match identified; checking institutional SOP eligibility.",
+                "tool": "check_drive_eligibility",
+                "args": {"student_id": student_id, "job_id": "$rank_and_explain_jobs.top_job_id"},
+            })
+        elif (last_tool == "check_drive_eligibility"
+                and observation.get("eligible") is False
+                and student_id):
+            suggested = " ".join(str(s) for s in (observation.get("suggested_actions") or []))
+            if "SOP-04" in suggested and "inspect_interview_history" not in queued:
+                steps.append({
+                    "thought": "Observation: blocked by the mock-interview gate (SOP-04); reviewing interview history to close it.",
+                    "tool": "inspect_interview_history",
+                    "args": {"student_id": student_id},
+                })
+            elif "persist_upskilling_plan" not in queued:
+                steps.append({
+                    "thought": "Observation: eligibility blocked; building a proficiency-aware remediation plan.",
+                    "tool": "persist_upskilling_plan",
+                    "args": {"student_id": student_id, "job_id": "$check_drive_eligibility.job_id"},
+                })
+        return {"steps": steps[:2]}

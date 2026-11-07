@@ -369,6 +369,47 @@ def get_job(job_id: str, session: Session = Depends(get_session)):
             "is_fresher": getattr(j, "is_fresher", True)}
 
 
+@router.delete("/api/jobs/live")
+@router.post("/api/jobs/purge-live")
+def purge_live_jobs_endpoint(
+    request: Request,
+    keep_output: bool = False,
+    session: Session = Depends(get_session),
+    ctx: Any = Depends(get_ctx),
+    role: str = Depends(require_role("student", "faculty_mentor", "tpo_admin")),
+) -> dict[str, Any]:
+    """Purge all live scraped jobs, related records, and vector embeddings.
+
+    Accessible to all roles (student, faculty_mentor, tpo_admin) regardless of persona.
+    Institutional on-campus jobs (Job.source == "local") remain untouched.
+    """
+    from app.scraper.pipeline import purge_live_jobs
+
+    count = purge_live_jobs(session, ctx=ctx, clear_output=not keep_output)
+
+    try:
+        session.add(
+            AuditLog(
+                id=f"aud-{uuid4().hex[:8]}",
+                action="jobs.live.purged",
+                entity_type="job",
+                entity_id="all-live",
+                actor_role=role,
+                detail={"purged_count": count, "keep_output": keep_output},
+            )
+        )
+        session.commit()
+    except Exception as exc:
+        logger.warning("Failed to record AuditLog for purge_live_jobs: %s", exc)
+
+    return {
+        "status": "success",
+        "purged": count,
+        "purged_count": count,
+        "message": f"Successfully removed {count} live job(s) from database.",
+    }
+
+
 @router.delete("/api/jobs/{job_id}")
 def delete_job_endpoint(
     job_id: str,

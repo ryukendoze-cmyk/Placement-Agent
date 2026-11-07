@@ -456,3 +456,47 @@ def test_api_agent_run_unknown_run_404():
     client = _make_client()
     with client:
         assert client.get("/api/agent/runs/run-none").status_code == 404
+
+
+def test_resolve_nested_dot_paths_and_step_aliases():
+    mem = {
+        "_step_1": {"student_id": "stu-123"},
+        "rank_and_explain_jobs": {
+            "top_job_id": "job-001",
+            "matches": [{"job_id": "job-001", "score": 92}, {"job_id": "job-002", "score": 81}],
+        },
+    }
+    assert _resolve("$rank_and_explain_jobs.matches.0.job_id", mem) == "job-001"
+    assert _resolve("$last.matches.1.score", mem) == 81
+    assert _resolve("$step_1.student_id", mem) == "stu-123"
+
+
+def test_verify_sop_numeric_claims_flags_hallucinated_thresholds():
+    known = {"SOP-04", "SOP-03"}
+    bad = verify_text("Under SOP-04 requires a score of 40 to qualify.", known)
+    assert any("SOP-04:mock_threshold=40!=65" in u for u in bad["unverified"])
+    assert bad["grounding_score"] < 100
+
+    good = verify_text("Under SOP-04 requires a score of 65 to qualify.", known)
+    assert good["unverified"] == []
+    assert good["grounding_score"] == 100
+
+
+def test_mock_llm_plans_all_specialized_tools():
+    llm = MockLLM()
+    for goal, expected_tool in [
+        ("Generate a prerequisite DAG roadmap for my missing skills", "generate_prerequisite_roadmap"),
+        ("Search live market jobs for backend engineer", "search_live_market_jobs"),
+        ("Purge live market jobs from the database", "purge_live_market_jobs"),
+        ("Show my past interview history and rubric breakdown", "inspect_interview_history"),
+        ("Persist upskilling plan for my top match", "persist_upskilling_plan"),
+        ("Submit drive application for my top role", "submit_drive_application"),
+    ]:
+        raw = llm.complete(
+            "TASK: plan_steps",
+            json.dumps({"goal": goal, "student_id": "stu-1", "actor_role": "tpo_admin"}),
+            json_mode=True,
+        )
+        steps = json.loads(raw)["steps"]
+        assert any(s["tool"] == expected_tool for s in steps), f"Missing {expected_tool} for goal={goal!r}"
+

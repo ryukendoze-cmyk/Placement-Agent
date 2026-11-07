@@ -200,10 +200,12 @@ def create_student_core(session, ctx, file, name, branch, year, gpa):
     return sid, [_skill_payload(r, ctx) for r in rows]
 
 
-def delete_student_core(session: Session, ctx, sid: str) -> bool:
+def delete_student_core(session: Session, ctx, sid: str, actor_role: str = "tpo_admin") -> bool:
     student = session.get(Student, sid)
     if student is None:
         return False
+    student_name = student.name
+    student_branch = student.branch
     # M19: applications must go first (they FK both student and job).
     session.execute(delete(JobApplication).where(JobApplication.student_id == sid))
     session.execute(delete(JobMatch).where(JobMatch.student_id == sid))
@@ -215,6 +217,15 @@ def delete_student_core(session: Session, ctx, sid: str) -> bool:
         session.execute(delete(PlanItem).where(PlanItem.plan_id == p.id))
     session.execute(delete(UpskillPlan).where(UpskillPlan.student_id == sid))
     session.delete(student)
+    from app.security.audit import log_audit
+    log_audit(
+        session,
+        action="student.deleted",
+        entity_type="student",
+        entity_id=sid,
+        actor_role=actor_role or "tpo_admin",
+        detail={"deleted_student_id": sid, "name": student_name, "branch": student_branch},
+    )
     session.commit()
     return True
 
@@ -231,7 +242,7 @@ def delete_student(
     user=Depends(_STUDENT_OR_ADMIN_ROLE),
 ):
     enforce_student_scope(request, sid)
-    if not delete_student_core(session, ctx, sid):
+    if not delete_student_core(session, ctx, sid, actor_role=current_role(request)):
         raise HTTPException(404, "student not found")
     return {"status": "success", "deleted_student_id": sid}
 
@@ -493,6 +504,55 @@ def simulate_match(sid: str, job_id: str, request: Request,
     courses_for_skill = {s: pick_course_for_skill(s, courses) for s in skills}
     return simulate_counterfactual(student_skills, job, skills, sim, ctx.taxonomy,
                                    levels=levels, courses_for_skill=courses_for_skill)
+
+
+@router.delete("/api/students/{sid}/matches/live")
+@router.post("/api/students/{sid}/matches/purge-live")
+def student_purge_live_jobs_endpoint(
+    sid: str,
+    request: Request,
+    keep_output: bool = False,
+    session: Session = Depends(get_session),
+    ctx: Any = Depends(get_ctx),
+    role: str = Depends(require_role("student", "faculty_mentor", "tpo_admin")),
+) -> dict[str, Any]:
+    """Purge all live scraped jobs from the database and refresh student matches.
+
+    Accessible to student, faculty_mentor, and tpo_admin regardless of role.
+    """
+    enforce_student_scope(request, sid)
+    from app.scraper.pipeline import purge_live_jobs
+
+    count = purge_live_jobs(session, ctx=ctx, clear_output=not keep_output)
+
+    try:
+        session.add(
+            AuditLog(
+                id=f"aud-{uuid4().hex[:8]}",
+                action="jobs.live.purged",
+                entity_type="job",
+                entity_id=f"student:{sid}",
+                actor_role=role,
+                detail={"purged_count": count, "student_id": sid, "keep_output": keep_output},
+            )
+        )
+        session.commit()
+    except Exception as exc:
+        logger.warning("Failed to record AuditLog for student purge_live_jobs: %s", exc)
+
+    st = session.get(Student, sid)
+    if st:
+        try:
+            _rank_and_persist(session, ctx, sid, st, include_scraped=False)
+        except Exception as exc:
+            logger.warning("Post-purge match refresh failed: %s", exc)
+
+    return {
+        "status": "success",
+        "purged": count,
+        "purged_count": count,
+        "message": f"Successfully removed {count} live job(s) from database.",
+    }
 
 
 @router.delete("/api/students/{sid}/matches/{job_id}")

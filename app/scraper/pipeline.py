@@ -11,7 +11,7 @@ from typing import Any
 from sqlalchemy import delete
 from sqlmodel import Session, select
 
-from app.models import Interview, Job, JobMatch, PlanItem, UpskillPlan
+from app.models import Interview, Job, JobApplication, JobMatch, PlanItem, UpskillPlan
 from app.scraper.normalizer import (
     extract_experience_years,
     is_ai_normalizer_circuit_open,
@@ -60,11 +60,12 @@ def purge_dummy_jobs(session: Session, ctx: Any | None = None) -> int:
         return 0
 
     # Delete children before parents (FK-safe order): PlanItem -> UpskillPlan
-    # -> Interview -> JobMatch -> Job, all scoped to the purged job ids.
+    # -> Interview -> JobApplication -> JobMatch -> Job, all scoped to the purged job ids.
     sub_plans = select(UpskillPlan.id).where(UpskillPlan.job_id.in_(purged_ids))
     session.execute(delete(PlanItem).where(PlanItem.plan_id.in_(sub_plans)))
     session.execute(delete(UpskillPlan).where(UpskillPlan.job_id.in_(purged_ids)))
     session.execute(delete(Interview).where(Interview.job_id.in_(purged_ids)))
+    session.execute(delete(JobApplication).where(JobApplication.job_id.in_(purged_ids)))
     session.execute(delete(JobMatch).where(JobMatch.job_id.in_(purged_ids)))
     session.execute(delete(Job).where(Job.id.in_(purged_ids)))
     session.commit()
@@ -125,6 +126,7 @@ def purge_live_jobs(
         session.execute(delete(PlanItem).where(PlanItem.plan_id.in_(sub_plans)))
         session.execute(delete(UpskillPlan).where(UpskillPlan.job_id.in_(purged_ids)))
         session.execute(delete(Interview).where(Interview.job_id.in_(purged_ids)))
+        session.execute(delete(JobApplication).where(JobApplication.job_id.in_(purged_ids)))
         session.execute(delete(JobMatch).where(JobMatch.job_id.in_(purged_ids)))
         session.execute(delete(Job).where(Job.id.in_(purged_ids)))
         session.commit()

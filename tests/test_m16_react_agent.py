@@ -64,17 +64,18 @@ def _seed_student(client, name="M16 Probe", branch="CSE", year=3, gpa=8.0) -> st
     return r.json()["id"]
 
 
-# ------------------------------------------------------------ 15-tool registry
+# ------------------------------------------------------------ 18-tool registry
 def test_tool_registry_has_exactly_15_tools():
-    assert len(TOOL_REGISTRY) == 15
+    assert len(TOOL_REGISTRY) == 18
     expected = {
         "inspect_student_profile", "rank_and_explain_jobs", "simulate_skill_acquisition",
         "search_placement_policy_rag", "search_course_catalog",
         "generate_prerequisite_roadmap", "audit_resume_bullets",
         "query_cohort_bottlenecks", "draft_cohort_intervention", "propose_hitl_approval",
-        # M16 additions
+        # M16 + live market + drive application & simulation tools
         "check_drive_eligibility", "persist_upskilling_plan", "inspect_interview_history",
-        "search_live_market_jobs", "ask_clarifying_question",
+        "search_live_market_jobs", "purge_live_market_jobs", "ask_clarifying_question",
+        "submit_drive_application", "simulate_placement_drive",
     }
     assert set(TOOL_REGISTRY) == expected
 
@@ -461,3 +462,64 @@ def test_tool_aliases_and_prompt_grounding():
             assert "inspect_student_profile" in PLAN_SYSTEM
             assert "rank_and_explain_jobs" in PLAN_SYSTEM
             assert "search_live_market_jobs" in PLAN_SYSTEM
+            assert "submit_drive_application" in PLAN_SYSTEM
+            assert "simulate_placement_drive" in PLAN_SYSTEM
+
+
+def test_new_tools_submit_drive_application_and_simulate_placement_drive():
+    """Verify submit_drive_application and simulate_placement_drive tools in the 18-tool registry."""
+    from app.agent.tools import call_tool
+    client = _make_client()
+    with client:
+        sid = _seed_student(client, "Drive Tool Student")
+        ctx = client.app.state.ctx
+        with Session(ctx.engine) as session:
+            sim = call_tool(
+                "simulate_placement_drive",
+                ctx,
+                session,
+                title="Prospective AI Drive",
+                salary_lpa=[10, 14],
+                min_gpa=7.0,
+                required_skills=["python"],
+            )
+            assert "eligible_now_count" in sim
+            assert "bootcamp_intervention_roi" in sim
+
+            app_res = call_tool(
+                "submit_drive_application",
+                ctx,
+                session,
+                student_id=sid,
+                request_waiver=True,
+                note="Applying via ReAct agent tool",
+            )
+            assert "status" in app_res
+            assert app_res["job_id"]
+
+
+def test_step_repair_recovers_missing_student_id():
+    """Verify _repair_failed_step uses REPAIR_SYSTEM to fill missing student_id and recover."""
+    from app.agent.orchestrator import _repair_failed_step
+    from app.agent.tools import call_tool
+    session, ctx = _session_env()
+    with session:
+        sid = "stu-rep0001"
+        from app.models import Student, StudentSkill
+        session.add(Student(id=sid, name="Repair", branch="CSE", year=3, gpa=8.2,
+                            resume_text="Skills: Python, FastAPI\n"))
+        session.add(StudentSkill(student_id=sid, skill_id="python", mentions=2,
+                                 level="basic", evidence=["python"]))
+        session.commit()
+        repaired_args = _repair_failed_step(
+            ctx.llm,
+            tool_name="inspect_student_profile",
+            args={},
+            student_id=sid,
+            error_str="missing required argument: student_id",
+            memory={},
+        )
+        assert repaired_args.get("student_id") == sid
+        out = call_tool("inspect_student_profile", ctx, session, **repaired_args)
+        assert out.get("student_id") == sid
+

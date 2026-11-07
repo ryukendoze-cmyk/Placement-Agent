@@ -52,11 +52,12 @@ def start_run(payload: dict, request: Request,
     student_id = (payload or {}).get("student_id")
     actor_role = (payload or {}).get("actor_role", "student")
     user = get_current_user_optional(request)
-    if user is not None and user.role == "student":
-        if student_id and student_id != user.student_id:
-            enforce_student_scope(request, student_id)
-        student_id = user.student_id
-        actor_role = "student"
+    if user is not None:
+        actor_role = user.role
+        if user.role == "student":
+            if student_id and student_id != user.student_id:
+                enforce_student_scope(request, student_id)
+            student_id = user.student_id
     run = run_agent(ctx, session, goal=goal, student_id=student_id, actor_role=actor_role)
     steps = session.exec(select(AgentStep).where(AgentStep.run_id == run.id)
                          .order_by(AgentStep.step_order)).all()
@@ -83,11 +84,12 @@ def start_run_stream(payload: dict, request: Request,
     student_id = (payload or {}).get("student_id")
     actor_role = (payload or {}).get("actor_role", "student")
     user = get_current_user_optional(request)
-    if user is not None and user.role == "student":
-        if student_id and student_id != user.student_id:
-            enforce_student_scope(request, student_id)
-        student_id = user.student_id
-        actor_role = "student"
+    if user is not None:
+        actor_role = user.role
+        if user.role == "student":
+            if student_id and student_id != user.student_id:
+                enforce_student_scope(request, student_id)
+            student_id = user.student_id
 
     def event_stream():
         try:

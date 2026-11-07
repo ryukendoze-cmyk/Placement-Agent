@@ -208,6 +208,7 @@ def _entity_counts(session: Session) -> dict:
         "interviews": count(Interview),
         "applications": count(JobApplication),
         "approvals": count(ApprovalRequest),
+        "agent_runs": count(AgentRun),
         "audit_logs": count(AuditLog),
     }
 
@@ -216,13 +217,27 @@ def _entity_counts(session: Session) -> dict:
 def system_telemetry(request: Request, session: Session = Depends(get_session),
                      role: str = Depends(require_role("tpo_admin"))):
     """M23: agent metrics + LLM telemetry + DB entity counts (TPO only)."""
+    from app.config import settings
+
     ctx = request.app.state.ctx
-    llm_stats = (ctx.llm_telemetry.stats() if getattr(ctx, "llm_telemetry", None) is not None
-                 else {"providers": {}, "totals": {"total_calls": 0, "total_tokens": 0,
-                                                    "estimated_cost_usd": 0.0,
-                                                    "total_errors": 0, "total_fallbacks": 0}})
-    return {"agent_metrics": _agent_metrics(session), "llm": llm_stats,
-            "entities": _entity_counts(session)}
+    raw_llm = (ctx.llm_telemetry.stats() if getattr(ctx, "llm_telemetry", None) is not None
+               else {"providers": {}, "totals": {"total_calls": 0, "total_tokens": 0,
+                                                  "estimated_cost_usd": 0.0,
+                                                  "total_errors": 0, "total_fallbacks": 0}})
+    totals = raw_llm.get("totals") or {}
+    llm_stats = {
+        **raw_llm,
+        "provider": getattr(settings, "llm_provider", "mock") or "mock",
+        "calls_total": totals.get("total_calls", 0),
+        "fallbacks_triggered": totals.get("total_fallbacks", 0),
+    }
+    entities = _entity_counts(session)
+    return {
+        "agent_metrics": _agent_metrics(session),
+        "llm": llm_stats,
+        "entities": entities,
+        "database_counts": entities,
+    }
 
 
 @router.get("/api/admin/eval-benchmark")

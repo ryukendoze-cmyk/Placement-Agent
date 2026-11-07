@@ -387,6 +387,185 @@ def _search_live_market_jobs(ctx, session, student_id: str | None = None,
             "count": len(results), "jobs": results}
 
 
+def _purge_live_market_jobs(ctx, session, actor_role: str | None = None, **_):
+    """Purge all live scraped job postings from the database and vector index."""
+    if actor_role and str(actor_role).lower() == "student":
+        raise PermissionError("purge_live_market_jobs requires faculty_mentor or tpo_admin privileges")
+    from ..scraper.pipeline import purge_live_jobs
+    count = purge_live_jobs(session, ctx=ctx, clear_output=True)
+    return {"purged_count": count, "message": f"Purged {count} live market job(s) from database and reset caches."}
+
+
+def _submit_drive_application(ctx, session, student_id: str, job_id: str | None = None,
+                              request_waiver: bool = True, note: str = "", **_):
+    """Submit a campus drive application with SOP eligibility check and 2-tier HITL routing."""
+    from datetime import datetime, timezone
+
+    from sqlmodel import select
+
+    from ..matching.engine import job_tier
+    from ..models import (
+        ApprovalRequest,
+        AuditLog,
+        Job,
+        JobApplication,
+        JobMatch,
+        ProgressEvent,
+        Student,
+    )
+    from ..rag.policy_rag import evaluate_student_eligibility
+
+    student = session.get(Student, student_id)
+    if student is None:
+        raise ValueError(f"student '{student_id}' not found")
+    if not job_id:
+        top_m = session.exec(
+            select(JobMatch)
+            .where(JobMatch.student_id == student_id)
+            .order_by(JobMatch.score.desc())
+        ).first()
+        if top_m is not None:
+            job_id = top_m.job_id
+        else:
+            first_j = session.exec(select(Job)).first()
+            job_id = first_j.id if first_j is not None else None
+    job = session.get(Job, job_id) if job_id else None
+    if job is None:
+        raise ValueError(f"job '{job_id}' not found")
+
+    active_statuses = ("submitted", "awaiting_mentor_endorsement", "awaiting_tpo_approval", "nominated")
+    existing = session.exec(
+        select(JobApplication).where(
+            JobApplication.student_id == student_id,
+            JobApplication.job_id == job_id,
+            JobApplication.status.in_(active_statuses),
+        )
+    ).first()
+    if existing is not None:
+        return {
+            "application_id": existing.id,
+            "student_id": student_id,
+            "job_id": job_id,
+            "status": existing.status,
+            "tier": existing.tier,
+            "approval_id": existing.approval_id,
+            "requires_hitl": bool(existing.approval_id),
+            "note": "Active application already exists for this drive.",
+        }
+
+    elig = evaluate_student_eligibility(session, ctx, student_id, job_id)
+    tier = job_tier(job)
+    jm = session.exec(
+        select(JobMatch).where(JobMatch.student_id == student_id, JobMatch.job_id == job_id)
+    ).first()
+    match_score = int(jm.score) if jm and jm.score else int(elig.get("skill_coverage_pct") or 0)
+    eligible = bool(elig.get("eligible"))
+    now = datetime.now(timezone.utc)
+    app_id = f"app-{uuid4().hex[:8]}"
+
+    if eligible and tier == "standard":
+        app_row = JobApplication(
+            id=app_id, student_id=student_id, job_id=job_id, status="nominated",
+            tier=tier, match_score=match_score, eligible_at_apply=True,
+            eligibility_checks={"checks": elig.get("checks", []), "cited_sops": elig.get("cited_sops", [])},
+            approval_id=None, endorsed_by="", approved_by="", notes=note,
+            created_at=now, updated_at=now,
+        )
+        session.add(app_row)
+        session.add(ProgressEvent(
+            id=f"pe-{uuid4().hex[:8]}", student_id=student_id, kind="nomination",
+            ref_id=job_id, readiness=match_score, at=now,
+        ))
+        session.add(AuditLog(
+            id=f"aud-{uuid4().hex[:8]}", action="application.nominated",
+            entity_type="job_application", entity_id=app_id, actor_role="agent",
+            detail={"student_id": student_id, "job_id": job_id, "tier": tier, "match_score": match_score},
+        ))
+        session.flush()
+        return {
+            "application_id": app_id, "student_id": student_id, "job_id": job_id,
+            "status": "nominated", "tier": tier, "match_score": match_score,
+            "eligible": True, "cited_sops": elig.get("cited_sops", []),
+            "requires_hitl": False,
+        }
+
+    if not eligible and not request_waiver:
+        return {
+            "application_id": None, "student_id": student_id, "job_id": job_id,
+            "status": "blocked", "tier": tier, "eligible": False,
+            "reasons": elig.get("reasons", []), "cited_sops": elig.get("cited_sops", []),
+            "requires_hitl": False,
+        }
+
+    awaiting_status = "awaiting_tpo_approval" if eligible else "awaiting_mentor_endorsement"
+    appr_title = (
+        f"Drive nomination: {job.title} ({tier})"
+        if eligible else f"Waiver request: {job.title}"
+    )
+    appr_summary = (
+        f"{student.name} is eligible for {tier} tier (readiness {match_score}). TPO approval required [SOP-04]."
+        if eligible else
+        f"{student.name} is blocked by SOP checks: {'; '.join(elig.get('reasons', [])[:3]) or 'n/a'}. "
+        f"Faculty mentor endorsement required before TPO review."
+    )
+    ap = ApprovalRequest(
+        id=f"appr-{uuid4().hex[:8]}", kind="job_application_nomination",
+        target_id=student_id, title=appr_title, summary=appr_summary,
+        payload={
+            "student_id": student_id, "job_id": job_id, "tier": tier,
+            "readiness": match_score, "waiver_requested": not eligible,
+            "blocked_reasons": elig.get("reasons", []), "note": note,
+        },
+        status="pending_review", requested_by="agent", created_at=now,
+    )
+    session.add(ap)
+    session.flush()
+    app_row = JobApplication(
+        id=app_id, student_id=student_id, job_id=job_id,
+        status=awaiting_status, tier=tier, match_score=match_score,
+        eligible_at_apply=eligible,
+        eligibility_checks={
+            "checks": elig.get("checks", []),
+            "cited_sops": elig.get("cited_sops", []),
+            "reasons": elig.get("reasons", []),
+        },
+        approval_id=ap.id, endorsed_by="", approved_by="", notes=note,
+        created_at=now, updated_at=now,
+    )
+    session.add(app_row)
+    session.add(AuditLog(
+        id=f"aud-{uuid4().hex[:8]}",
+        action="application.submitted" if eligible else "application.waiver_requested",
+        entity_type="job_application", entity_id=app_id, actor_role="agent",
+        detail={"student_id": student_id, "job_id": job_id, "tier": tier, "approval_id": ap.id},
+    ))
+    session.flush()
+    return {
+        "application_id": app_id, "approval_id": ap.id,
+        "student_id": student_id, "job_id": job_id,
+        "status": awaiting_status, "tier": tier, "match_score": match_score,
+        "eligible": eligible, "cited_sops": elig.get("cited_sops", []),
+        "requires_hitl": True,
+    }
+
+
+def _simulate_placement_drive_tool(ctx, session, title: str = "Prospective Campus Drive",
+                                   company: str = "Prospective Recruiter",
+                                   min_gpa: float = 7.0,
+                                   required_skills: list | None = None,
+                                   salary_lpa: list | None = None, **_):
+    """Simulate cohort-wide eligibility and bootcamp ROI for a prospective campus drive."""
+    from ..analytics.drive_simulator import simulate_placement_drive
+    return simulate_placement_drive(
+        session, ctx,
+        title=str(title or "Prospective Campus Drive"),
+        company=str(company or "Prospective Recruiter"),
+        salary_lpa=list(salary_lpa or [12, 16]),
+        min_gpa=float(min_gpa if min_gpa is not None else 7.0),
+        required_skills=list(required_skills or ["python", "sql"]),
+    )
+
+
 def _all_jobs():
     from sqlmodel import select
 
@@ -451,10 +630,21 @@ TOOLS = [
          "Search live/campus jobs by query/location/fresher fit, optionally ranked.",
          {"student_id?": "str", "query?": "str", "location?": "str",
           "fresher_only?": "bool"}, _search_live_market_jobs),
+    Tool("purge_live_market_jobs",
+         "Purge all live scraped jobs, related matches/plans/interviews, and vector embeddings from the database (TPO/Faculty only).",
+         {"actor_role?": "str"}, _purge_live_market_jobs),
     Tool("ask_clarifying_question",
          "Ask the user a clarifying question; pauses the run awaiting their reply.",
          {"question": "str", "options?": "list", "missing_fields?": "list"},
          _ask_clarifying_question),
+    Tool("submit_drive_application",
+         "Submit a campus drive application for a student and job, routing through 2-tier HITL approval when required.",
+         {"student_id": "str", "job_id?": "str", "request_waiver?": "bool", "note?": "str"},
+         _submit_drive_application),
+    Tool("simulate_placement_drive",
+         "Simulate cohort-wide eligibility, SOP bottlenecks, and bootcamp ROI for a prospective campus drive.",
+         {"title?": "str", "company?": "str", "min_gpa?": "float", "required_skills?": "list[str]", "salary_lpa?": "list[int]"},
+         _simulate_placement_drive_tool),
 ]
 
 TOOL_REGISTRY: dict[str, Tool] = {t.name: t for t in TOOLS}
@@ -466,6 +656,10 @@ TOOL_ALIASES: dict[str, str] = {
     "student_profile": "inspect_student_profile",
     "search_jobs": "search_live_market_jobs",
     "search_market_jobs": "search_live_market_jobs",
+    "purge_live_jobs": "purge_live_market_jobs",
+    "remove_live_jobs": "purge_live_market_jobs",
+    "clear_live_jobs": "purge_live_market_jobs",
+    "delete_live_jobs": "purge_live_market_jobs",
     "rank_jobs": "rank_and_explain_jobs",
     "rank_job_matches": "rank_and_explain_jobs",
     "rank_and_explain": "rank_and_explain_jobs",
@@ -476,6 +670,9 @@ TOOL_ALIASES: dict[str, str] = {
     "search_policy": "search_placement_policy_rag",
     "policy_rag": "search_placement_policy_rag",
     "interview_history": "inspect_interview_history",
+    "apply_to_drive": "submit_drive_application",
+    "create_application": "submit_drive_application",
+    "simulate_drive": "simulate_placement_drive",
 }
 
 

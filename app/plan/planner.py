@@ -136,6 +136,23 @@ def apply_plan_item_completion(session, ctx, plan: UpskillPlan, item: PlanItem, 
                              breakdown=_asdict(js)))
     session.flush()
 
+    # Closed-loop application sync: refresh match_score on active JobApplications
+    from ..models import JobApplication
+    active_apps = session.exec(
+        select(JobApplication).where(
+            JobApplication.student_id == plan.student_id,
+            JobApplication.status.in_(
+                ["submitted", "awaiting_mentor_endorsement", "awaiting_tpo_approval"]
+            ),
+        )
+    ).all()
+    if active_apps:
+        score_by_job = {job.id: float(js.score) for job, js in ranked}
+        for app_row in active_apps:
+            if app_row.job_id in score_by_job:
+                app_row.match_score = score_by_job[app_row.job_id]
+                session.add(app_row)
+
     # 4. recompute metrics
     items = session.exec(select(PlanItem).where(PlanItem.plan_id == plan.id)).all()
     total_hours = plan.total_hours or 1

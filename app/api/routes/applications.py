@@ -345,6 +345,27 @@ def withdraw_student_application(
     }
 
 
+@router.post("/api/applications/{app_id}/withdraw")
+@router.delete("/api/applications/{app_id}")
+def withdraw_application_direct(
+    app_id: str,
+    request: Request,
+    session: Session = Depends(get_session),
+    role: str = Depends(_STUDENT_OR_ADMIN),
+):
+    """Withdraw an active drive application by application ID (with student scope check)."""
+    app_row = session.get(JobApplication, app_id)
+    if app_row is None:
+        raise HTTPException(404, "application not found")
+    return withdraw_student_application(
+        sid=app_row.student_id,
+        app_id=app_id,
+        request=request,
+        session=session,
+        role=role,
+    )
+
+
 @router.delete("/api/admin/applications/{app_id}")
 def delete_admin_application(
     app_id: str,

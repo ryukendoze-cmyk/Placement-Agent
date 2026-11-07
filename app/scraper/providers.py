@@ -276,6 +276,7 @@ class RapidJobScraperProvider(BaseJobScraperProvider):
                         "min_amount": None,
                         "max_amount": None,
                         "skills": skills,
+                        "is_sandbox_fallback": True,
                     }
                 )
             return jobs[:results_wanted]
@@ -492,6 +493,7 @@ class AutomationJobScraperProvider(BaseJobScraperProvider):
                     "max_amount": None,
                     "role_tags": role_tags,
                     "skills": skills,
+                    "is_sandbox_fallback": True,
                 }
             )
         return jobs[:results_wanted]
@@ -654,6 +656,7 @@ class ProxyAPIJobScraperProvider(BaseJobScraperProvider):
                     "date_posted": None,
                     "min_amount": None,
                     "max_amount": None,
+                    "is_sandbox_fallback": True,
                 }
             )
         return jobs[:results_wanted]

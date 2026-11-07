@@ -15,17 +15,17 @@ changes.
 |---|---|
 | **Explainable matching** | Ranks 24 real job descriptions against a resume with a transparent score (`0.6 required-coverage + 0.2 preferred + 0.2 semantic`) and shows exactly *which* required skills matched (with the resume line as evidence) and which are missing. |
 | **Upskilling plans** | Skill gaps become an ordered, hour-costed course plan ordered by a **prerequisite DAG** (prerequisites before consumers), capped at 10 h/week, with an LLM narrative. |
-| **Closed-loop readiness** | Mark a plan item done (optionally verified by a keyword-graded micro-quiz) -> skills are promoted, matches re-ranked, and a readiness event (`0.5 plan-completion + 0.5 best-match`) climbs over time. |
-| **Adaptive mock interviews** | 8-turn voice-in/voice-out studio (Web Speech API, text fallback) over an **89-question bank with reference outlines**; difficulty adapts to answer quality; each turn is scored on a **3-axis rubric** (technical accuracy, depth & examples, communication) with matched/missed keywords and an ideal-answer panel; completion writes a `ProgressEvent` + immutable `AuditLog`. |
-| **Autonomous agent** | Goal -> plan -> execute -> verify -> recover over tools (inspect, rank, simulate, search, audit), with a step-by-step reasoning trace visible in the **Agent Brain** drawer. |
+| **Closed-loop readiness** | Mark a plan item done (optionally verified by a keyword-graded micro-quiz) -> skills are promoted, matches re-ranked, active `JobApplication` match scores updated, and a readiness event (`0.5 plan-completion + 0.5 best-match`) climbs over time. |
+| **Adaptive mock interviews** | 8-turn voice-in/voice-out studio (Web Speech API, text fallback) over a **220+ question bank with reference outlines**; difficulty adapts to answer quality; each turn is scored on a **3-axis rubric** (technical accuracy, depth & examples, communication) with matched/missed keywords and an ideal-answer panel; completion writes a `ProgressEvent` + immutable `AuditLog`. |
+| **Autonomous agent** | Iterative ReAct loop (`Goal -> Plan -> Execute -> Observe -> Replan/Repair -> Verify`) over **18 registered tools** (inspect, rank, plan, apply, simulate drive, search SOPs, audit resume, STAR rewrite), with a live interactive reasoning trace in the **Agent Brain** drawer. |
 | **Grounded copilot** | RAG over institutional placement SOPs; every answer cites `[SOP-XX]` clauses with a grounding score; clickable citation pills. |
-| **Human-in-the-loop** | Approvals center for nominations, bootcamp launches and proficiency waivers: nothing mutates until a reviewer approves, and every decision is audited. |
-| **Cohort analytics** | KPI strip, skill-gap demand vs coverage, readiness doughnut, top courses, programme recommendations + **Launch Bootcamp (HITL)** and CSV/JSON export. |
-| **Flagship UI/UX** | App shell with sidebar + command bar (`Ctrl+K`), active-student switcher, 1-click role pill (Student/Faculty/TPO), global toast system (zero `alert()`), Agent Brain drawer, printable interview scorecard. |
-| **RBAC + PII** | 3 roles (`student` / `faculty_mentor` / `tpo_admin`) with HMAC-signed session tokens; PII scrubbed before storage/LLM; append-only audit trail with row-level tamper guard. |
-| **Live job intelligence** | Pluggable scraper (static HTML fixture) with `content_hash` idempotency, per-source circuit breaker, and a two-stage ANN pipeline (pre-filter k=10, final top 10) that keeps local + scraped jobs in one ranked pool. |
+| **Human-in-the-loop** | Two-tier Approvals Center (`faculty_mentor` Tier-1 endorsement -> `tpo_admin` Tier-2 final sign-off) enforcing strict separation of duties for nominations, bootcamp launches, and proficiency waivers; every decision is immutably audited. |
+| **Cohort analytics** | KPI strip, skill-gap demand vs coverage, readiness doughnut, top courses, programme recommendations + **Launch Bootcamp (HITL)**, live **Quantitative Evaluation Benchmark** panel, and CSV/JSON export. |
+| **Flagship UI/UX** | App shell with sidebar + command bar (`Ctrl+K`), active-student switcher, 1-click role pill (Student/Faculty/TPO), global toast & confirmation modal system (zero `alert()` / `confirm()`), interactive Agent Brain drawer, printable interview scorecard. |
+| **RBAC + PII** | 3 roles (`student` / `faculty_mentor` / `tpo_admin`) with HMAC-signed session tokens; PII scrubbed + prompt-injection neutralized across resumes, interviews, agent goals, and copilot queries; append-only audit trail with row-level tamper guard. |
+| **Live job intelligence** | Pluggable scraper with `content_hash` idempotency, transparent sandbox fallback tagging (`is_sandbox_fallback`), per-source circuit breaker, and a two-stage ANN pipeline (pre-filter k=10, final top 10) that keeps local + scraped jobs in one ranked pool. |
 | **Drive simulation + ROI** | TPO cohort simulator that evaluates every student against a *hypothetical* drive with the production SOP engine (eligible list, per-SOP bottleneck breakdown, top missing skills with recommended courses) plus a deterministic bootcamp-intervention ROI projection. |
-| **Streaming agents** | ReAct agent (15 tools, budget + cycle + tool-duplication guards) and grounded copilot stream events over SSE (`POST /api/agent/run/stream`, `POST /api/copilot/ask/stream`) with a live event-timeline UI. |
+| **Streaming agents** | ReAct agent (**18 tools**, real-time unbuffered SSE generator, observation-driven replanning, step repair, budget + cycle guards) and grounded copilot stream events over SSE (`POST /api/agent/run/stream`, `POST /api/copilot/ask/stream`) with a live event-timeline UI. |
 | **Interview intelligence** | Per-turn speech-delivery telemetry (WPM banding, filler density, STAR structure, delivery score, coaching tip), per-question accuracy/latency tracking, and a session `speech_summary` on every finished transcript. |
 | **Applications + endorsements** | `JobApplication` state machine (`submitted -> awaiting_mentor_endorsement -> awaiting_tpo_approval -> nominated -> shortlisted -> rejected`) with SOP-03 CGPA waivers, auto-nominate for eligible standard-tier matches, and a faculty mentor endorsement loop. |
 | **Observability** | Public `/healthz` + `/readyz` probes, `/api/admin/system-telemetry` (p95 latency, token usage, circuit state, entity counts), and a `eval-benchmark` command for SOP RAG recall@k/MRR, planner DAG invariants, and agent grounding rate. |
@@ -256,17 +256,17 @@ a database.
 ```
 app/
   api/            FastAPI app: main.py (create_app/AppContext), routes/, deps.py
-  agent/          orchestrator.py - ReAct loop (15 tools, budget/cycle guards, SSE)
+  agent/          orchestrator.py - ReAct loop (18 tools, budget/cycle guards, SSE)
   analytics/      cohort.py (pure cohort aggregations), drive_simulator.py (TPO drive sim + ROI)
   embeddings/     embedder.py (Hashing/Local), store.py (Memory/PgVector, upsert_many, two-stage ANN)
   eval/           benchmark.py - SOP RAG recall@k/MRR + planner DAG + grounding audit
-  interview/      bank.py (89-Q bank + outlines + select), engine.py (adaptive + rubric),
+  interview/      bank.py (220+ Q bank + outlines + select), engine.py (adaptive + rubric),
                   speech_analytics.py (WPM/filler/STAR telemetry + aggregation)
   llm/            base.py (factory), mock.py (rubric-aware), bedrock.py, openai.py,
                   telemetry.py (token/cost accounting + circuit breaker)
   matching/       engine.py (score_job/JobScore/band_for), rank.py (rank_jobs, ann_pre_filter_k)
   plan/           planner.py (build_plan, 10h/week), prereq.py (DAG), verification.py (quiz)
-  rag/            policy_rag.py - SOP retrieval + citation verification + eligibility
+  rag/            policy_rag.py - 18 SOP retrieval + citation verification + eligibility
   resume/         parser.py (PDF/DOCX/TXT/PNG/JPEG -> text)
   scraper/        service.py, providers.py, pipeline.py, normalizer.py, ai_query.py
   security/       rbac.py (3 roles + HMAC sessions), pii.py, guardrails.py, ratelimit.py, audit.py
@@ -278,7 +278,7 @@ app/
   cli.py          seed / seed --demo-cohort / demo / eval-benchmark
   models.py       SQLModel tables (incl. AuditLog, AgentRun, AgentStep, ApprovalRequest, JobApplication)
   db.py, config.py, seed.py
-data/             skills.json (124), jobs.json (24), courses.json (40), questions.json (89), sops.json
+data/             skills.json (124), jobs.json (24), courses.json (40), questions.json (220+), placement_sops.json (18)
 tests/            unit + integration (marker) suites
 docs/             COMPLETION-REPORT.md, superpowers/plans/
 Dockerfile, docker-compose.yml, docker/initdb/, .github/workflows/ci.yml

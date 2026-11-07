@@ -16,7 +16,12 @@ from app.models import (
     StudentSkill,
     UpskillPlan,
 )
-from app.security.rbac import current_role, enforce_student_scope, get_current_user_optional
+from app.security.rbac import (
+    current_role,
+    enforce_student_scope,
+    get_current_user_optional,
+    require_role,
+)
 
 router = APIRouter()
 
@@ -104,10 +109,11 @@ def delete_student_page(
     request: Request,
     session: Session = Depends(get_session),
     ctx=Depends(get_ctx),
+    _role: str = Depends(require_role("student", "faculty_mentor", "tpo_admin")),
 ):
     from app.api.routes.students import delete_student_core
     enforce_student_scope(request, sid)
-    delete_student_core(session, ctx, sid)
+    delete_student_core(session, ctx, sid, actor_role=current_role(request))
     return RedirectResponse(url="/", status_code=303)
 
 

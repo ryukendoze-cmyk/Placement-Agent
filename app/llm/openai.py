@@ -63,7 +63,6 @@ class OpenAILLM:
 
         max_retries = 2
         backoff_sec = 2.0
-        t0 = time.time()
         for attempt in range(max_retries):
             try:
                 resp = self._get_client().chat.completions.create(**kwargs)

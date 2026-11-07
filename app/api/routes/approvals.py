@@ -105,9 +105,21 @@ def _recompute_job_match(session: Session, ctx, sid: str) -> None:
                         vector_store=store, job_vec_cache=ctx.job_vectors,
                         top=10, levels=levels)
     session.execute(_delete(JobMatch).where(JobMatch.student_id == sid))
+    score_by_job = {}
     for job, js in results:
+        score_by_job[job.id] = js.score
         session.add(JobMatch(id=f"m-{uuid4().hex[:8]}", student_id=sid, job_id=job.id,
                              score=js.score, band=js.band, breakdown=_asdict(js)))
+    # Refresh active JobApplications for this student so TPO sees updated readiness
+    active_apps = session.exec(select(JobApplication).where(
+        JobApplication.student_id == sid,
+        JobApplication.status.in_(("submitted", "awaiting_mentor_endorsement", "awaiting_tpo_approval")),
+    )).all()
+    for app_row in active_apps:
+        if app_row.job_id in score_by_job:
+            app_row.match_score = int(score_by_job[app_row.job_id])
+            app_row.updated_at = datetime.now(timezone.utc)
+            session.add(app_row)
 
 
 def execute_approved(session: Session, ctx, ap: ApprovalRequest) -> dict:
@@ -245,6 +257,18 @@ def approve(appr_id: str, payload: dict | None = None,
         raise HTTPException(409, "approval already rejected")
     note = str((payload or {}).get("note") or "")
     if ap.status == "pending_review":
+        # Separation of duties: faculty mentors endorse Tier-1 applications,
+        # while final Tier-2 drive nomination approval or faculty-originated
+        # requests require TPO admin sign-off.
+        if role == "faculty_mentor" and (
+            ap.kind in ("job_application_nomination", "nomination")
+            or (ap.endorsed_by or "").strip() == "faculty_mentor"
+            or (ap.requested_by or "").strip() == "faculty_mentor"
+        ):
+            raise HTTPException(
+                403,
+                "TPO administrator approval is required for final drive nomination or self-requested actions (separation of duties)",
+            )
         # M19 two-tier guard: a waiver application must be endorsed by a
         # faculty mentor before the TPO can approve it.
         linked = _linked_application(session, ap)
