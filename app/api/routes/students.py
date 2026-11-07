@@ -36,7 +36,7 @@ from app.scraper.ai_query import LEVEL_RANK as _LEVEL_RANK
 from app.scraper.ai_query import suggest_job_queries_for_student
 from app.security.guardrails import sanitize_untrusted_text
 from app.security.pii import scrub_for_llm
-from app.security.rbac import enforce_student_scope, require_role
+from app.security.rbac import current_role, enforce_student_scope, require_role
 from app.skills.extract import extract_resume_with_ai
 from app.taxonomy.branches import normalize_branch
 

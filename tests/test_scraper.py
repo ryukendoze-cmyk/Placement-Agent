@@ -2749,20 +2749,28 @@ class TestStealthHarvesterProvider:
 
     def test_cli_scrape_command_surface(self):
         """Root cli.py exposes the spec 14.2 D scrape command with its flags."""
+        import os
+        import re
         import subprocess
         import sys
         from pathlib import Path
 
         repo_root = Path(__file__).resolve().parent.parent
+        env = dict(os.environ)
+        env["NO_COLOR"] = "1"
+        env["TERM"] = "dumb"
+        env.pop("FORCE_COLOR", None)
         r = subprocess.run(
             [sys.executable, "cli.py", "scrape", "--help"],
             cwd=repo_root, capture_output=True,
             encoding="utf-8", errors="replace", timeout=120,
+            env=env,
         )
         assert r.returncode == 0, f"cli.py scrape --help failed: {r.stderr[-400:]}"
         combined = (r.stdout or "") + (r.stderr or "")
+        clean = re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", combined)
         for flag in ("--keywords", "--location", "--days-old", "--limit"):
-            assert flag in combined, f"scrape --help missing {flag}"
+            assert (flag in combined) or (flag in clean), f"scrape --help missing {flag}"
 
 
 class TestIngestFromOutputFolder:
