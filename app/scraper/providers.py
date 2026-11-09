@@ -944,8 +944,143 @@ class StealthHarvesterProvider(BaseJobScraperProvider):
         return merged
 
 
+class AshbyATSProvider(BaseJobScraperProvider):
+    """Direct-ATS job harvester for Ashby, Greenhouse, and Lever.
+
+    Fetches verified postings directly from official company career APIs:
+      - Ashby Posting API (https://api.ashbyhq.com/posting-api/job-board/{slug})
+      - Greenhouse Job Board API (https://boards-api.greenhouse.io/v1/boards/{slug}/jobs)
+      - Lever Postings API (https://api.lever.co/v0/postings/{slug})
+
+    Zero captchas, zero bot walls, 100% direct-hire postings.
+    """
+
+    name = "ashby_ats"
+    display_name = "Ashby & Multi-ATS Harvester (Direct Company Boards)"
+    supported_sites = ["ashby", "greenhouse", "lever"]
+
+    def __init__(self, output_dir: str | os.PathLike[str] | None = None) -> None:
+        self._output_dir = Path(output_dir) if output_dir else Path("output")
+
+    def fetch_jobs(
+        self,
+        search_term: str | list[str],
+        location: str = "India",
+        results_wanted: int = 15,
+        **kwargs: Any,
+    ) -> list[dict[str, Any]]:
+        """Run the direct-ATS scraper across Ashby, Greenhouse, and Lever boards."""
+        try:
+            terms = (
+                [str(t).strip() for t in search_term if str(t).strip()]
+                if isinstance(search_term, list)
+                else [str(search_term).strip()]
+            )
+            terms = [t for t in terms if t][:2] or ["Software Engineer"]
+
+            from job_scraper.pipeline import run_pipeline
+
+            portals = kwargs.get("portals")
+            sites = kwargs.get("sites")
+            active_filter = portals or sites
+            if not active_filter:
+                target_portals = ["ashby", "greenhouse", "lever"]
+            else:
+                target_portals = [p for p in active_filter if p in self.supported_sites]
+                if not target_portals:
+                    # Specific non-ATS boards were requested (e.g. ['naukri']); skip ATS boards
+                    return []
+
+            try:
+                limit = int(kwargs.get("limit") or results_wanted)
+            except (TypeError, ValueError):
+                limit = max(1, int(results_wanted or 15))
+            try:
+                days_old = int(kwargs.get("days_old", 7))
+            except (TypeError, ValueError):
+                days_old = 7
+
+            coro = run_pipeline(
+                keywords=terms,
+                location=location,
+                days_old=days_old,
+                limit=limit,
+                portals=target_portals,
+                output_dir=str(self._output_dir),
+            )
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop is not None and loop.is_running():
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    out = pool.submit(asyncio.run, coro).result(timeout=40.0)
+            else:
+                out = asyncio.run(asyncio.wait_for(coro, timeout=40.0))
+
+            records = out.get("normalized") if isinstance(out, dict) else None
+            if not isinstance(records, list):
+                return []
+            jobs: list[dict[str, Any]] = []
+            for r in records:
+                if isinstance(r, dict):
+                    job = self._to_contract_shape(r)
+                    if job is not None:
+                        jobs.append(job)
+            return jobs
+        except Exception as exc:  # noqa: BLE001 - zero-crash guarantee
+            logger.warning("AshbyATSProvider failed: %s", exc)
+            return []
+
+    def _to_contract_shape(self, rec: dict[str, Any]) -> dict[str, Any] | None:
+        url = str(rec.get("job_url") or rec.get("url") or "").strip()
+        if not url or self._is_placeholder_url(url):
+            return None
+
+        salary = rec.get("salary_lpa")
+        if (
+            isinstance(salary, (list, tuple))
+            and len(salary) >= 2
+            and any(x > 0 for x in salary)
+            and rec.get("salary_disclosed", True)
+        ):
+            min_amt = salary[0]
+            max_amt = salary[1]
+            interval = "lpa"
+        else:
+            min_amt = None
+            max_amt = None
+            interval = None
+
+        tags = list(rec.get("required_skills") or []) + list(rec.get("preferred_skills") or [])
+
+        return {
+            "title": str(rec.get("title") or "").strip() or "Software Engineer",
+            "company": str(rec.get("company") or "").strip() or "Tech Employer",
+            "location": str(rec.get("location") or "India").strip() or "India",
+            "description": str(rec.get("description") or ""),
+            "job_url": url,
+            "site": str(rec.get("site") or rec.get("source") or "ashby").strip().lower(),
+            "scraper_engine": self.name,
+            "date_posted": rec.get("date_posted"),
+            "min_amount": min_amt,
+            "max_amount": max_amt,
+            "interval": interval,
+            "is_remote": bool(rec.get("is_remote") or rec.get("remote")),
+            "experience_years": rec.get("experience_years"),
+            "tags": [str(t) for t in tags if t],
+        }
+
+    @staticmethod
+    def _is_placeholder_url(url: str) -> bool:
+        low = url.lower()
+        return "example.com" in low or "rapid.example" in low
+
+
 __all__ = [
     "JOBSPY_SITES",
+    "AshbyATSProvider",
     "AutomationJobScraperProvider",
     "BaseJobScraperProvider",
     "JobSpyProvider",

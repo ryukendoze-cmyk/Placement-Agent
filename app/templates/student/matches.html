@@ -816,14 +816,14 @@
       location: "all",
       mode: "all", // "all" | "remote" | "hybrid" | "on_site"
       exp: "all", // "all" | "0-1" | "1-3" | "3-5" | "5+"
-      portals: new Set(["local", "naukri", "linkedin", "indeed", "foundit", "internshala", "unstop", "instahyre", "hirist"]),
+      portals: new Set(["local", "naukri", "linkedin", "indeed", "foundit", "internshala", "unstop", "instahyre", "hirist", "ashby", "greenhouse", "lever"]),
       skills: new Set(),
       fresherOnly: false,
       sort: "score_desc"
     };
 
-    var ALL_PORTAL_KEYS = ["local", "naukri", "linkedin", "indeed", "foundit", "internshala", "unstop", "instahyre", "hirist"];
-    var SCRAPED_PORTAL_KEYS = ["naukri", "linkedin", "indeed", "foundit", "internshala", "unstop", "instahyre", "hirist"];
+    var ALL_PORTAL_KEYS = ["local", "naukri", "linkedin", "indeed", "foundit", "internshala", "unstop", "instahyre", "hirist", "ashby", "greenhouse", "lever"];
+    var SCRAPED_PORTAL_KEYS = ["naukri", "linkedin", "indeed", "foundit", "internshala", "unstop", "instahyre", "hirist", "ashby", "greenhouse", "lever"];
     var PORTAL_LABELS = {
       "local": "On-Campus (Local)",
       "naukri": "Naukri",
@@ -833,7 +833,10 @@
       "internshala": "Internshala",
       "unstop": "Unstop",
       "instahyre": "Instahyre",
-      "hirist": "Hirist"
+      "hirist": "Hirist",
+      "ashby": "Ashby",
+      "greenhouse": "Greenhouse",
+      "lever": "Lever"
     };
 
     // DOM References
@@ -923,8 +926,8 @@
 
       if (portalSummary) {
         portalSummary.textContent = state.portals.size === ALL_PORTAL_KEYS.length
-          ? "All 9 active"
-          : (state.portals.size + " of 9 active");
+          ? ("All " + ALL_PORTAL_KEYS.length + " active")
+          : (state.portals.size + " of " + ALL_PORTAL_KEYS.length + " active");
       }
     }
     renderPortalPills();
@@ -1677,6 +1680,10 @@
               <input type="checkbox" name="scrape-provider" value="stealth_harvester" checked class="rounded border-[#1D5C42] text-[#1D5C42] focus:ring-[#1D5C42]" />
               <span class="font-medium text-[#1B5E43]">Stealth Harvester (8 Indian Portals: Naukri, LinkedIn, Indeed, Foundit, Internshala, Unstop, Instahyre, Hirist)</span>
             </label>
+            <label class="inline-flex items-center gap-2 text-xs text-[#1C1E1B] cursor-pointer p-2.5 rounded-xl border border-[#C8D9E8] bg-[#EEF5FB]/70 hover:bg-[#EEF5FB] sm:col-span-2">
+              <input type="checkbox" name="scrape-provider" value="ashby_ats" checked class="rounded border-[#1B5084] text-[#1B5084] focus:ring-[#1B5084]" />
+              <span class="font-semibold text-[#16436E]">Ashby &amp; Multi-ATS (Direct Company Boards: Ashby, Greenhouse, Lever &middot; 146+ Tech Firms)</span>
+            </label>
           </div>
         </div>
 
@@ -1694,6 +1701,18 @@
             <label class="inline-flex items-center gap-2 text-xs text-[#1C1E1B] cursor-pointer">
               <input type="checkbox" name="scrape-site" value="indeed" checked class="rounded border-[#C7C4B8] text-[#1D5C42] focus:ring-[#1D5C42]" />
               <span>Indeed</span>
+            </label>
+            <label class="inline-flex items-center gap-2 text-xs text-[#16436E] font-medium cursor-pointer">
+              <input type="checkbox" name="scrape-site" value="ashby" checked class="rounded border-[#1B5084] text-[#1B5084] focus:ring-[#1B5084]" />
+              <span>Ashby HQ</span>
+            </label>
+            <label class="inline-flex items-center gap-2 text-xs text-[#16436E] font-medium cursor-pointer">
+              <input type="checkbox" name="scrape-site" value="greenhouse" checked class="rounded border-[#1B5084] text-[#1B5084] focus:ring-[#1B5084]" />
+              <span>Greenhouse</span>
+            </label>
+            <label class="inline-flex items-center gap-2 text-xs text-[#16436E] font-medium cursor-pointer">
+              <input type="checkbox" name="scrape-site" value="lever" checked class="rounded border-[#1B5084] text-[#1B5084] focus:ring-[#1B5084]" />
+              <span>Lever</span>
             </label>
           </div>
         </div>
@@ -1765,9 +1784,9 @@
           </div>
         </div>
 
-        <!-- 8-Portal Real-Time Grid -->
+        <!-- Live Portal & Direct ATS Execution Grid -->
         <div>
-          <span class="block text-[11px] font-bold uppercase tracking-wider text-[#5C5A52] font-mono mb-2">Portal Execution Grid (8 Tech Portals)</span>
+          <span class="block text-[11px] font-bold uppercase tracking-wider text-[#5C5A52] font-mono mb-2">Portal &amp; ATS Execution Grid (Live Indian Portals + Direct ATS)</span>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs" id="portal-telemetry-grid">
             <!-- Naukri -->
             <div id="telemetry-portal-naukri" class="p-2.5 rounded-xl border border-[#E5E3DC] bg-white space-y-1">
@@ -1848,6 +1867,36 @@
                 </span>
               </div>
               <div class="portal-status-meta text-[11px] font-mono text-[#7A776E]">Queued</div>
+            </div>
+            <!-- Ashby -->
+            <div id="telemetry-portal-ashby" class="p-2.5 rounded-xl border border-[#C8D9E8] bg-[#F4F9FD] space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-[#16436E]">Ashby HQ</span>
+                <span class="portal-status-icon text-[#16436E]">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                </span>
+              </div>
+              <div class="portal-status-meta text-[11px] font-mono text-[#16436E]">Queued</div>
+            </div>
+            <!-- Greenhouse -->
+            <div id="telemetry-portal-greenhouse" class="p-2.5 rounded-xl border border-[#C8D9E8] bg-[#F4F9FD] space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-[#16436E]">Greenhouse</span>
+                <span class="portal-status-icon text-[#16436E]">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                </span>
+              </div>
+              <div class="portal-status-meta text-[11px] font-mono text-[#16436E]">Queued</div>
+            </div>
+            <!-- Lever -->
+            <div id="telemetry-portal-lever" class="p-2.5 rounded-xl border border-[#C8D9E8] bg-[#F4F9FD] space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-[#16436E]">Lever</span>
+                <span class="portal-status-icon text-[#16436E]">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                </span>
+              </div>
+              <div class="portal-status-meta text-[11px] font-mono text-[#16436E]">Queued</div>
             </div>
           </div>
         </div>
@@ -2027,12 +2076,12 @@
       var siteBoxes = document.querySelectorAll("input[name='scrape-site']:checked");
       var sites = [];
       siteBoxes.forEach(function (box) { sites.push(box.value); });
-      if (sites.length === 0) sites = ["naukri", "linkedin", "indeed"];
+      if (sites.length === 0) sites = ["naukri", "linkedin", "indeed", "ashby", "greenhouse", "lever"];
 
       var providerBoxes = document.querySelectorAll("input[name='scrape-provider']:checked");
       var providers = [];
       providerBoxes.forEach(function (box) { providers.push(box.value); });
-      if (providers.length === 0) providers = ["jobspy", "rapid", "stealth_harvester"];
+      if (providers.length === 0) providers = ["jobspy", "rapid", "stealth_harvester", "ashby_ats"];
 
       var fresherOnlyEl = document.getElementById("scrape-fresher-only");
       var fresherOnly = fresherOnlyEl ? fresherOnlyEl.checked : true;
@@ -2071,7 +2120,19 @@
       };
 
       function updatePortalCard(portal, status, metaHtml, iconKey, borderClass) {
-        var card = document.getElementById("telemetry-portal-" + portal.toLowerCase());
+        var pKey = (portal || "").toLowerCase();
+        if (pKey === "ashby_ats" || pKey === "ashbyhq") pKey = "ashby";
+        var card = document.getElementById("telemetry-portal-" + pKey);
+        if (!card) {
+          var grid = document.getElementById("portal-telemetry-grid");
+          if (grid) {
+            card = document.createElement("div");
+            card.id = "telemetry-portal-" + pKey;
+            card.className = "p-2.5 rounded-xl border border-[#E5E3DC] bg-white space-y-1";
+            card.innerHTML = '<div class="flex items-center justify-between"><span class="font-bold text-[#1C1E1B] capitalize">' + portal + '</span><span class="portal-status-icon text-[#7A776E]"></span></div><div class="portal-status-meta text-[11px] font-mono text-[#7A776E]">Queued</div>';
+            grid.appendChild(card);
+          }
+        }
         if (!card) return;
         var iconSpan = card.querySelector(".portal-status-icon");
         var metaDiv = card.querySelector(".portal-status-meta");
@@ -2139,11 +2200,11 @@
           var ing = (data && data.new_ingested !== undefined) ? data.new_ingested : 0;
           var elp = (data && data.elapsed_total_s !== undefined) ? data.elapsed_total_s : "";
           if (summaryMsg) {
-            summaryMsg.innerHTML = '<span class="text-[#1B5E43] font-semibold">Completed in ' + elp + 's:</span> ' + tot + ' jobs discovered across 8 portals (' + ing + ' newly indexed).';
+            summaryMsg.innerHTML = '<span class="text-[#1B5E43] font-semibold">Completed in ' + elp + 's:</span> ' + tot + ' jobs discovered across active boards (' + ing + ' newly indexed).';
           }
           if (doneBtn) doneBtn.classList.remove("hidden");
           if (window.toast) {
-            window.toast("Harvested " + tot + " live opportunities across 8 portals!", "success");
+            window.toast("Harvested " + tot + " live opportunities across active boards!", "success");
           }
           setTimeout(function () {
             location.reload();

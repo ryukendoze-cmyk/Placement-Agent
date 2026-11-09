@@ -190,23 +190,12 @@ def _ensure_columns(engine: Engine) -> None:
 
 
 def _sanitize_legacy_salaries(engine: Engine) -> int:
-    """Reset legacy [6, 12] auto-filled salaries to undisclosed [0, 0] (§Milestone 8)."""
-    if engine.dialect.name == "postgresql":
-        stmt = text(
-            "UPDATE job SET salary_lpa = '[0, 0]'::json, salary_disclosed = FALSE "
-            "WHERE (salary_lpa::text LIKE '[6, 12]%' OR salary_lpa::text LIKE '[6,12]%') "
-            "AND (salary_disclosed IS FALSE OR salary_disclosed IS NULL)"
-        )
-    else:
-        stmt = text(
-            "UPDATE job SET salary_lpa = '[0, 0]', salary_disclosed = 0 "
-            "WHERE (salary_lpa LIKE '[6, 12]%' OR salary_lpa LIKE '[6,12]%') "
-            "AND (salary_disclosed = 0 OR salary_disclosed IS NULL)"
-        )
+    """Reset legacy [6, 12] auto-filled salaries and repair compressed USD salaries."""
     try:
-        with engine.begin() as conn:
-            res = conn.execute(stmt)
-            return int(res.rowcount or 0)
+        from sqlmodel import Session
+        from app.scraper.pipeline import sanitize_legacy_salaries as _pipeline_sanitize
+        with Session(engine) as s:
+            return _pipeline_sanitize(s)
     except Exception as exc:  # noqa: BLE001 - sanitation must never block boot
         logger.warning("Legacy salary sanitation failed: %s", exc)
         return 0

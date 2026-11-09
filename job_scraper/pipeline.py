@@ -32,11 +32,14 @@ class PortalResult:
 
 def _build_registry() -> dict[str, Any]:
     """portal name -> factory(session) -> extractor instance."""
+    from job_scraper.extractors.ashby import AshbyExtractor
     from job_scraper.extractors.foundit import FounditExtractor
+    from job_scraper.extractors.greenhouse import GreenhouseExtractor
     from job_scraper.extractors.hirist import HiristExtractor
     from job_scraper.extractors.indeed import IndeedExtractor
     from job_scraper.extractors.instahyre import InstahyreExtractor
     from job_scraper.extractors.internshala import InternshalaExtractor
+    from job_scraper.extractors.lever import LeverExtractor
     from job_scraper.extractors.linkedin import LinkedInExtractor
     from job_scraper.extractors.naukri import NaukriExtractor
     from job_scraper.extractors.unstop import UnstopExtractor
@@ -50,6 +53,9 @@ def _build_registry() -> dict[str, Any]:
         "unstop": lambda s: UnstopExtractor(s),
         "instahyre": lambda s: InstahyreExtractor(s),
         "hirist": lambda s: HiristExtractor(s),
+        "ashby": lambda s: AshbyExtractor(s),
+        "greenhouse": lambda s: GreenhouseExtractor(s),
+        "lever": lambda s: LeverExtractor(s),
     }
 
 
@@ -123,7 +129,7 @@ async def run_pipeline(
                                 freshness_days=days_old,
                                 limit=limit,
                             ),
-                            timeout=8.0,
+                            timeout=10.0,
                         )
                         result.jobs.extend(jobs)
                     except Exception as exc:

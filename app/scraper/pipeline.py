@@ -192,6 +192,30 @@ def sanitize_legacy_salaries(session: Session) -> int:
                 job.salary_disclosed = False
                 session.add(job)
                 updated += 1
+            elif (
+                salary
+                and len(salary) == 2
+                and 0 < salary[0] <= 5
+                and job.description
+                and ("$" in job.description or "USD" in job.description)
+            ):
+                import re
+                usd_match = re.search(
+                    r"\$\s*([0-9,]+(?:\.[0-9]+)?)\s*(k)?\s*(?:-|–|—|to)\s*\$?\s*([0-9,]+(?:\.[0-9]+)?)\s*(k)?",
+                    job.description,
+                    re.IGNORECASE,
+                )
+                if usd_match:
+                    def _pv(val: str, is_k: bool) -> float:
+                        v = float(val.replace(",", ""))
+                        return v * 1000 if (is_k or v < 1000) else v
+                    lo_val = _pv(usd_match.group(1), bool(usd_match.group(2)))
+                    hi_val = _pv(usd_match.group(3), bool(usd_match.group(4)))
+                    if lo_val >= 20_000:
+                        job.salary_lpa = [round(lo_val * 86.5 / 100_000), round(hi_val * 86.5 / 100_000)]
+                        job.salary_disclosed = True
+                        session.add(job)
+                        updated += 1
         if updated > 0:
             session.commit()
             logger.info("Sanitized %d legacy salary records to undisclosed [0, 0]", updated)

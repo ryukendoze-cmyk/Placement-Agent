@@ -770,7 +770,7 @@ def student_scrape_jobs_endpoint(
     term = payload.get("term") or payload.get("search_term")
     location = payload.get("location") or "Bengaluru"
     limit = int(payload.get("limit") or payload.get("results_wanted") or 20)
-    sites = payload.get("sites") or ["naukri", "linkedin", "indeed"]
+    sites = payload.get("sites") or ["naukri", "linkedin", "indeed", "ashby", "greenhouse", "lever"]
 
     terms: list[str] = []
     if terms_input and isinstance(terms_input, list):
@@ -844,7 +844,7 @@ def student_scrape_jobs_stream_endpoint(
     term = payload.get("term") or payload.get("search_term")
     location = payload.get("location") or "Bengaluru"
     limit = int(payload.get("limit") or payload.get("results_wanted") or 20)
-    sites = payload.get("sites") or ["naukri", "linkedin", "indeed"]
+    sites = payload.get("sites") or ["naukri", "linkedin", "indeed", "ashby", "greenhouse", "lever"]
     fresher_only = payload.get("fresher_only", True)
 
     terms: list[str] = []
@@ -880,7 +880,7 @@ def student_scrape_jobs_stream_endpoint(
         terms = enriched_terms
 
     search_term = terms if len(terms) > 1 else terms[0]
-    providers = payload.get("providers") if payload.get("providers") is not None else ["jobspy", "stealth_harvester"]
+    providers = payload.get("providers") if payload.get("providers") is not None else ["jobspy", "stealth_harvester", "ashby_ats"]
     scraper = CompositeJobScraper()
 
     def event_stream():

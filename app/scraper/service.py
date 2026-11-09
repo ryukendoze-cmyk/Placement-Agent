@@ -19,6 +19,7 @@ import pandas as pd
 from jobspy import scrape_jobs
 
 from app.scraper.providers import (
+    AshbyATSProvider,
     AutomationJobScraperProvider,
     BaseJobScraperProvider,
     JobSpyProvider,
@@ -278,6 +279,7 @@ class CompositeJobScraper:
                 AutomationJobScraperProvider(),
                 ProxyAPIJobScraperProvider(),
                 StealthHarvesterProvider(),
+                AshbyATSProvider(),
             ]
         self.providers: dict[str, BaseJobScraperProvider] = {p.name: p for p in providers}
 
@@ -416,15 +418,27 @@ class CompositeJobScraper:
         def now_iso() -> str:
             return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        # Streaming units: explicit portals, else the stealth harvester's 8
-        # portals when it participates, else provider names.
+        # Streaming units: explicit portals, else supported sites of participating
+        # multi-site providers (stealth harvester's 8 portals + ashby_ats's ATS boards),
+        # else provider names.
         if portals is None and any(
-            getattr(p, "name", "") == "stealth_harvester" for p in target_providers
+            getattr(p, "name", "") in ("stealth_harvester", "ashby_ats") for p in target_providers
         ):
-            stealth = next(
-                p for p in target_providers if getattr(p, "name", "") == "stealth_harvester"
-            )
-            unit_portals: list[str] | None = list(stealth.supported_sites)
+            unit_portals: list[str] | None = []
+            for p in target_providers:
+                if getattr(p, "name", "") == "stealth_harvester":
+                    for s in getattr(p, "supported_sites", []):
+                        if s not in unit_portals:
+                            unit_portals.append(s)
+                elif getattr(p, "name", "") == "ashby_ats":
+                    ats_sites = [s for s in getattr(p, "supported_sites", []) if sites is None or s in sites]
+                    if not ats_sites and (sites is None or any(s in ("ashby", "greenhouse", "lever") for s in sites)):
+                        ats_sites = [s for s in getattr(p, "supported_sites", []) if sites is None or s in sites] or list(getattr(p, "supported_sites", []))
+                    for s in ats_sites:
+                        if s not in unit_portals:
+                            unit_portals.append(s)
+            if not unit_portals:
+                unit_portals = None
         else:
             unit_portals = list(portals) if portals else None
 
@@ -442,7 +456,7 @@ class CompositeJobScraper:
             for unit in units:
                 target = [
                     p for p in target_providers
-                    if unit in getattr(p, "supported_sites", []) or getattr(p, "name", "") == "stealth_harvester"
+                    if unit in getattr(p, "supported_sites", [])
                 ]
                 if not target:
                     target = target_providers

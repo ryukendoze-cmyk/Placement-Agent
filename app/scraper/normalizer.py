@@ -126,8 +126,8 @@ def _parse_amount(val: Any, interval: str) -> int | None:
     if math.isnan(amt) or amt <= 0:
         return None
 
-    # Values <= 100 are already in LPA notation (e.g. 6.5, 12, 18)
-    if amt <= 100:
+    # Values in LPA notation (e.g. 6.5, 12, 18, or executive/US-remote up to 500 LPA)
+    if interval in ("lpa", "inr_lpa") or amt <= 500:
         return max(1, round(amt))
 
     # Monthly salary conversion: amount * 12 / 100,000
@@ -239,8 +239,27 @@ def parse_salary_lpa(
     if isinstance(min_amt, dict) and max_amt is None and interval is None:
         raw = min_amt
         interval = str(raw.get("interval") or "").strip().lower()
+        currency = str(raw.get("currency") or raw.get("currency_code") or "").strip().upper()
         min_amt = raw.get("min_amount")
         max_amt = raw.get("max_amount")
+        if currency == "USD":
+            USD_TO_INR = 86.5
+            if min_amt:
+                try:
+                    v = float(re.sub(r"[^\d.]", "", str(min_amt)))
+                    v = v * 1000 if v < 1000 else v
+                    min_amt = v * USD_TO_INR / 100_000
+                    interval = "lpa"
+                except Exception:
+                    pass
+            if max_amt:
+                try:
+                    v = float(re.sub(r"[^\d.]", "", str(max_amt)))
+                    v = v * 1000 if v < 1000 else v
+                    max_amt = v * USD_TO_INR / 100_000
+                    interval = "lpa"
+                except Exception:
+                    pass
     else:
         interval = str(interval or "").strip().lower()
 
@@ -453,6 +472,7 @@ Analyze the provided job posting and extract:
 2. preferred_skills: list of secondary, bonus, or nice-to-have technical skill IDs from the taxonomy.
 3. salary_lpa: [min_lpa, max_lpa] integer array in Lakhs Per Annum (LPA).
    - Normalize ambiguous salary formats:
+     * If salary is in USD ($) (e.g., $100k, $230,000 - $450,000 USD), convert to annual INR LPA using 1 USD ≈ 86.5 INR (multiply USD by 86.5 and divide by 100,000; e.g. $100k -> [87, 87], $230k - $450k -> [199, 389]). NEVER divide a USD salary by 100,000 directly.
      * If salary is a monthly stipend (e.g., ₹25k/mo, ₹30,000/month), convert to annual LPA using round(amt * 12 / 100000). For example, ₹30,000/mo -> [4, 4] LPA.
      * If salary is an annual range in raw INR (e.g. 600000 to 1200000, 8-12 Lakhs), convert to LPA (e.g. [6, 12]).
      * If salary is undisclosed or not mentioned, return [0, 0].
@@ -599,27 +619,26 @@ def normalize_job_with_ai(
                 if len(valid_required) >= 2:
                     break
 
-        # Salary parsing
-        raw_sal = ai_data.get("salary_lpa")
-        salary_disclosed = bool(ai_data.get("salary_disclosed"))
-        salary_lpa = [0, 0]
-        if isinstance(raw_sal, list) and len(raw_sal) == 2:
-            try:
-                s_min = round(float(raw_sal[0]))
-                s_max = round(float(raw_sal[1]))
-                if s_min > s_max:
-                    s_min, s_max = s_max, s_min
-                salary_lpa = [s_min, s_max]
-                if any(x > 0 for x in salary_lpa):
-                    salary_disclosed = True
-            except (TypeError, ValueError):
-                salary_lpa = [0, 0]
-
-        if salary_lpa == [0, 0]:
-            stat_sal, stat_disc = parse_salary_lpa(raw_job)
-            if stat_disc:
-                salary_lpa = stat_sal
-                salary_disclosed = stat_disc
+        # Salary parsing: structured API salary has priority over LLM guesswork
+        stat_sal, stat_disc = parse_salary_lpa(raw_job)
+        if stat_disc and any(x > 0 for x in stat_sal):
+            salary_lpa = stat_sal
+            salary_disclosed = True
+        else:
+            raw_sal = ai_data.get("salary_lpa")
+            salary_disclosed = bool(ai_data.get("salary_disclosed"))
+            salary_lpa = [0, 0]
+            if isinstance(raw_sal, list) and len(raw_sal) == 2:
+                try:
+                    s_min = round(float(raw_sal[0]))
+                    s_max = round(float(raw_sal[1]))
+                    if s_min > s_max:
+                        s_min, s_max = s_max, s_min
+                    salary_lpa = [s_min, s_max]
+                    if any(x > 0 for x in salary_lpa):
+                        salary_disclosed = True
+                except (TypeError, ValueError):
+                    salary_lpa = [0, 0]
 
         # Deterministic experience extraction on full combined text (title + desc + url + tags)
         combined_text = f"{title} {clean_desc} {job_url} {raw_job.get('tags') or ''}".strip()

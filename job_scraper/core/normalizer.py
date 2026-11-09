@@ -229,8 +229,8 @@ def parse_salary_lpa(
         elif iv == "annual":
             lpa = value / 100_000
         else:  # lpa or unknown numeric
-            # Heuristic: huge numbers are raw INR annual.
-            if value > 100 and iv in (None, "lpa"):
+            # Heuristic: numbers >= 10,000 are raw INR annual, while smaller numbers are already in LPA.
+            if value >= 10_000 and iv in (None, "lpa"):
                 lpa = value / 100_000
             else:
                 lpa = value
