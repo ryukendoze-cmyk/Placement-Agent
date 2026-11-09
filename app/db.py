@@ -193,6 +193,7 @@ def _sanitize_legacy_salaries(engine: Engine) -> int:
     """Reset legacy [6, 12] auto-filled salaries and repair compressed USD salaries."""
     try:
         from sqlmodel import Session
+
         from app.scraper.pipeline import sanitize_legacy_salaries as _pipeline_sanitize
         with Session(engine) as s:
             return _pipeline_sanitize(s)

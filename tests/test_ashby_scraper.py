@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
@@ -14,11 +13,9 @@ from app.scraper.normalizer import normalize_scraped_job
 from app.scraper.providers import AshbyATSProvider, BaseJobScraperProvider
 from app.scraper.service import CompositeJobScraper
 from app.taxonomy.taxonomy import load_taxonomy
-from job_scraper.core.models import RawScrapedJob
 from job_scraper.extractors.ashby import AshbyExtractor
 from job_scraper.extractors.greenhouse import GreenhouseExtractor
 from job_scraper.extractors.lever import LeverExtractor
-
 
 MOCK_ASHBY_RESPONSE = {
     "jobs": [

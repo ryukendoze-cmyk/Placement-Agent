@@ -9,7 +9,7 @@ from typing import Any, Optional
 import httpx
 
 from job_scraper.core.models import RawScrapedJob
-from job_scraper.extractors.base import BaseExtractor, PAN_INDIAN
+from job_scraper.extractors.base import PAN_INDIAN, BaseExtractor
 
 logger = logging.getLogger(__name__)
 
