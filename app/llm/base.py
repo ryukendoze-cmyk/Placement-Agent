@@ -22,6 +22,7 @@ def get_llm(settings: Settings) -> LLMClient:
     if provider == "openai":
         from .openai import OpenAILLM
         return OpenAILLM(settings.openai_api_key, settings.openai_model,
-                         base_url=settings.openai_base_url)
+                         base_url=settings.openai_base_url,
+                         timeout=getattr(settings, "llm_timeout", 60.0))
     from .mock import MockLLM
     return MockLLM()

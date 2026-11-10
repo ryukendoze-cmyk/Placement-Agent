@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -167,6 +167,67 @@ class TestAshbyExtractor:
         assert extractor._matches_location("Remote - US", True, "India") is False
         assert extractor._matches_location("Remote - European Union", True, "India") is False
         assert extractor._matches_location("London, United Kingdom", False, "India") is False
+
+    @pytest.mark.asyncio
+    async def test_ashby_skips_disabled_hosted_board(self):
+        extractor = AshbyExtractor(companies=[{"company": "Cursor", "slug": "cursor"}])
+        mock_client = AsyncMock()
+
+        # Mock API response returning 200 with jobs (resp.json is synchronous in httpx)
+        mock_get_resp = MagicMock()
+        mock_get_resp.status_code = 200
+        mock_get_resp.json.return_value = {
+            "jobs": [
+                {
+                    "id": "c1",
+                    "title": "Engineer",
+                    "jobUrl": "https://jobs.ashbyhq.com/cursor/c1",
+                    "location": "India",
+                    "isRemote": True,
+                    "isListed": True,
+                }
+            ]
+        }
+        mock_client.get = AsyncMock(return_value=mock_get_resp)
+
+        # Mock head probe returning 404 (board disabled)
+        mock_head_resp = MagicMock()
+        mock_head_resp.status_code = 404
+        mock_client.head = AsyncMock(return_value=mock_head_resp)
+
+        jobs = await extractor._fetch_company_board(mock_client, {"company": "Cursor", "slug": "cursor"})
+        assert jobs == []
+        assert extractor._board_liveness_cache["cursor"] is False
+
+    @pytest.mark.asyncio
+    async def test_ashby_accepts_live_hosted_board(self):
+        extractor = AshbyExtractor(companies=[{"company": "OpenAI", "slug": "openai"}])
+        mock_client = AsyncMock()
+
+        mock_get_resp = MagicMock()
+        mock_get_resp.status_code = 200
+        mock_get_resp.json.return_value = {
+            "jobs": [
+                {
+                    "id": "o1",
+                    "title": "Software Engineer",
+                    "jobUrl": "https://jobs.ashbyhq.com/openai/o1",
+                    "location": "India",
+                    "isRemote": True,
+                    "isListed": True,
+                }
+            ]
+        }
+        mock_client.get = AsyncMock(return_value=mock_get_resp)
+
+        mock_head_resp = MagicMock()
+        mock_head_resp.status_code = 200
+        mock_client.head = AsyncMock(return_value=mock_head_resp)
+
+        jobs = await extractor._fetch_company_board(mock_client, {"company": "OpenAI", "slug": "openai"})
+        assert len(jobs) == 1
+        assert jobs[0]["title"] == "Software Engineer"
+        assert extractor._board_liveness_cache["openai"] is True
 
 
 class TestGreenhouseExtractor:

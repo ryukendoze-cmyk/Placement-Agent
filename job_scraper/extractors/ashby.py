@@ -15,23 +15,23 @@ logger = logging.getLogger(__name__)
 
 ASHBY_API_BASE = "https://api.ashbyhq.com/posting-api/job-board"
 
-# Curated fallback list of prominent tech companies on Ashby
+# Curated fallback list of prominent tech companies on Ashby with active hosted boards
 DEFAULT_ASHBY_COMPANIES: list[dict[str, str]] = [
     {"company": "Ashby", "slug": "Ashby"},
     {"company": "OpenAI", "slug": "openai"},
     {"company": "Notion", "slug": "Notion"},
     {"company": "Ramp", "slug": "ramp"},
     {"company": "Linear", "slug": "linear"},
-    {"company": "PostHog", "slug": "posthog"},
-    {"company": "Cursor", "slug": "cursor"},
     {"company": "Vanta", "slug": "vanta"},
     {"company": "Snowflake", "slug": "snowflake"},
-    {"company": "Deel", "slug": "deel"},
-    {"company": "Retool", "slug": "retool"},
     {"company": "Sentry", "slug": "sentry"},
     {"company": "Replit", "slug": "replit"},
     {"company": "Temporal", "slug": "temporal"},
-    {"company": "Superhuman", "slug": "superhuman"},
+    {"company": "Supabase", "slug": "supabase"},
+    {"company": "Zapier", "slug": "zapier"},
+    {"company": "Harvey", "slug": "harvey"},
+    {"company": "1Password", "slug": "1password"},
+    {"company": "Cohere", "slug": "cohere"},
 ]
 
 RESTRICTED_NON_INDIA_PATTERNS = (
@@ -117,6 +117,46 @@ class AshbyExtractor(BaseExtractor):
     def __init__(self, session: Any = None, companies: Optional[list[dict[str, str]]] = None) -> None:
         super().__init__(session=session)
         self.companies = companies or _load_ashby_companies()
+        self._board_liveness_cache: dict[str, bool] = {}
+
+    async def _is_board_live(
+        self, client: httpx.AsyncClient, slug: str, jobs: list[dict[str, Any]]
+    ) -> bool:
+        """Verify the hosted job board is live and not disabled in favor of a custom portal.
+
+        When companies toggle 'Disable Ashby-hosted jobs page' (e.g. Cursor, PostHog),
+        the posting API continues to return jobs, but the generated jobUrl resolves
+        to a 404 'Page not found'. Probing ensures we only ingest reachable jobs.
+        """
+        if slug in self._board_liveness_cache:
+            return self._board_liveness_cache[slug]
+
+        # 1. Quick probe on the hosted board URL
+        board_url = f"https://jobs.ashbyhq.com/{slug}"
+        try:
+            probe = await client.head(board_url, timeout=3.0)
+            if probe.status_code == 404:
+                self._board_liveness_cache[slug] = False
+                return False
+            if probe.status_code in (200, 301, 302, 307, 308):
+                self._board_liveness_cache[slug] = True
+                return True
+        except Exception as exc:
+            logger.debug("Ashby board probe failed for %s: %s", slug, exc)
+
+        # 2. Fallback probe on the first job's jobUrl
+        first_url = next((j.get("jobUrl") for j in jobs if j.get("jobUrl")), None)
+        if first_url:
+            try:
+                probe = await client.head(first_url, timeout=3.0)
+                is_live = probe.status_code not in (404, 410)
+                self._board_liveness_cache[slug] = is_live
+                return is_live
+            except Exception as exc:
+                logger.debug("Ashby jobUrl probe failed for %s: %s", first_url, exc)
+
+        self._board_liveness_cache[slug] = True
+        return True
 
     async def _fetch_company_board(
         self, client: httpx.AsyncClient, company_info: dict[str, str]
@@ -128,7 +168,13 @@ class AshbyExtractor(BaseExtractor):
             if resp.status_code == 200:
                 data = resp.json()
                 jobs = data.get("jobs", [])
-                return jobs if isinstance(jobs, list) else []
+                if not isinstance(jobs, list) or not jobs:
+                    return []
+                # Verify board is live before accepting jobs
+                if not await self._is_board_live(client, slug, jobs):
+                    logger.debug("Ashby company %s hosted board returned 404; skipping", slug)
+                    return []
+                return jobs
             logger.debug("Ashby company %s returned status %d", slug, resp.status_code)
             return []
         except Exception as exc:

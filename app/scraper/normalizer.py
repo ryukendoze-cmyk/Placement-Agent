@@ -12,6 +12,7 @@ import time
 import uuid
 from typing import Any
 
+from app.config import settings
 from app.matching.engine import (
     FRESHER_TITLE_RE,
     MID_LEVEL_TITLE_RE,
@@ -581,12 +582,20 @@ def normalize_job_with_ai(
         }
 
         user_content = json.dumps(prompt_payload)
-        response_text = llm.complete(
-            JOB_NORMALIZER_SYSTEM,
-            user_content,
-            json_mode=True,
-            timeout=15.0,
-        )
+        timeout = getattr(settings, "llm_timeout", 60.0)
+        try:
+            response_text = llm.complete(
+                JOB_NORMALIZER_SYSTEM,
+                user_content,
+                json_mode=True,
+                timeout=timeout,
+            )
+        except TypeError:
+            response_text = llm.complete(
+                JOB_NORMALIZER_SYSTEM,
+                user_content,
+                json_mode=True,
+            )
 
         clean_json = (response_text or "").strip()
         if clean_json.startswith("```"):

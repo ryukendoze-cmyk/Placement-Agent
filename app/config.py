@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
     openai_base_url: str | None = None
+    llm_timeout: float = 90.0
     session_secret_key: str = "ps06-jklu-careeros-dev-secret-key-change-in-prod-2026"
     session_ttl_seconds: int = 86400 * 7
     auth_mode: str = "demo"
