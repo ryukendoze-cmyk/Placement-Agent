@@ -27,6 +27,7 @@ def init_db(engine: Engine) -> None:
     _purge_dummy_jobs(engine)
     _sanitize_legacy_salaries(engine)
     _sanitize_legacy_experience(engine)
+    _sanitize_legacy_skills(engine)
     install_audit_guard(engine)
 
 
@@ -284,6 +285,30 @@ def _sanitize_legacy_experience(engine: Engine) -> int:
     except Exception as exc:  # noqa: BLE001 - sanitation must never block boot
         logger.warning("Legacy experience sanitation failed: %s", exc)
         return 0
+
+
+def _sanitize_legacy_skills(engine: Engine) -> int:
+    """Sanitize legacy jobs with bloated or ungrounded skills."""
+    try:
+        from sqlmodel import Session
+
+        from app.scraper.pipeline import sanitize_legacy_skills as _pipeline_sanitize
+        with Session(engine) as s:
+            return _pipeline_sanitize(s)
+    except Exception as exc:  # noqa: BLE001 - sanitation must never block boot
+        logger.warning("Legacy skills sanitation failed: %s", exc)
+        return 0
+
+
+def sanitize_legacy_skills(session_or_engine, ctx=None) -> int:
+    """Sanitize legacy jobs with bloated or ungrounded skills.
+    Accepts either an active SQLModel Session or a SQLAlchemy Engine."""
+    from sqlmodel import Session
+    if isinstance(session_or_engine, Session):
+        from app.scraper.pipeline import sanitize_legacy_skills as _pipeline_sanitize
+        return _pipeline_sanitize(session_or_engine, ctx)
+    return _sanitize_legacy_skills(session_or_engine)
+
 
 def install_audit_guard(engine: Engine) -> None:
     """Make AuditLog rows immutable: refuse UPDATE and DELETE at the ORM layer.

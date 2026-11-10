@@ -317,10 +317,10 @@ def _ground_skills(text: str, taxonomy: Taxonomy) -> tuple[list[str], list[str]]
         fallback_pad = [s for s in CORE_FALLBACK_SKILLS if s != sorted_skills[0]][0]
         return [sorted_skills[0], fallback_pad], []
 
-    # Partition: first 2 to 6 skills become required, remainder preferred
+    # Partition: first 2 to 6 skills become required, remainder preferred (capped at 6)
     split_idx = min(max(2, min(len(sorted_skills), 4)), 6)
     required = sorted_skills[:split_idx]
-    preferred = sorted_skills[split_idx:]
+    preferred = sorted_skills[split_idx:split_idx + 6]
     return required, preferred
 
 
@@ -469,8 +469,13 @@ def normalize_scraped_job(raw: dict[str, Any], taxonomy: Taxonomy) -> Job:
 JOB_NORMALIZER_SYSTEM = """TASK: extract_job_posting
 You are an institutional career intelligence AI that extracts structured data from scraped job postings.
 Analyze the provided job posting and extract:
-1. required_skills: list of strictly necessary technical skill IDs from the provided taxonomy.
-2. preferred_skills: list of secondary, bonus, or nice-to-have technical skill IDs from the taxonomy.
+1. required_skills: list of 2 to 6 strictly necessary core technical skill IDs from the provided taxonomy.
+   - ONLY extract skills that are explicitly mentioned or strictly required in the job description text.
+2. preferred_skills: list of 0 to 6 secondary, bonus, or nice-to-have technical skill IDs from the taxonomy.
+   - CRITICAL: ONLY extract skills explicitly mentioned in the job text as preferred, plus, or nice-to-have.
+   - DO NOT list skills that are absent from the text.
+   - If no secondary/bonus skills are explicitly mentioned in the job text, return [].
+   - NEVER dump or copy the canonical_skills list into preferred_skills.
 3. salary_lpa: [min_lpa, max_lpa] integer array in Lakhs Per Annum (LPA).
    - Normalize ambiguous salary formats:
      * If salary is in USD ($) (e.g., $100k, $230,000 - $450,000 USD), convert to annual INR LPA using 1 USD ≈ 86.5 INR (multiply USD by 86.5 and divide by 100,000; e.g. $100k -> [87, 87], $230k - $450k -> [199, 389]). NEVER divide a USD salary by 100,000 directly.
@@ -547,7 +552,12 @@ def normalize_job_with_ai(
     Falls back immediately to normalize_scraped_job(raw_job, taxonomy) on any failure,
     timeout, missing LLM, or invalid output (Dual-Path Graceful Degradation).
     """
-    is_mock = type(llm).__name__ == "MockLLM" if llm is not None else False
+    is_mock = (
+        type(llm).__name__ in ("MockLLM", "MagicMock", "AsyncMock")
+        or "Mock" in type(llm).__name__
+        if llm is not None
+        else False
+    )
     if llm is None or (is_ai_normalizer_circuit_open() and not is_mock):
         return normalize_scraped_job(raw_job, taxonomy)
 
@@ -606,19 +616,38 @@ def normalize_job_with_ai(
             raise ValueError("AI normalizer output is not a JSON object")
 
         # Programmatically validate extracted skills against taxonomy
+        # AND verify the skill (or an alias) actually appears in the job text.
+        tag_str = " ".join(str(t) for t in (raw_job.get("tags") or []) if t)
+        corpus = f"{title} {clean_desc} {tag_str}".lower()
+
+        def _skill_in_text(s_id: str) -> bool:
+            s_obj = taxonomy.get_opt(s_id)
+            if not s_obj:
+                return False
+            candidates = [s_obj.name.lower(), s_obj.id.lower()] + [a.lower() for a in s_obj.aliases]
+            for c in candidates:
+                pat = r"(?<![a-z0-9])" + re.escape(c) + r"(?![a-z0-9])"
+                if re.search(pat, corpus):
+                    return True
+            return False
+
         valid_required: list[str] = []
         for s in ai_data.get("required_skills", []):
             s_norm = str(s).strip().lower()
             resolved = taxonomy.resolve(s_norm) or (s_norm if taxonomy.get_opt(s_norm) else None)
-            if resolved and resolved not in valid_required:
+            if resolved and resolved not in valid_required and _skill_in_text(resolved):
                 valid_required.append(resolved)
 
         valid_preferred: list[str] = []
         for s in ai_data.get("preferred_skills", []):
             s_norm = str(s).strip().lower()
             resolved = taxonomy.resolve(s_norm) or (s_norm if taxonomy.get_opt(s_norm) else None)
-            if resolved and resolved not in valid_preferred and resolved not in valid_required:
+            if resolved and resolved not in valid_preferred and resolved not in valid_required and _skill_in_text(resolved):
                 valid_preferred.append(resolved)
+
+        # Cap lists to prevent LLM hallucinations or skill dumping
+        valid_required = valid_required[:6]
+        valid_preferred = valid_preferred[:6]
 
         # Fall back to CORE_FALLBACK_SKILLS if fewer than 2 valid skills resolved
         if len(valid_required) < 2:

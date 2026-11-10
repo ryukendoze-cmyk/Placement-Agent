@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,7 @@ from sqlmodel import Session, select
 
 from app.models import Interview, Job, JobApplication, JobMatch, PlanItem, UpskillPlan
 from app.scraper.normalizer import (
+    CORE_FALLBACK_SKILLS,
     extract_experience_years,
     is_ai_normalizer_circuit_open,
     is_senior_job,
@@ -316,6 +318,107 @@ def sanitize_legacy_experience(session: Session, ctx: Any = None) -> int:
     return len(updated_ids)
 
 
+def sanitize_legacy_skills(session: Session, ctx: Any | None = None) -> int:
+    """Repair legacy jobs whose skills were bloated with taxonomy dumps or ungrounded skills.
+
+    Scans every job, verifying skills against the taxonomy and job text:
+    - Leaves hand-curated local jobs (source == 'local') alone if skills count <= 6.
+    - required_skills: valid taxonomy skills, capped at 6, minimum 2 (using CORE_FALLBACK_SKILLS).
+    - preferred_skills: valid taxonomy skills mentioned in job text, excluding required, capped at 6.
+
+    Args:
+        session: Active SQLModel database session.
+        ctx: Application context (used for taxonomy and post-update match re-ranking).
+
+    Returns:
+        Count of sanitized jobs.
+    """
+    taxonomy = getattr(ctx, "taxonomy", None) or load_taxonomy()
+    updated_ids: list[str] = []
+
+    try:
+        jobs = list(session.exec(select(Job)).all())
+        for job in jobs:
+            # Leave curated institutional jobs untouched if not bloated
+            is_local = getattr(job, "source", "local") == "local"
+            orig_req = list(job.required_skills or [])
+            orig_pref = list(job.preferred_skills or [])
+
+            if is_local and len(orig_req) <= 6 and len(orig_pref) <= 6:
+                continue
+
+            clean_body = (job.description or "").split("Apply URL:")[0].strip()
+            corpus = f"{job.title or ''} {clean_body}".lower()
+
+            def _skill_in_text(s_id: str) -> bool:
+                s_obj = taxonomy.get_opt(s_id)
+                if not s_obj:
+                    return False
+                candidates = [s_obj.name.lower(), s_obj.id.lower()] + [a.lower() for a in s_obj.aliases]
+                for c in candidates:
+                    pat = r"(?<![a-z0-9])" + re.escape(c) + r"(?![a-z0-9])"
+                    if re.search(pat, corpus):
+                        return True
+                return False
+
+            # Sanitize required_skills
+            valid_required: list[str] = []
+            for s in orig_req:
+                s_norm = str(s).strip().lower()
+                resolved = taxonomy.resolve(s_norm) or (s_norm if taxonomy.get_opt(s_norm) else None)
+                if resolved and resolved not in valid_required:
+                    valid_required.append(resolved)
+
+            valid_required = valid_required[:6]
+            if len(valid_required) < 2:
+                for fallback in CORE_FALLBACK_SKILLS:
+                    if fallback not in valid_required:
+                        valid_required.append(fallback)
+                    if len(valid_required) >= 2:
+                        break
+
+            # Sanitize preferred_skills: must be in taxonomy, in text, not in required, capped at 6
+            valid_preferred: list[str] = []
+            for s in orig_pref:
+                s_norm = str(s).strip().lower()
+                resolved = taxonomy.resolve(s_norm) or (s_norm if taxonomy.get_opt(s_norm) else None)
+                if (
+                    resolved
+                    and resolved not in valid_preferred
+                    and resolved not in valid_required
+                    and _skill_in_text(resolved)
+                ):
+                    valid_preferred.append(resolved)
+
+            valid_preferred = valid_preferred[:6]
+
+            if job.required_skills != valid_required or job.preferred_skills != valid_preferred:
+                job.required_skills = valid_required
+                job.preferred_skills = valid_preferred
+                session.add(job)
+                updated_ids.append(job.id)
+
+        if updated_ids:
+            session.commit()
+            logger.info("Sanitized skills for %d legacy job rows", len(updated_ids))
+    except Exception as exc:  # noqa: BLE001 - sanitation must not crash caller
+        logger.warning("Legacy skill sanitation failed: %s", exc)
+        session.rollback()
+        return 0
+
+    if updated_ids and ctx is not None:
+        try:
+            from app.api.routes.students import _rank_and_persist
+            from app.models import Student
+
+            for student in session.exec(select(Student)).all():
+                _rank_and_persist(session, ctx, student.id, student, include_scraped=True)
+        except Exception as rank_err:  # noqa: BLE001 - sanitation must not crash caller
+            logger.warning("Post-sanitation skill match re-ranking failed: %s", rank_err)
+
+    return len(updated_ids)
+
+
 def index_job_vectors(jobs: list, vector_store, embedder,
                       job_vectors: dict | None = None) -> int:
     """Embed each job's description and index it into the vector store.
@@ -399,6 +502,7 @@ def ingest_scraped_jobs(
         purge_dummy_jobs(session, ctx)
         sanitize_legacy_salaries(session)
         sanitize_legacy_experience(session, ctx)
+        sanitize_legacy_skills(session, ctx)
 
     # Pre-index existing database records for cross-provider dedup
     existing_jobs = list(session.exec(select(Job)).all())

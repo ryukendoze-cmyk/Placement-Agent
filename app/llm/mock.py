@@ -368,7 +368,7 @@ class MockLLM:
 
         split_idx = min(max(2, min(len(matched_skills), 4)), 6)
         required_skills = matched_skills[:split_idx]
-        preferred_skills = matched_skills[split_idx:]
+        preferred_skills = matched_skills[split_idx:split_idx + 6]
 
         return json.dumps({
             "required_skills": required_skills,

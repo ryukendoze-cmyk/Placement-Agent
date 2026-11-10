@@ -19,6 +19,7 @@ from app.scraper.pipeline import (
     ingest_scraped_jobs,
     purge_dummy_jobs,
     purge_live_jobs,
+    sanitize_legacy_skills,
 )
 from app.scraper.providers import (
     AutomationJobScraperProvider,
@@ -43,6 +44,7 @@ __all__ = [
     "ingest_scraped_jobs",
     "purge_dummy_jobs",
     "purge_live_jobs",
+    "sanitize_legacy_skills",
     "normalize_scraped_job",
     "normalize_job_with_ai",
     "JOB_NORMALIZER_SYSTEM",
