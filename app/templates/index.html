@@ -6,36 +6,75 @@
       <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
       Workspace
     </div>
-    <h1 class="font-serif-display text-2xl sm:text-3xl font-semibold text-[#1C1E1B] tracking-tight">Student Cohort Directory</h1>
-    <p class="text-sm text-[#5C5A52] mt-1">Manage candidates, review readiness, and onboard new resumes with AI extraction.</p>
+    <h1 class="font-serif-display text-2xl sm:text-3xl font-semibold text-[#1C1E1B] tracking-tight">
+      {% if role == 'student' %}My Placement Workspace{% elif role == 'faculty_mentor' %}Department Mentee Directory{% else %}Student Cohort Directory{% endif %}
+    </h1>
+    <p class="text-sm text-[#5C5A52] mt-1">
+      {% if role == 'student' %}Access your verified profile, job readiness matches, upskill plan, and mock interview practice.{% elif role == 'faculty_mentor' %}Monitor department mentees, skill verification readiness, and career plans.{% else %}Manage candidates, review readiness, and onboard new resumes with AI extraction.{% endif %}
+    </p>
   </div>
   <div class="flex flex-wrap items-center gap-2">
     <span class="mono inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-full bg-white border border-[#E5E3DC] text-[#1C1E1B]">
       <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]" aria-hidden="true"></span>
-      Cohort: {{ students|length }}
+      {% if role == 'student' %}My Workspace{% else %}Cohort: {{ students|length }}{% endif %}
     </span>
     <span class="mono inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[#1B5E43] font-medium">
       AI Extraction: online
     </span>
     <span class="mono inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-full bg-[#EFECE4] border border-[#E2DEC9] text-[#4A483F]">
-      Taxonomy: 124 skills
+      Taxonomy: {{ taxonomy_count|default(124) }} skills
     </span>
   </div>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-7">
-  <section class="lg:col-span-7">
+  <section class="{% if role == 'tpo_admin' %}lg:col-span-7{% else %}lg:col-span-12{% endif %}">
     <div class="editorial-card overflow-hidden">
-      <div class="px-6 py-4 border-b border-[#ECEAE2] flex items-center justify-between">
+      <div class="px-6 py-4 border-b border-[#ECEAE2] flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">All candidates</h2>
-          <p class="text-xs text-[#5C5A52] mt-0.5">Monogram, branch, year, and quick actions per student.</p>
+          <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">{% if role == 'student' %}My Profile &amp; Quick Navigation{% elif role == 'faculty_mentor' %}Department Mentees{% else %}All candidates{% endif %}</h2>
+          <p class="text-xs text-[#5C5A52] mt-0.5">{% if role == 'student' %}Your placement readiness and quick workspace shortcuts.{% else %}Alphabetical roster with branch, year, GPA, and quick actions per student.{% endif %}</p>
         </div>
-        <span class="mono text-xs px-2.5 py-1 rounded-full bg-[#EFECE4] text-[#4A483F] font-medium">{{ students|length }} total</span>
+        {% if role != 'student' %}
+        <span id="cohort-showing-count" class="mono text-xs px-2.5 py-1 rounded-full bg-[#EFECE4] text-[#4A483F] font-medium">Showing {{ students|length }} of {{ students|length }}</span>
+        {% endif %}
       </div>
-      <ul class="divide-y divide-[#ECEAE2]">
+      {% if role in ('tpo_admin', 'faculty_mentor') %}
+      <div id="cohort-filters" class="px-6 py-3.5 border-b border-[#ECEAE2] bg-[#FAF9F5] flex flex-wrap items-center gap-2.5">
+        <div class="relative flex-1 min-w-[12rem]">
+          <input id="cohort-search" type="search" placeholder="Search by name, ID, or branch..."
+                 class="w-full text-xs border border-[#D5D2C6] bg-white rounded-full px-3.5 py-2 text-[#1C1E1B] placeholder:text-[#8E9690] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]" />
+        </div>
+        <select id="cohort-branch-filter" aria-label="Filter by branch"
+                class="text-xs border border-[#D5D2C6] bg-white rounded-full px-3 py-2 text-[#1C1E1B] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]">
+          <option value="">All Branches</option>
+          {% for code, label in branch_options|default([]) %}
+          <option value="{{ code }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select id="cohort-gpa-filter" aria-label="Minimum GPA"
+                class="mono text-xs border border-[#D5D2C6] bg-white rounded-full px-3 py-2 text-[#1C1E1B] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]">
+          <option value="">All GPAs</option>
+          <option value="6.0">&gt;= 6.0 GPA</option>
+          <option value="7.0">&gt;= 7.0 GPA</option>
+          <option value="7.5">&gt;= 7.5 GPA</option>
+          <option value="8.0">&gt;= 8.0 GPA</option>
+          <option value="8.5">&gt;= 8.5 GPA</option>
+        </select>
+        <button id="cohort-reset-btn" type="button"
+                class="hidden text-xs font-semibold px-3 py-2 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#4A483F] transition-colors cursor-pointer">
+          Reset Filters
+        </button>
+      </div>
+      {% endif %}
+      <ul id="cohort-list" class="divide-y divide-[#ECEAE2]">
         {% for s in students %}
-        <li class="px-6 py-4 flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 hover:bg-[#FAF9F5] transition-colors">
+        {% set canon_branch = normalize_branch(s.branch or '') if normalize_branch is defined else (s.branch or '') %}
+        <li class="cohort-row px-6 py-4 flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 hover:bg-[#FAF9F5] transition-colors"
+            data-name="{{ (s.name or '')|lower }}"
+            data-branch="{{ canon_branch }}"
+            data-gpa="{{ s.gpa or 0 }}"
+            data-id="{{ (s.id or '')|lower }}">
           <div class="flex items-center gap-3.5 min-w-0 flex-1">
             <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[#1D5C42] text-xs font-bold shrink-0 mono" aria-hidden="true">
               {{ s.name[:2]|upper }}
@@ -43,7 +82,7 @@
             <div class="min-w-0 flex-1">
               <a href="/students/{{ s.id }}" class="text-sm font-bold text-[#1C1E1B] hover:text-[#1D5C42] hover:underline truncate block">{{ s.name }}</a>
               <div class="flex flex-wrap items-center gap-1.5 mt-1">
-                {% if s.branch %}<span class="text-[11px] px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] font-semibold">{{ s.branch }}</span>{% endif %}
+                {% if canon_branch %}<span class="text-[11px] px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] font-semibold">{{ canon_branch }}</span>{% endif %}
                 <span class="mono text-[11px] px-2.5 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">Y{{ s.year }}</span>
                 {% if s.gpa %}<span class="mono text-[11px] px-2.5 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">GPA {{ "%.2f"|format(s.gpa) }}</span>{% endif %}
               </div>
@@ -60,10 +99,16 @@
           <p class="text-sm text-[#5C5A52]">No students yet. Onboard your first candidate with the AI Resume card.</p>
         </li>
         {% endfor %}
+        {% if students %}
+        <li id="cohort-filter-empty" class="hidden px-6 py-10 text-center">
+          <p class="text-sm text-[#5C5A52]">No candidates match the selected search, branch, or GPA filters.</p>
+        </li>
+        {% endif %}
       </ul>
     </div>
   </section>
 
+  {% if role == 'tpo_admin' %}
   <section class="lg:col-span-5">
     <div class="editorial-card overflow-hidden">
       <div class="px-6 py-4 border-b border-[#ECEAE2]">
@@ -95,8 +140,13 @@
           </label>
           <label class="block">
             <span class="block text-xs font-medium text-[#4A483F] mb-1">Branch</span>
-            <input type="text" name="branch"
-                   class="block w-full text-sm border border-[#D5D2C6] bg-[#FAF9F5] focus:bg-white rounded-xl px-3.5 py-2 focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]" />
+            <select name="branch" id="upload-branch-select"
+                    class="block w-full text-sm border border-[#D5D2C6] bg-[#FAF9F5] focus:bg-white rounded-xl px-3.5 py-2 focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]">
+              <option value="">Select Branch</option>
+              {% for code, label in branch_options|default([]) %}
+              <option value="{{ code }}">{{ label }}</option>
+              {% endfor %}
+            </select>
           </label>
           <label class="block">
             <span class="block text-xs font-medium text-[#4A483F] mb-1">Year</span>
@@ -125,8 +175,10 @@
       </form>
     </div>
   </section>
+  {% endif %}
 </div>
 
+{% if role == 'tpo_admin' %}
 <script>
 (function () {
   const uploadForm = document.querySelector('form[action="/upload"]');
@@ -145,7 +197,7 @@
   const fileInput = document.querySelector('form[action="/upload"] input[name="file"]');
   if (!fileInput) return;
   const nameInput = document.querySelector('form[action="/upload"] input[name="name"]');
-  const branchInput = document.querySelector('form[action="/upload"] input[name="branch"]');
+  const branchInput = document.querySelector('form[action="/upload"] [name="branch"]');
   const yearInput = document.querySelector('form[action="/upload"] input[name="year"]');
   const gpaInput = document.querySelector('form[action="/upload"] input[name="gpa"]');
   const preview = document.getElementById('ai-preview');
@@ -162,7 +214,19 @@
       const data = await res.json();
       const p = data.profile || {};
       if (nameInput && !nameInput.value.trim() && p.name) nameInput.value = p.name;
-      if (branchInput && !branchInput.value.trim() && p.branch) branchInput.value = p.branch;
+      if (branchInput && !branchInput.value.trim() && p.branch) {
+        const rawB = String(p.branch).trim();
+        let matchedVal = '';
+        if (branchInput.tagName === 'SELECT') {
+          const opts = Array.from(branchInput.options || []);
+          const exact = opts.find(function (o) { return o.value.toLowerCase() === rawB.toLowerCase(); });
+          const partial = opts.find(function (o) { return o.value && rawB.toLowerCase().indexOf(o.value.toLowerCase()) >= 0; });
+          matchedVal = exact ? exact.value : (partial ? partial.value : '');
+          if (matchedVal) branchInput.value = matchedVal;
+        } else {
+          branchInput.value = rawB;
+        }
+      }
       if (yearInput && p.year != null) yearInput.value = p.year;
       if (gpaInput && parseFloat(gpaInput.value || '0') === 0 && p.gpa != null) gpaInput.value = p.gpa;
       if (skillList && Array.isArray(data.skills)) {
@@ -180,4 +244,56 @@
   });
 })();
 </script>
+{% endif %}
+{% if role in ('tpo_admin', 'faculty_mentor') %}
+<script>
+(function () {
+  var searchEl = document.getElementById('cohort-search');
+  var branchEl = document.getElementById('cohort-branch-filter');
+  var gpaEl = document.getElementById('cohort-gpa-filter');
+  var resetBtn = document.getElementById('cohort-reset-btn');
+  var countEl = document.getElementById('cohort-showing-count');
+  var emptyEl = document.getElementById('cohort-filter-empty');
+  var rows = Array.from(document.querySelectorAll('#cohort-list .cohort-row'));
+  var total = rows.length;
+
+  function applyCohortFilters() {
+    var q = (searchEl && searchEl.value ? searchEl.value : '').trim().toLowerCase();
+    var br = (branchEl && branchEl.value ? branchEl.value : '').trim().toLowerCase();
+    var minGpa = gpaEl && gpaEl.value ? parseFloat(gpaEl.value) : null;
+    var active = Boolean(q || br || minGpa !== null);
+    var shown = 0;
+
+    rows.forEach(function (row) {
+      var name = row.getAttribute('data-name') || '';
+      var id = row.getAttribute('data-id') || '';
+      var rowBranch = (row.getAttribute('data-branch') || '').toLowerCase();
+      var rowGpa = parseFloat(row.getAttribute('data-gpa') || '0');
+      var ok = true;
+      if (q && name.indexOf(q) < 0 && id.indexOf(q) < 0 && rowBranch.indexOf(q) < 0) ok = false;
+      if (br && rowBranch !== br) ok = false;
+      if (minGpa !== null && (!isFinite(rowGpa) || rowGpa < minGpa)) ok = false;
+      row.classList.toggle('hidden', !ok);
+      if (ok) shown += 1;
+    });
+
+    if (countEl) countEl.textContent = 'Showing ' + shown + ' of ' + total;
+    if (resetBtn) resetBtn.classList.toggle('hidden', !active);
+    if (emptyEl) emptyEl.classList.toggle('hidden', !(total > 0 && shown === 0));
+  }
+
+  if (searchEl) searchEl.addEventListener('input', applyCohortFilters);
+  if (branchEl) branchEl.addEventListener('change', applyCohortFilters);
+  if (gpaEl) gpaEl.addEventListener('change', applyCohortFilters);
+  if (resetBtn) {
+    resetBtn.addEventListener('click', function () {
+      if (searchEl) searchEl.value = '';
+      if (branchEl) branchEl.value = '';
+      if (gpaEl) gpaEl.value = '';
+      applyCohortFilters();
+    });
+  }
+})();
+</script>
+{% endif %}
 {% endblock %}

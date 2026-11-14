@@ -1,0 +1,97 @@
+<div class="space-y-4">
+  <!-- Judge Context Banner + Live System Telemetry Strip -->
+  <div class="rounded-2xl border border-[#DCE4DE] bg-[#F6F8F6] p-3.5 space-y-2.5">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <p class="text-[11px] font-bold uppercase tracking-wider text-[#1D5C42]">Agentic Observability &amp; Grounding Cockpit</p>
+        <p class="text-[11px] text-[#57605A] leading-snug mt-0.5">
+          Inspect live multi-step planning, tool I/O, zero-hallucination citation verification, and adaptive fallback recovery across Orchestrator, Copilot, and Smart JD runs.
+        </p>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <span id="drawer-workflow-badge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#E3F2EA] text-[#164934]">orchestrator</span>
+        <a id="drawer-audit-link" href="/admin/audit"
+           class="hidden text-[11px] font-semibold text-[#1D5C42] hover:underline px-2 py-1 rounded-lg bg-white border border-[#DCE4DE]">
+          Audit Log
+        </a>
+      </div>
+    </div>
+    <div id="drawer-telemetry-strip" class="grid grid-cols-4 gap-2 text-center">
+      <div class="bg-white rounded-xl border border-[#E5E3DA] px-2 py-1.5">
+        <p class="text-[9px] font-mono uppercase text-[#767F79]">Provider</p>
+        <p id="ab-stat-provider" class="text-[11px] font-bold text-[#1A211D] truncate">--</p>
+      </div>
+      <div class="bg-white rounded-xl border border-[#E5E3DA] px-2 py-1.5">
+        <p class="text-[9px] font-mono uppercase text-[#767F79]">Grounding</p>
+        <p id="ab-stat-grounding" class="text-[11px] font-bold text-[#1D5C42]">--</p>
+      </div>
+      <div class="bg-white rounded-xl border border-[#E5E3DA] px-2 py-1.5">
+        <p class="text-[9px] font-mono uppercase text-[#767F79]">Latency</p>
+        <p id="ab-stat-latency" class="text-[11px] font-bold text-[#1A211D]">--</p>
+      </div>
+      <div class="bg-white rounded-xl border border-[#E5E3DA] px-2 py-1.5">
+        <p class="text-[9px] font-mono uppercase text-[#767F79]">Tokens / Cost</p>
+        <p id="ab-stat-tokens" class="text-[11px] font-bold text-[#1A211D]">--</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Run History Selector -->
+  <div class="flex items-center gap-2">
+    <label for="drawer-run-select" class="text-[11px] font-semibold text-[#57605A] shrink-0">Trace:</label>
+    <select id="drawer-run-select"
+            class="flex-1 min-w-0 bg-white border border-[#E0DCD0] rounded-xl px-2.5 py-1.5 text-xs text-[#1A211D] focus:outline-none focus:border-[#1D5C42]">
+      <option value="">Loading recent traces...</option>
+    </select>
+    <button id="drawer-refresh" type="button"
+            class="px-2.5 py-1.5 rounded-xl border border-[#E0DCD0] bg-white hover:bg-[#F5F3EC] text-[11px] font-semibold text-[#1A211D] cursor-pointer">
+      Refresh
+    </button>
+  </div>
+
+  <!-- Goal Runner + Judge Preset Workflows -->
+  <div class="space-y-2">
+    <div class="flex gap-2">
+      <input id="drawer-goal" type="text"
+             placeholder="Ask autonomous agent (e.g. Rank jobs & plan next steps)..."
+             class="flex-1 min-w-0 bg-white border border-[#E0DCD0] rounded-xl px-3 py-2 text-xs text-[#1A211D] focus:outline-none focus:border-[#1D5C42]"/>
+      <button id="drawer-run" type="button"
+              class="btn-primary-pill px-4 py-2 text-xs shrink-0 cursor-pointer">
+        Run Agent
+      </button>
+    </div>
+    <div id="drawer-quick-goals" class="flex flex-wrap gap-1.5"></div>
+  </div>
+
+  <!-- Live Grounding & Citation Score Panel -->
+  <div id="drawer-grounding-box" class="hidden rounded-2xl border border-[#E5E3DA] bg-white p-3.5 space-y-2">
+    <div class="flex items-center justify-between gap-2">
+      <span class="text-[11px] font-bold uppercase tracking-wider text-[#57605A]">Zero-Hallucination Grounding</span>
+      <div class="flex items-center gap-1.5">
+        <span id="drawer-fallback-pill" class="hidden px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#FEF3C7] text-[#92400E]">FALLBACK RECOVERED</span>
+        <span id="drawer-grounding-pill" class="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#E3F2EA] text-[#164934]">--</span>
+      </div>
+    </div>
+    <div id="drawer-verified-pills" class="flex flex-wrap gap-1"></div>
+    <div id="drawer-unverified-pills" class="hidden flex flex-wrap gap-1 pt-1 border-t border-[#F4DFDF]"></div>
+  </div>
+
+  <!-- Clarification Resume Box (awaiting_input) -->
+  <div id="drawer-clarify-box" class="hidden rounded-2xl border border-[#F2C97D] bg-[#FFFBEB] p-3 space-y-2">
+    <p class="text-[11px] font-bold text-[#92400E]">Clarification Required to Continue Run</p>
+    <p id="drawer-clarify-question" class="text-xs text-[#4A3B12]"></p>
+    <div class="flex gap-2">
+      <input id="drawer-clarify-input" type="text" placeholder="Enter clarification..."
+             class="flex-1 min-w-0 bg-white border border-[#E5C97B] rounded-xl px-2.5 py-1.5 text-xs text-[#1A211D]"/>
+      <button id="drawer-clarify-send" type="button"
+              class="px-3 py-1.5 rounded-xl bg-[#92400E] text-white text-xs font-semibold cursor-pointer">
+        Reply
+      </button>
+    </div>
+  </div>
+
+  <!-- Execution Step Trace & Final Answer -->
+  <div id="drawer-trace" class="space-y-2.5 text-xs text-[#57605A]">
+    Open Agent Brain or trigger a 1-click workflow above to inspect multi-step reasoning, tool calls, verification checks, and fallback recovery.
+  </div>
+</div>

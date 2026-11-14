@@ -85,7 +85,9 @@ class OpenAILLM:
         # Prefer streaming consumption to keep connection alive via SSE heartbeats
         try:
             chunks = []
-            for delta in self.stream(system, user, json_mode=json_mode, timeout=timeout):
+            for delta in self.stream(
+                system, user, json_mode=json_mode, temperature=temperature, timeout=timeout
+            ):
                 chunks.append(delta)
             if chunks:
                 return "".join(chunks)
@@ -94,7 +96,14 @@ class OpenAILLM:
 
         return self._direct_complete(system, user, json_mode=json_mode, temperature=temperature, timeout=timeout)
 
-    def stream(self, system: str, user: str, json_mode: bool = False, timeout: float | None = None):
+    def stream(
+        self,
+        system: str,
+        user: str,
+        json_mode: bool = False,
+        temperature: float = 0.0,
+        timeout: float | None = None,
+    ):
         """Stream the completion token-by-token via the OpenAI streaming API.
 
         Handles heartbeat chunks (e.g. choices: []) gracefully to prevent socket timeouts.
@@ -106,7 +115,7 @@ class OpenAILLM:
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            "temperature": 0.0,
+            "temperature": temperature,
             "stream": True,
         }
         if timeout is not None:
@@ -126,5 +135,7 @@ class OpenAILLM:
                     yield delta
         except Exception as e:
             logger.warning("OpenAI streaming failed (%s); falling back to direct complete.", e)
-            full = self._direct_complete(system, user, json_mode=json_mode, timeout=timeout)
+            full = self._direct_complete(
+                system, user, json_mode=json_mode, temperature=temperature, timeout=timeout
+            )
             yield from _chunk_words(full)

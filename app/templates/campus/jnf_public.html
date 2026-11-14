@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JKLU Placement Cell - Recruiter Job Notification Form (JNF)</title>
+  <script src="/static/vendor/tailwindcss.js"></script>
+  <link rel="stylesheet" href="/static/vendor/fonts.css" />
+  <style>
+    body {
+      font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background-color: #F4F3EC;
+      color: #1C1E1B;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-serif-display {
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+      letter-spacing: -0.02em;
+    }
+    .mono {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-[#F4F3EC] text-[#1C1E1B] py-6 px-4 sm:py-10">
+  <div class="max-w-3xl mx-auto space-y-6">
+    <!-- Institutional Header (Public, Standalone) -->
+    <header class="bg-white rounded-[24px] border border-[#E5E3DC] shadow-sm p-5 sm:p-7 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="w-11 h-11 rounded-2xl bg-[#122019] text-[#7CE2B3] flex items-center justify-center shrink-0">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 2 4 7v10l8 5 8-5V7l-8-5Z" />
+            <path d="M12 7 8 9.5v5L12 17l4-2.5v-5L12 7Z" />
+          </svg>
+        </div>
+        <div>
+          <p class="mono text-[11px] uppercase tracking-wider font-semibold text-[#1D5C42]">JK Lakshmipat University &middot; CareerOS</p>
+          <h1 class="font-serif-display text-xl sm:text-2xl font-semibold text-[#1C1E1B]">Recruiter Job Notification Form (JNF)</h1>
+        </div>
+      </div>
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">
+        <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
+        TPO Intake Portal
+      </span>
+    </header>
+
+    <!-- Error / Validation Banner -->
+    <div id="jnf-error-banner" class="hidden rounded-2xl border border-[#F5D0C8] bg-[#FDF0ED] text-[#9E2A20] px-4 py-3 text-xs font-medium"></div>
+
+    <!-- Recruiter Intake Form -->
+    <form id="jnf-public-form" class="bg-white rounded-[24px] border border-[#E5E3DC] shadow-sm p-5 sm:p-7 space-y-6">
+      <input type="hidden" id="jnf-token" value="{{ token|default('') }}" />
+
+      <!-- JD File Upload -->
+      <div class="rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="mono text-[11px] font-bold uppercase tracking-wider text-[#4A483F]">1. Upload Job Description (Optional if filling details below)</span>
+          <span class="text-[11px] text-[#7A776E]">.pdf, .docx, .txt (max 2 MB)</span>
+        </div>
+        <label id="jnf-dropzone" for="jnf-file-input"
+               class="flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-[#C7C4B8] hover:border-[#1D5C42] rounded-2xl bg-white p-5 text-center cursor-pointer transition-colors">
+          <svg class="w-6 h-6 text-[#1D5C42]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+          </svg>
+          <p class="text-xs font-semibold text-[#1C1E1B]">Drop JD document here or click to upload</p>
+          <span id="jnf-file-name" class="hidden inline-flex items-center px-3 py-1 rounded-full text-[11px] mono font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]"></span>
+          <input id="jnf-file-input" type="file" accept=".pdf,.docx,.txt,.text,.md" class="hidden" />
+        </label>
+      </div>
+
+      <!-- Role & Compensation -->
+      <div class="space-y-3">
+        <span class="block mono text-[11px] font-bold uppercase tracking-wider text-[#4A483F]">2. Role &amp; Compensation Details</span>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+          <div class="space-y-1">
+            <label for="jnf-company" class="block font-semibold text-[#4A483F]">Company Name</label>
+            <input id="jnf-company" type="text"
+                   class="w-full px-3.5 py-2.5 border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                   placeholder="e.g. Acme Cloud Pvt Ltd" />
+          </div>
+          <div class="space-y-1">
+            <label for="jnf-role" class="block font-semibold text-[#4A483F]">Role Title</label>
+            <input id="jnf-role" type="text"
+                   class="w-full px-3.5 py-2.5 border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                   placeholder="e.g. Associate Software Engineer" />
+          </div>
+          <div class="space-y-1">
+            <label for="jnf-location" class="block font-semibold text-[#4A483F]">Location</label>
+            <input id="jnf-location" type="text"
+                   class="w-full px-3.5 py-2.5 border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                   placeholder="e.g. Bengaluru / Jaipur" />
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="space-y-1">
+              <label for="jnf-work-mode" class="block font-semibold text-[#4A483F]">Work Mode</label>
+              <select id="jnf-work-mode"
+                      class="w-full px-3 py-2.5 border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]">
+                <option value="On-site">On-site</option>
+                <option value="Hybrid">Hybrid</option>
+                <option value="Remote">Remote</option>
+              </select>
+            </div>
+            <div class="space-y-1">
+              <label for="jnf-exp-level" class="block font-semibold text-[#4A483F]">Offer Type</label>
+              <select id="jnf-exp-level"
+                      class="w-full px-3 py-2.5 border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]">
+                <option value="Fresher">Full-Time (Fresher)</option>
+                <option value="Internship">Internship</option>
+              </select>
+            </div>
+          </div>
+          <div class="space-y-1">
+            <label for="jnf-ctc-min" class="block font-semibold text-[#4A483F]">CTC Min (LPA)</label>
+            <input id="jnf-ctc-min" type="number" step="0.1" min="0"
+                   class="w-full px-3.5 py-2.5 border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                   placeholder="e.g. 9.0" />
+          </div>
+          <div class="space-y-1">
+            <label for="jnf-ctc-max" class="block font-semibold text-[#4A483F]">CTC Max (LPA)</label>
+            <input id="jnf-ctc-max" type="number" step="0.1" min="0"
+                   class="w-full px-3.5 py-2.5 border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                   placeholder="e.g. 12.0" />
+          </div>
+          <div class="space-y-1">
+            <label for="jnf-stipend" class="block font-semibold text-[#4A483F]">Monthly Stipend (INR, Internship)</label>
+            <input id="jnf-stipend" type="number" step="500" min="0"
+                   class="w-full px-3.5 py-2.5 border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                   placeholder="e.g. 35000" />
+          </div>
+          <div class="flex items-end">
+            <label class="w-full inline-flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl border border-[#D5D2C6] bg-[#FAF9F5] cursor-pointer">
+              <span id="jnf-disclosed-lbl" class="font-semibold text-[#1C1E1B]">Salary Disclosed</span>
+              <input id="jnf-salary-disclosed" type="checkbox" checked class="rounded border-[#C7C4B8] text-[#1D5C42] focus:ring-[#1D5C42]" />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Eligibility Criteria -->
+      <div class="space-y-3">
+        <span class="block mono text-[11px] font-bold uppercase tracking-wider text-[#4A483F]">3. Eligibility &amp; Branches</span>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs">
+          <div class="space-y-1">
+            <label for="jnf-min-cgpa" class="block font-semibold text-[#4A483F]">Minimum CGPA</label>
+            <input id="jnf-min-cgpa" type="number" step="0.1" min="0" max="10"
+                   class="w-full px-3.5 py-2.5 border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                   placeholder="Leave empty for none" />
+          </div>
+          <div class="space-y-1">
+            <label for="jnf-max-backlogs" class="block font-semibold text-[#4A483F]">Max Active Backlogs</label>
+            <input id="jnf-max-backlogs" type="number" step="1" min="0"
+                   class="w-full px-3.5 py-2.5 border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                   placeholder="e.g. 0" />
+          </div>
+          <div class="space-y-1">
+            <label for="jnf-grad-year" class="block font-semibold text-[#4A483F]">Graduation Batch Year</label>
+            <input id="jnf-grad-year" type="number" step="1" min="2024" max="2035" value="2027"
+                   class="w-full px-3.5 py-2.5 border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]" />
+          </div>
+        </div>
+        <div class="space-y-1.5">
+          <span class="block text-xs font-semibold text-[#4A483F]">Eligible Branches (leave unselected for All Branches)</span>
+          <div id="jnf-branches" class="flex flex-wrap gap-2">
+            {% for br in ["CSE", "IT", "ECE", "EE", "ME", "CE", "AI&DS", "CHE", "BT"] %}
+            <button type="button" data-branch="{{ br }}"
+                    class="jnf-branch-chip min-h-[38px] px-3.5 py-1.5 rounded-full text-xs font-semibold border border-[#D5D2C6] bg-white text-[#4A483F] hover:border-[#1D5C42] transition-colors cursor-pointer">
+              {{ br }}
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Raw JD Text -->
+      <div class="space-y-1.5 text-xs">
+        <label for="jnf-raw-text" class="block mono text-[11px] font-bold uppercase tracking-wider text-[#4A483F]">4. Job Description &amp; Required Skills Text</label>
+        <textarea id="jnf-raw-text" rows="5"
+                  class="w-full px-3.5 py-2.5 border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] mono leading-relaxed"
+                  placeholder="Paste responsibilities, required technical skills, interview process, and bond/location notes..."></textarea>
+      </div>
+
+      <!-- Submit -->
+      <div class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#ECEAE2]">
+        <p class="text-[11px] text-[#7A776E]">All submissions require Training &amp; Placement Officer (TPO) verification before publishing to students.</p>
+        <button id="jnf-submit-btn" type="submit"
+                class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#1D5C42] hover:bg-[#154531] text-white text-xs font-semibold transition-colors cursor-pointer min-h-[44px]">
+          <span>Submit JNF for TPO Review</span>
+        </button>
+      </div>
+    </form>
+
+    <!-- Success Screen -->
+    <div id="jnf-success-card" class="hidden bg-white rounded-[24px] border border-[#C8E4D5] shadow-sm p-7 sm:p-10 text-center space-y-4">
+      <div class="w-14 h-14 rounded-2xl bg-[#E3F2EA] text-[#1D5C42] mx-auto flex items-center justify-center">
+        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+      </div>
+      <h2 class="font-serif-display text-2xl font-semibold text-[#1C1E1B]">Submitted for TPO Review</h2>
+      <p class="text-sm text-[#5C5A52] max-w-md mx-auto">Your Job Notification Form has been parsed, policy-validated, and queued for Training &amp; Placement Officer approval.</p>
+      <div class="inline-flex flex-wrap items-center justify-center gap-2 px-4 py-2 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] text-xs mono text-[#1C1E1B]">
+        <span>Trace ID:</span>
+        <strong id="jnf-success-trace" class="text-[#1D5C42]">-</strong>
+      </div>
+      <p id="jnf-success-meta" class="text-xs text-[#7A776E]"></p>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    "use strict";
+    var selectedBranches = [];
+    var selectedFile = null;
+
+    function qs(id) { return document.getElementById(id); }
+
+    var tokenEl = qs("jnf-token");
+    if (tokenEl && !tokenEl.value) {
+      var segs = window.location.pathname.split("/").filter(Boolean);
+      if (segs.length >= 2 && segs[0] === "jnf") {
+        tokenEl.value = segs[1];
+      }
+    }
+
+    var fileInput = qs("jnf-file-input");
+    var fileLabel = qs("jnf-file-name");
+    var dropzone = qs("jnf-dropzone");
+    function setFile(f) {
+      selectedFile = f || null;
+      if (fileLabel) {
+        if (f) {
+          fileLabel.textContent = f.name + " (" + Math.max(1, Math.round(f.size / 1024)) + " KB)";
+          fileLabel.classList.remove("hidden");
+        } else {
+          fileLabel.classList.add("hidden");
+        }
+      }
+    }
+    if (fileInput) {
+      fileInput.addEventListener("change", function () {
+        setFile(fileInput.files && fileInput.files[0]);
+      });
+    }
+    if (dropzone) {
+      dropzone.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        dropzone.classList.add("border-[#1D5C42]", "bg-[#E3F2EA]/40");
+      });
+      dropzone.addEventListener("dragleave", function () {
+        dropzone.classList.remove("border-[#1D5C42]", "bg-[#E3F2EA]/40");
+      });
+      dropzone.addEventListener("drop", function (e) {
+        e.preventDefault();
+        dropzone.classList.remove("border-[#1D5C42]", "bg-[#E3F2EA]/40");
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+          setFile(e.dataTransfer.files[0]);
+        }
+      });
+    }
+
+    var discCb = qs("jnf-salary-disclosed");
+    var discLbl = qs("jnf-disclosed-lbl");
+    if (discCb && discLbl) {
+      discCb.addEventListener("change", function () {
+        discLbl.textContent = discCb.checked ? "Salary Disclosed" : "Undisclosed";
+      });
+    }
+
+    document.querySelectorAll(".jnf-branch-chip").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var br = btn.getAttribute("data-branch");
+        if (selectedBranches.indexOf(br) >= 0) {
+          selectedBranches = selectedBranches.filter(function (x) { return x !== br; });
+          btn.className = "jnf-branch-chip min-h-[38px] px-3.5 py-1.5 rounded-full text-xs font-semibold border border-[#D5D2C6] bg-white text-[#4A483F] hover:border-[#1D5C42] transition-colors cursor-pointer";
+        } else {
+          selectedBranches.push(br);
+          btn.className = "jnf-branch-chip min-h-[38px] px-3.5 py-1.5 rounded-full text-xs font-semibold border border-[#1D5C42] bg-[#1D5C42] text-white transition-colors cursor-pointer";
+        }
+      });
+    });
+
+    var form = qs("jnf-public-form");
+    var errBanner = qs("jnf-error-banner");
+    var submitBtn = qs("jnf-submit-btn");
+
+    if (form) {
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        if (errBanner) errBanner.classList.add("hidden");
+
+        var rawText = (qs("jnf-raw-text").value || "").trim();
+        var company = (qs("jnf-company").value || "").trim();
+        var roleTitle = (qs("jnf-role").value || "").trim();
+        if (!selectedFile && !rawText && (!company || !roleTitle)) {
+          if (errBanner) {
+            errBanner.textContent = "Please upload a JD file, paste a job description, or fill Company and Role Title.";
+            errBanner.classList.remove("hidden");
+          }
+          return;
+        }
+
+        var fd = new FormData();
+        fd.append("token", qs("jnf-token").value || "");
+        if (selectedFile) fd.append("file", selectedFile);
+        if (company) fd.append("company", company);
+        if (roleTitle) fd.append("role_title", roleTitle);
+        if (qs("jnf-location").value.trim()) fd.append("location", qs("jnf-location").value.trim());
+        fd.append("work_mode", qs("jnf-work-mode").value);
+        fd.append("experience_level", qs("jnf-exp-level").value);
+        fd.append("salary_disclosed", qs("jnf-salary-disclosed").checked ? "true" : "false");
+        if (qs("jnf-ctc-min").value !== "") fd.append("ctc_lpa_min", qs("jnf-ctc-min").value);
+        if (qs("jnf-ctc-max").value !== "") fd.append("ctc_lpa_max", qs("jnf-ctc-max").value);
+        if (qs("jnf-stipend").value !== "") fd.append("stipend_inr_per_month", qs("jnf-stipend").value);
+        if (qs("jnf-min-cgpa").value !== "") fd.append("min_cgpa", qs("jnf-min-cgpa").value);
+        if (qs("jnf-max-backlogs").value !== "") fd.append("max_active_backlogs", qs("jnf-max-backlogs").value);
+        if (qs("jnf-grad-year").value !== "") fd.append("graduation_year", qs("jnf-grad-year").value);
+        fd.append("allowed_branches", JSON.stringify(selectedBranches));
+        if (rawText) fd.append("raw_jd_text", rawText);
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.classList.add("opacity-60", "cursor-wait");
+        }
+
+        fetch("/api/campus-drives/public-jnf", {
+          method: "POST",
+          body: fd
+        })
+          .then(function (r) {
+            return r.json().then(function (j) {
+              if (!r.ok) throw new Error((j && (j.detail || JSON.stringify(j))) || ("HTTP " + r.status));
+              return j;
+            });
+          })
+          .then(function (res) {
+            form.classList.add("hidden");
+            var successCard = qs("jnf-success-card");
+            if (successCard) successCard.classList.remove("hidden");
+            if (qs("jnf-success-trace")) {
+              qs("jnf-success-trace").textContent = res.trace_id || res.id || "recorded";
+            }
+            if (qs("jnf-success-meta")) {
+              var parts = [];
+              if (res.company) parts.push(res.company);
+              if (res.role_title) parts.push(res.role_title);
+              if (res.approval_status) parts.push("Status: " + res.approval_status);
+              qs("jnf-success-meta").textContent = parts.join(" | ");
+            }
+          })
+          .catch(function (err) {
+            if (errBanner) {
+              errBanner.textContent = "Submission failed: " + err.message;
+              errBanner.classList.remove("hidden");
+            }
+          })
+          .finally(function () {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.classList.remove("opacity-60", "cursor-wait");
+            }
+          });
+      });
+    }
+  })();
+  </script>
+</body>
+</html>

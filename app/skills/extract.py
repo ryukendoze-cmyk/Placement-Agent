@@ -25,16 +25,153 @@ compatibility.
 """
 from __future__ import annotations
 
+import copy
+import hashlib
+import inspect
 import json
 import logging
 import re
+import weakref
+from collections import OrderedDict
 
+from ..security.guardrails import sanitize_untrusted_text
 from ..taxonomy.branches import normalize_branch
 from ..taxonomy.taxonomy import Skill, Taxonomy
 
 logger = logging.getLogger(__name__)
 
 BOUND = r"(?<![a-z0-9]){alias}(?![a-z0-9])"
+
+_NEGATIVE_OR_FUTURE_RE = re.compile(
+    r"\b(?:"
+    r"did\s+not\s+(?:use|know|work\s+with|have)|didn'?t\s+(?:use|know|work)|"
+    r"have\s+not\s+used|haven'?t\s+(?:used|touched|worked\s+with)|never\s+(?:used|worked\s+with)|"
+    r"not\s+used|didn'?t\s+touch|"
+    r"no\s+(?:experience|prior\s+experience|hands[- ]on|exposure|knowledge)\s+(?:with|in|of)?|"
+    r"not\s+(?:familiar|experienced|proficient|fluent)\s+(?:with|in)|"
+    r"without\s+(?:using|any)|lack(?:s|ing)?\s+(?:experience\s+(?:with|in)\s+)?|"
+    r"(?:coursework|topics?|skills?)\s+excluded|excluded\s+(?:from|coursework)|"
+    r"familiarity\s+hoped|hoped\s+for|"
+    r"(?:interested|keen)\s+in(?:\s+(?:learning|exploring|working\s+with|about))?|"
+    r"(?:interested|keen|eager|hoping|planning|willing|looking|aiming|would\s+like)\s+(?:in\s+|to\s+)?(?:learn|explore|study|pick\s+up|work\s+with)(?:ing)?|"
+    r"want\s+to\s+(?:explore|learn|study)|plan\s+to\s+learn|hope\s+to\s+learn|"
+    r"yet\s+to\s+(?:learn|explore|use)|"
+    r"aspiring\s+to\s+learn|currently\s+learning\s+(?:about\s+|the\s+basics\s+of\s+)?"
+    r")\b",
+    re.IGNORECASE,
+)
+_POSITIVE_RESET_RE = re.compile(
+    r"\b(?:used|using|built|developed|implemented|deployed|shipped|architected|"
+    r"worked\s+with|working\s+with|experienced\s+in|proficient\s+in|skilled\s+in|"
+    r"skills?\s*:|tools?\s*:|tech\s+stack\s*:)\b",
+    re.IGNORECASE,
+)
+_AMBIGUOUS_GO_PHRASES = (
+    "go-to-market",
+    "go to market",
+    "ready to go",
+    "on the go",
+    "on-the-go",
+    "way to go",
+    "go beyond",
+    "go through",
+    "go into",
+    "go back",
+    "go ahead",
+    "let's go",
+    "lets go",
+)
+
+
+def _alias_pattern(alias: str) -> re.Pattern[str]:
+    low = alias.lower().strip()
+    if low == "c":
+        return re.compile(
+            r"(?<!objective-)(?<!objective )(?<![a-z0-9+#&.])c"
+            r"(?!\+\+|#|\s*[-/]\s*(?:suite|level|section))(?![a-z0-9+#.])",
+            re.IGNORECASE,
+        )
+    if low == "c++":
+        return re.compile(r"(?<![a-z0-9+#.])c\+\+(?:\d{2})?(?![a-z_+#])", re.IGNORECASE)
+    if low == "c#":
+        return re.compile(r"(?<![a-z0-9+#.])c#(?![a-z0-9+#])", re.IGNORECASE)
+    if low in (".net", "dotnet"):
+        return re.compile(r"(?:(?<![a-z0-9_])|(?<=asp))\.net(?![a-z0-9])|(?<![a-z0-9])dotnet(?![a-z0-9])", re.IGNORECASE)
+    if low in ("node.js", "nodejs", "node js"):
+        return re.compile(r"(?<![a-z0-9])node(?:\.|\s+|)js(?![a-z0-9])", re.IGNORECASE)
+    if low in ("next.js", "nextjs", "next js"):
+        return re.compile(r"(?<![a-z0-9])next(?:\.|\s+|)js(?![a-z0-9])", re.IGNORECASE)
+    if low in ("vue.js", "vuejs"):
+        return re.compile(r"(?<![a-z0-9])vue(?:\.|\s+|)js(?![a-z0-9])", re.IGNORECASE)
+    if low in ("ci/cd", "ci-cd", "cicd", "ci cd"):
+        return re.compile(r"(?<![a-z0-9])ci(?:\s*/\s*|\s*-\s*|\s*)cd(?![a-z0-9])", re.IGNORECASE)
+    if low == "r":
+        return re.compile(r"(?<![a-z0-9&/.-])r(?![a-z0-9&/.-])", re.IGNORECASE)
+    if low == "go":
+        return re.compile(r"(?<![a-z0-9-])go(?![a-z0-9-])", re.IGNORECASE)
+    if low == "rust":
+        return re.compile(r"(?<![a-z0-9-])rust(?!-(?:free|proof))(?![a-z0-9])", re.IGNORECASE)
+    if any(sep in low for sep in (" ", "-", "/", ".")):
+        parts = [re.escape(p) for p in re.split(r"[\s/.-]+", low) if p]
+        if len(parts) >= 2:
+            sep_pat = r"[\s./-]+"
+            return re.compile(rf"(?<![a-z0-9]){sep_pat.join(parts)}(?![a-z0-9])", re.IGNORECASE)
+    return re.compile(BOUND.format(alias=re.escape(low)), re.IGNORECASE)
+
+
+def _match_is_positive(line: str, alias: str, m: re.Match[str]) -> bool:
+    low_alias = alias.lower()
+    low_line = line.lower()
+    matched_txt = line[m.start() : m.end()]
+
+    if low_alias == "r":
+        # Reject R&D / R/W contexts or casual lowercase 'r' outside explicit skills lists
+        window = low_line[max(0, m.start() - 6) : min(len(low_line), m.end() + 6)]
+        if "&" in window or "r&d" in window or "r & d" in window:
+            return False
+        if matched_txt != "R" and not re.search(
+            r"\b(?:skills?|tools?|languages?|r\s+(?:programming|language|studio)|ggplot|dplyr|tidyverse)\b",
+            low_line,
+        ):
+            return False
+
+    if low_alias == "go":
+        win = low_line[max(0, m.start() - 16) : min(len(low_line), m.end() + 16)]
+        if any(phrase in win for phrase in _AMBIGUOUS_GO_PHRASES):
+            return False
+        if matched_txt != "Go" and not re.search(
+            r"\b(?:skills?|languages?|golang|goroutine|gin|fiber|backend|microservices?)\b",
+            low_line,
+        ):
+            return False
+
+    if low_alias == "c":
+        before = low_line[max(0, m.start() - 12) : m.start()]
+        if re.search(r"\b(?:option|section|plan|tier|part|vitamin|grade)\s+$", before):
+            return False
+
+    # Negation & future-learning clause check (look back to last sentence boundary)
+    clause_start = max(
+        low_line.rfind(".", 0, m.start()),
+        low_line.rfind(";", 0, m.start()),
+        low_line.rfind("!", 0, m.start()),
+    ) + 1
+    prefix = low_line[clause_start : m.start()]
+    neg_matches = list(_NEGATIVE_OR_FUTURE_RE.finditer(prefix))
+    if neg_matches:
+        last_neg_end = neg_matches[-1].end()
+        tail_after_neg = prefix[last_neg_end:]
+        if not _POSITIVE_RESET_RE.search(tail_after_neg):
+            return False
+    return True
+
+
+def _line_matches_alias(line: str, alias: str) -> bool:
+    pat = _alias_pattern(alias)
+    for m in pat.finditer(line):
+        if _match_is_positive(line, alias, m):
+            return True
+    return False
 
 LEVELS = ("basic", "intermediate", "advanced")
 
@@ -43,13 +180,13 @@ EXTRACT_RESUME_SYSTEM = (
     "You are an expert technical recruiter and AI resume parser. Analyze the candidate's "
     "resume dynamically and extract:\n"
     "1. Candidate profile metadata (name, branch, year, gpa, summary) if present in the text.\n"
-    "For candidate profile 'branch', return standard canonical branch codes (e.g. 'CSE', 'IT', 'ECE', 'EE', 'ME', 'CE', or 'AI&DS') whenever applicable.\n"
+    "For candidate profile 'branch', return standard canonical branch codes (e.g. 'CSE', 'AI&DS', 'ECE', 'IT', 'EE', 'ME', 'CE', 'CHE', or 'BT') whenever applicable.\n"
     "2. Every technical and soft skill from the provided taxonomy that the candidate demonstrates.\n"
-    "For each skill, determine proficiency level ('basic', 'intermediate', or 'advanced') "
-    "dynamically based on contextual depth in the resume:\n"
-    "- 'advanced': production internships/work experience, complex end-to-end systems, architectural ownership, quantified impact metrics, or deep multi-project mastery.\n"
-    "- 'intermediate': applied hands-on project implementation, practical framework/tool usage, or multiple distinct applied contexts.\n"
-    "- 'basic': listed only in a skills section, introductory coursework, or brief single mention without applied project depth.\n"
+    "Apply this strict calibration rubric consistently for each skill's proficiency level ('basic', 'intermediate', or 'advanced'):\n"
+    "- 'advanced': production internships or full-time work experience, complex end-to-end architecture ownership, quantified impact metrics (latency/throughput/users/%), or deep evidence across >=3 distinct projects/roles.\n"
+    "- 'intermediate': applied hands-on project implementation, practical framework/tool usage with concrete deliverables, certifications with project work, or >=2 applied mentions.\n"
+    "- 'basic': listed only in a Skills/Tools list, introductory coursework without project execution, or a single flat mention without applied depth.\n"
+    "Do NOT extract negated, excluded, or aspirational ('willing/interested to learn') skills. "
     "You MUST only return skills that exist in the provided taxonomy and are grounded in the resume text.\n"
     "Respond ONLY with valid JSON matching this schema:\n"
     '{"profile": {"name": str, "branch": str, "year": int, "gpa": float, "summary": str}, '
@@ -57,6 +194,29 @@ EXTRACT_RESUME_SYSTEM = (
 )
 
 # --- contextual (deterministic) analysis primitives -------------------------
+
+_SECTION_RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("summary", re.compile(r"^\s*(?:summary|executive\s+summary|objective|profile|about(?:\s+me)?)\s*(?:[:\-]|$)", re.I)),
+    ("skills", re.compile(r"^\s*(?:technical\s+skills?|core\s+skills?|skills?|technologies|tech\s+stack|tools|competencies)\s*(?:[:\-]|$)", re.I)),
+    ("experience", re.compile(r"^\s*(?:work\s+experience|internship\s+experience|professional\s+experience|experience|employment|internships?)\s*(?:[:\-]|$)", re.I)),
+    ("projects", re.compile(r"^\s*(?:key\s+projects?|academic\s+projects?|personal\s+projects?|projects?|capstone)\s*(?:[:\-]|$)", re.I)),
+    ("coursework", re.compile(r"^\s*(?:relevant\s+coursework|coursework|courses|subjects)\s*(?:[:\-]|$)", re.I)),
+    ("certifications", re.compile(r"^\s*(?:certifications?|certificates?|licenses?|achievements?|awards?)\s*(?:[:\-]|$)", re.I)),
+    ("education", re.compile(r"^\s*(?:education|academics?|academic\s+background)\s*(?:[:\-]|$)", re.I)),
+)
+_DURATION_RE = re.compile(
+    r"\b(?:\d+\+?\s*(?:years?|yrs?|months?|mos?)|"
+    r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+20\d{2}\s*[-–to]+\s*(?:present|current|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+20\d{2})|"
+    r"20\d{2}\s*[-–]\s*(?:20\d{2}|present|current))\b",
+    re.I,
+)
+_COURSEWORK_ONLY_HINT = re.compile(r"\b(coursework|curriculum|syllabus|introductory|beginner)\b", re.I)
+
+_EXTRACTION_CACHE: OrderedDict[tuple, dict] = OrderedDict()
+_INSTANCE_EXTRACTION_CACHE: weakref.WeakKeyDictionary[object, OrderedDict[tuple[str, str], dict]] = (
+    weakref.WeakKeyDictionary()
+)
+_EXTRACTION_CACHE_MAX = 256
 
 _METRIC_RE = re.compile(
     r"\d+(?:\.\d+)?\s*(?:%|percent|ms|s\b|k\b|m\b|x\b|requests?|users?|customers?|rows?|"
@@ -142,26 +302,29 @@ def _alias_variants(skill: Skill, taxonomy: Taxonomy) -> list[str]:
 
 
 def _grounded(skill: Skill, text: str, evidence: list[str], taxonomy: Taxonomy) -> bool:
-    """True when the skill (or one of its aliases) appears in ``text`` OR at
-    least one non-empty evidence snippet is a substring of ``text``."""
+    """True when the skill (or one of its aliases) appears positively in ``text`` OR at
+    least one non-empty positive evidence line grounds it."""
+    lines = text.splitlines()
+    for ln in lines:
+        for variant in _alias_variants(skill, taxonomy):
+            if _line_matches_alias(ln, variant):
+                return True
     low_text = text.lower()
-    for variant in _alias_variants(skill, taxonomy):
-        if re.search(BOUND.format(alias=re.escape(variant)), low_text):
-            return True
     for snippet in evidence:
-        snippet = str(snippet).strip().lower()
-        if snippet and snippet in low_text:
+        snippet_clean = str(snippet).strip()
+        if not snippet_clean or snippet_clean.lower() not in low_text:
+            continue
+        if any(_line_matches_alias(snippet_clean, v) for v in _alias_variants(skill, taxonomy)):
             return True
     return False
 
 
 def _skill_lines(skill: Skill, text: str, taxonomy: Taxonomy) -> list[str]:
-    """Resume lines in which this skill's name/id/aliases appear (word-bounded)."""
+    """Resume lines in which this skill's name/id/aliases appear positively (word-bounded)."""
     out: list[str] = []
     for line in text.splitlines():
-        low = line.lower()
         for variant in _alias_variants(skill, taxonomy):
-            if re.search(BOUND.format(alias=re.escape(variant)), low):
+            if _line_matches_alias(line, variant):
                 stripped = line.strip()
                 if stripped and stripped not in out:
                     out.append(stripped)
@@ -180,18 +343,48 @@ def _leading_verb(line: str) -> str:
     return ""
 
 
-def _contextual_level(lines: list[str]) -> str:
+def _parse_sections(text: str) -> list[tuple[str, str]]:
+    """Tag each non-empty resume line with its active section name."""
+    tagged: list[tuple[str, str]] = []
+    current = "general"
+    for raw in (text or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        matched_section = None
+        for sec_name, pat in _SECTION_RULES:
+            if pat.match(line):
+                matched_section = sec_name
+                break
+        if matched_section:
+            current = matched_section
+            tagged.append((current, line))
+        else:
+            tagged.append((current, line))
+    return tagged
+
+
+def _line_sections_map(text: str) -> dict[str, str]:
+    """Map stripped resume line -> detected section name."""
+    out: dict[str, str] = {}
+    for sec, line in _parse_sections(text):
+        out.setdefault(line, sec)
+    return out
+
+
+def _contextual_level(lines: list[str], *, sections: dict[str, str] | None = None) -> str:
     """Deterministic proficiency assessment from a skill's evidence lines.
 
-    ``advanced``: quantified impact or strong engineering verbs / production or
-    experience context, or >=3 distinct evidence lines.
-    ``intermediate``: applied project usage or >=2 distinct evidence lines.
-    ``basic``: a single flat mention (skills list, coursework, brief note).
+    Combines section weight, concrete action verbs, duration/years signals,
+    quantified impact metrics, and multi-project evidence.
     """
     if not lines:
         return "basic"
     joined = " ".join(lines).lower()
+    sec_map = sections or {}
+    line_secs = [sec_map.get(ln.strip(), "general") for ln in lines]
     metric_hits = sum(1 for ln in lines if _line_has_metric(ln))
+    duration_hits = sum(1 for ln in lines if _DURATION_RE.search(ln))
     strong_verb_hits = sum(
         1 for ln in lines
         if _leading_verb(ln) in _STRONG_VERBS
@@ -202,26 +395,66 @@ def _contextual_level(lines: list[str]) -> str:
         if _leading_verb(ln) in _APPLIED_VERBS
         or any(v in ln.lower() for v in _APPLIED_VERBS)
     )
-    experience_ctx = bool(_EXPERIENCE_HINT.search(joined))
-    applied_ctx = experience_ctx or bool(_PROJECT_HINT.search(joined))
-    flat_list_only = all(_SKILLS_SECTION_HINT.search(ln) for ln in lines)
+    experience_ctx = bool(_EXPERIENCE_HINT.search(joined)) or ("experience" in line_secs)
+    project_ctx = bool(_PROJECT_HINT.search(joined)) or ("projects" in line_secs)
+    applied_ctx = experience_ctx or project_ctx or ("certifications" in line_secs)
+    flat_list_only = all(
+        _SKILLS_SECTION_HINT.search(ln) or sec_map.get(ln.strip()) in ("skills", "coursework", "education")
+        for ln in lines
+    ) and not (applied_hits or strong_verb_hits or metric_hits)
 
-    # >=3 distinct evidence lines means the skill shows up repeatedly across
-    # sections (experience/projects/achievements) - treat as deep, multi-context
-    # mastery even when the lines themselves are not verb-rich.
+    # Strong evidence: production/experience + metrics or strong verbs or duration,
+    # or >=3 distinct non-flat project/experience lines.
     if metric_hits >= 1 and (applied_ctx or strong_verb_hits >= 1):
         return "advanced"
-    if strong_verb_hits >= 1 and (experience_ctx or metric_hits >= 1):
+    if strong_verb_hits >= 1 and (experience_ctx or metric_hits >= 1 or duration_hits >= 1):
+        return "advanced"
+    if experience_ctx and duration_hits >= 1 and (applied_hits >= 1 or len(lines) >= 2):
         return "advanced"
     if len(lines) >= 3 and not flat_list_only:
         return "advanced"
     if metric_hits >= 1 or strong_verb_hits >= 1:
         return "intermediate"
-    if applied_ctx or applied_hits >= 1 or strong_verb_hits >= 1:
+    if applied_ctx or applied_hits >= 1 or duration_hits >= 1:
         return "intermediate"
-    if len(lines) >= 2:
+    if len(lines) >= 2 and not all(_COURSEWORK_ONLY_HINT.search(ln) for ln in lines):
         return "intermediate"
     return "basic"
+
+
+_LEVEL_RANK = {"basic": 0, "intermediate": 1, "advanced": 2}
+
+
+def _reconcile_level(
+    llm_level: str,
+    ctx_level: str,
+    lines: list[str],
+    mentions: int = 1,
+) -> str:
+    """Reconcile an LLM-assigned level with evidence-anchored contextual signals."""
+    ctx_norm = _normalize_level(ctx_level, default="basic")
+    llm_norm = _normalize_level(llm_level, default="")
+    if not llm_norm:
+        return ctx_norm
+    if not lines:
+        return llm_norm
+
+    flat_list_only = all(_SKILLS_SECTION_HINT.search(ln) for ln in lines) and not any(
+        _line_has_metric(ln) or any(v in ln.lower() for v in (_STRONG_VERBS | _APPLIED_VERBS))
+        for ln in lines
+    )
+    if flat_list_only and len(lines) <= 1 and mentions <= 1:
+        return "basic"
+
+    diff = abs(_LEVEL_RANK[llm_norm] - _LEVEL_RANK[ctx_norm])
+    if diff == 0:
+        return ctx_norm
+    if diff >= 2:
+        # Never allow 2-tier drift (basic <-> advanced) away from actual resume evidence
+        return ctx_norm
+    if ctx_norm == "basic" and flat_list_only:
+        return "basic"
+    return llm_norm
 
 
 def _normalize_level(value, default: str = "basic") -> str:
@@ -261,8 +494,8 @@ def _normalize_mentions(value, evidence: list[str], lines: list[str]) -> int:
 
 def _taxonomy_payload(taxonomy: Taxonomy) -> list[dict]:
     return [
-        {"id": s.id, "name": s.name, "aliases": list(s.aliases)}
-        for s in taxonomy.all()
+        {"id": s.id, "name": s.name, "aliases": sorted(set(s.aliases))}
+        for s in sorted(taxonomy.all(), key=lambda item: item.id)
     ]
 
 
@@ -291,11 +524,75 @@ def _normalize_profile(value) -> dict:
     return profile
 
 
+def _extract_contextual_branch(text: str) -> str:
+    """Detect and canonicalize a branch mention from resume text."""
+    # 1. Explicit Branch / Department label or degree-prefixed branch
+    explicit = re.search(
+        r"(?:\b(?:branch|department|dept|discipline|specialization|major)\s*[:\-]\s*|"
+        r"\b(?:b\.?tech|m\.?tech|b\.?e\.?|m\.?e\.?|b\.?sc|m\.?sc)\s+(?:in\s+)?)"
+        r"([A-Za-z][A-Za-z0-9\s&/.\-]+?(?:\([^)]+\))?)(?=\s*(?:[,|\n;]|year|cgpa|gpa|batch|class|20\d{2}|$))",
+        text,
+        re.I,
+    )
+    if explicit:
+        cand = explicit.group(1).strip()
+        norm = normalize_branch(cand)
+        if norm:
+            return norm
+
+    # 2. Parenthetical specializations & full engineering branch names (case-insensitive)
+    phrase_match = re.search(
+        r"\b(CSE\s*\([^)]+\)|ECE\s*\([^)]+\)|AI\s*&\s*DS|AI-DS|AIDS|AIML|"
+        r"computer\s+science(?:\s*(?:&|and)\s*engineering)?|computer\s+engineering|"
+        r"artificial\s+intelligence(?:\s*(?:&|and)\s*(?:data\s+science|machine\s+learning))?|"
+        r"information\s+technology|"
+        r"electronics(?:\s*(?:&|and)\s*communication(?:\s+engineering)?)?|"
+        r"electrical(?:\s*(?:&|and)\s*(?:electronics|engineering))?|"
+        r"mechanical(?:\s+engineering)?|"
+        r"civil(?:\s+engineering)?|"
+        r"chemical(?:\s+engineering)?|"
+        r"biotech(?:nology)?)\b",
+        text,
+        re.I,
+    )
+    if phrase_match:
+        norm = normalize_branch(phrase_match.group(1).strip())
+        if norm:
+            return norm
+
+    # 3. Standalone uppercase branch abbreviations (case-sensitive to avoid English 'it'/'me')
+    acro_match = re.search(r"\b(CSE|CS|AI&DS|AIDS|AIML|ECE|EEE|EE|IT|ME|CE|CHE|CH|BT)\b", text)
+    if acro_match:
+        norm = normalize_branch(acro_match.group(1).strip())
+        if norm:
+            return norm
+    return ""
+
+
+def _extract_contextual_summary(text: str) -> str:
+    """Extract concise summary text from a Summary / Objective section if present."""
+    parts: list[str] = []
+    for sec, line in _parse_sections(text):
+        if sec != "summary":
+            continue
+        cleaned = re.sub(
+            r"^(?:summary|executive\s+summary|objective|profile|about(?:\s+me)?)\s*[:\-]?\s*",
+            "",
+            line,
+            flags=re.I,
+        ).strip()
+        if cleaned:
+            parts.append(cleaned)
+        if len(parts) >= 3:
+            break
+    return " ".join(parts)[:400].strip()
+
+
 def _contextual_profile(text: str) -> dict:
     """Lightweight deterministic profile guess used by the fallback path.
 
-    Extracts a GPA, a branch (CSE/ECE/IT/AI-DS/... style token), a graduation
-    year and a leading candidate name when the resume header exposes one.
+    Extracts a GPA, a canonical branch (CSE/AI&DS/ECE/IT/...), a graduation
+    year, a summary section, and a leading candidate name.
     """
     profile = _empty_profile()
     if not text.strip():
@@ -310,15 +607,8 @@ def _contextual_profile(text: str) -> dict:
         except ValueError:
             profile["gpa"] = None
 
-    branch_match = re.search(
-        r"\b(CSE|CS|IT|ECE|EEE|ME|CE|AIML|AI|DS|AI&DS|AIDS|BT|CH)\b"
-        r"|(computer science(?:\s+&\s*engineering)?|information technology|"
-        r"artificial intelligence(?:\s*&\s*data science)?|electronics(?:\s*&\s*communication)?)",
-        text, re.I,
-    )
-    if branch_match:
-        matched_branch = (branch_match.group(1) or branch_match.group(2) or "").strip()
-        profile["branch"] = normalize_branch(matched_branch)
+    profile["branch"] = _extract_contextual_branch(text)
+    profile["summary"] = _extract_contextual_summary(text)
 
     year_match = re.search(
         r"\b(?:graduat|batch|class of|class of \d{4}|b\.?tech.*?)(?:e?d)?\s*(?:year)?\s*[:\-]?\s*(20\d{2}|\d)\b",
@@ -385,19 +675,98 @@ def _contextual_profile(text: str) -> dict:
     return profile
 
 
+def _cache_parts(clean_text: str, taxonomy: Taxonomy, llm: object) -> tuple[bool, tuple]:
+    text_hash = hashlib.sha256(clean_text.encode("utf-8")).hexdigest()
+    tax_sig = hashlib.sha256(
+        ",".join(sorted(s.id for s in taxonomy.all())).encode("utf-8")
+    ).hexdigest()[:16]
+    mod = getattr(type(llm), "__module__", "")
+    is_real_provider = mod.startswith("app.llm.") and type(llm).__name__ != "MockLLM"
+    if is_real_provider:
+        llm_sig = (
+            mod,
+            type(llm).__name__,
+            getattr(llm, "model", ""),
+            getattr(llm, "model_id", ""),
+        )
+        return True, (text_hash, tax_sig, llm_sig)
+    return False, (text_hash, tax_sig)
+
+
+def _cache_get(clean_text: str, taxonomy: Taxonomy, llm: object) -> dict | None:
+    is_real, key = _cache_parts(clean_text, taxonomy, llm)
+    if is_real:
+        cached = _EXTRACTION_CACHE.get(key)
+        if cached is not None:
+            _EXTRACTION_CACHE.move_to_end(key)
+            return copy.deepcopy(cached)
+        return None
+    try:
+        bucket = _INSTANCE_EXTRACTION_CACHE.get(llm)
+    except TypeError:
+        return None
+    if bucket is None:
+        return None
+    cached = bucket.get(key)
+    if cached is not None:
+        bucket.move_to_end(key)
+        return copy.deepcopy(cached)
+    return None
+
+
+def _cache_put(clean_text: str, taxonomy: Taxonomy, llm: object, result: dict) -> None:
+    is_real, key = _cache_parts(clean_text, taxonomy, llm)
+    if is_real:
+        _EXTRACTION_CACHE[key] = copy.deepcopy(result)
+        if len(_EXTRACTION_CACHE) > _EXTRACTION_CACHE_MAX:
+            _EXTRACTION_CACHE.popitem(last=False)
+        return
+    try:
+        bucket = _INSTANCE_EXTRACTION_CACHE.get(llm)
+        if bucket is None:
+            bucket = OrderedDict()
+            _INSTANCE_EXTRACTION_CACHE[llm] = bucket
+    except TypeError:
+        return
+    bucket[key] = copy.deepcopy(result)
+    if len(bucket) > _EXTRACTION_CACHE_MAX:
+        bucket.popitem(last=False)
+
+
+def _call_llm_deterministic(llm: object, system: str, user: str) -> str:
+    """Invoke ``llm.complete`` with ``temperature=0.0`` when the signature allows it."""
+    complete = getattr(llm, "complete")
+    kwargs: dict = {"system": system, "user": user, "json_mode": True}
+    try:
+        sig = inspect.signature(complete)
+        params = sig.parameters
+        if "temperature" in params or any(
+            p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()
+        ):
+            kwargs["temperature"] = 0.0
+    except (TypeError, ValueError):
+        pass
+    try:
+        return complete(**kwargs)
+    except TypeError:
+        kwargs.pop("temperature", None)
+        return complete(**kwargs)
+
+
 def _contextual_extract_resume(text: str, taxonomy: Taxonomy) -> dict:
-    """Deterministic fallback: word-boundary alias scan + contextual levels."""
+    """Deterministic fallback: word-boundary alias scan + section-aware contextual levels."""
     skills: dict[str, dict] = {}
     if not text.strip():
         return {"profile": _empty_profile(), "skills": {}, "ai_parsed": False}
 
-    for skill in taxonomy.all():
+    sec_map = _line_sections_map(text)
+    for skill in sorted(taxonomy.all(), key=lambda s: s.id):
         lines = _skill_lines(skill, text, taxonomy)
         if not lines:
             continue
         skills[skill.id] = {
             "skill_id": skill.id,
-            "level": _contextual_level(lines),
+            "level": _contextual_level(lines, sections=sec_map),
             "mentions": max(1, len(lines)),
             "evidence": list(lines),
         }
@@ -425,13 +794,18 @@ def extract_resume_with_ai(text: str, taxonomy: Taxonomy, llm: object | None = N
     if not isinstance(text, str) or not text.strip():
         return {"profile": _empty_profile(), "skills": {}, "ai_parsed": False}
 
+    clean_text, _ = sanitize_untrusted_text(text, source="resume")
     if llm is None:
         logger.warning("extract_resume_with_ai: no LLM configured; using contextual fallback")
-        return _contextual_extract_resume(text, taxonomy)
+        return _contextual_extract_resume(clean_text, taxonomy)
 
-    payload = json.dumps({"resume_text": text, "taxonomy": _taxonomy_payload(taxonomy)})
+    cached = _cache_get(clean_text, taxonomy, llm)
+    if cached is not None:
+        return cached
+
+    payload = json.dumps({"resume_text": clean_text, "taxonomy": _taxonomy_payload(taxonomy)})
     try:
-        raw = llm.complete(system=EXTRACT_RESUME_SYSTEM, user=payload, json_mode=True)
+        raw = _call_llm_deterministic(llm, system=EXTRACT_RESUME_SYSTEM, user=payload)
     except Exception as exc:  # noqa: BLE001 - resilience contract: never fail the upload
         logger.warning("extract_resume_with_ai: LLM call failed (%s); falling back", exc)
         return _contextual_extract_resume(text, taxonomy)
@@ -441,6 +815,7 @@ def extract_resume_with_ai(text: str, taxonomy: Taxonomy, llm: object | None = N
         logger.warning("extract_resume_with_ai: LLM returned invalid JSON; falling back")
         return _contextual_extract_resume(text, taxonomy)
 
+    sec_map = _line_sections_map(text)
     profile = _normalize_profile(parsed.get("profile"))
     skills: dict[str, dict] = {}
     raw_skills = parsed.get("skills")
@@ -461,15 +836,18 @@ def extract_resume_with_ai(text: str, taxonomy: Taxonomy, llm: object | None = N
         if not evidence:
             continue
         mentions = _normalize_mentions(entry.get("mentions"), evidence, lines)
+        anchor_lines = evidence or lines
+        ctx_level = _contextual_level(anchor_lines, sections=sec_map)
+        level = _reconcile_level(entry.get("level"), ctx_level, anchor_lines, mentions)
         skills[skill.id] = {
             "skill_id": skill.id,
-            "level": _normalize_level(entry.get("level")),
+            "level": level,
             "mentions": mentions,
             "evidence": evidence,
         }
 
     # Merge explicit taxonomy skills the LLM omitted so they are never lost.
-    for skill in taxonomy.all():
+    for skill in sorted(taxonomy.all(), key=lambda s: s.id):
         if skill.id in skills:
             continue
         lines = _skill_lines(skill, text, taxonomy)
@@ -477,7 +855,7 @@ def extract_resume_with_ai(text: str, taxonomy: Taxonomy, llm: object | None = N
             continue
         skills[skill.id] = {
             "skill_id": skill.id,
-            "level": _contextual_level(lines),
+            "level": _contextual_level(lines, sections=sec_map),
             "mentions": max(1, len(lines)),
             "evidence": list(lines),
         }
@@ -491,7 +869,10 @@ def extract_resume_with_ai(text: str, taxonomy: Taxonomy, llm: object | None = N
         if not profile[key] and ctx_profile[key]:
             profile[key] = ctx_profile[key]
 
-    return {"profile": profile, "skills": skills, "ai_parsed": True}
+    ordered_skills = {sid: skills[sid] for sid in sorted(skills)}
+    result = {"profile": profile, "skills": ordered_skills, "ai_parsed": True}
+    _cache_put(clean_text, taxonomy, llm, result)
+    return result
 
 
 def extract_skills_with_llm(
@@ -517,9 +898,8 @@ def extract_skills(
         }
     found: dict[str, list[str]] = {}
     for line in text.splitlines():
-        low = line.lower()
         for alias, skill_id in taxonomy.alias_map.items():
-            if re.search(BOUND.format(alias=re.escape(alias)), low):
+            if _line_matches_alias(line, alias):
                 bucket = found.setdefault(skill_id, [])
                 if line.strip() not in bucket:
                     bucket.append(line.strip())

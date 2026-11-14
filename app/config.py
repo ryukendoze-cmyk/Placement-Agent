@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     session_secret_key: str = "ps06-jklu-careeros-dev-secret-key-change-in-prod-2026"
     session_ttl_seconds: int = 86400 * 7
     auth_mode: str = "demo"
+    demo_role_switch: bool = True
     rate_limit_enabled: bool = False
     redis_url: str | None = None
     task_backend: str = "memory"      # memory | redis

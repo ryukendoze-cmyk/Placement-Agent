@@ -16,10 +16,17 @@ def test_seed_command_summary_output(capsys, monkeypatch):
     monkeypatch.setattr(cli.settings, "database_url", "sqlite://")
     rc = cli.main(["seed"])
     out = capsys.readouterr().out
+    from app.seed import _json
+    from app.taxonomy.taxonomy import load_taxonomy
+
+    expected_skills = str(len(load_taxonomy().all()))
+    expected_jobs = str(len(_json("jobs.json")))
+    expected_courses = str(len(_json("courses.json")))
+
     assert rc == 0
-    assert "124" in out
-    assert "24" in out
-    assert "40" in out
+    assert expected_skills in out
+    assert expected_jobs in out
+    assert expected_courses in out
     for word in ("skills", "jobs", "courses"):
         assert word in out
 

@@ -5,4 +5,12 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .pytest_temp/
+.ruff_cache/
 test_*.db
+node_modules/
+desktop/dist/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/.gradle/
+mobile/android/local.properties
+*.log

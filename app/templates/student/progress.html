@@ -1,158 +1,777 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="space-y-6">
-  <!-- Page Header -->
-  <div class="flex flex-wrap items-end justify-between gap-4 pb-3 border-b border-[#E5E3DC]">
+{% set kpis = report.kpis %}
+{% set chart_payload = {
+  "milestone_series": report.milestone_series,
+  "target_roles": report.target_roles[:6],
+  "weekly_plan": report.weekly_plan,
+  "by_verification": report.skill_breakdown.by_verification,
+  "by_level": report.skill_breakdown.by_level
+} %}
+<div class="space-y-6" id="student-progress-page" data-sid="{{ sid }}">
+  <!-- 1. Executive Header -->
+  <div class="flex flex-wrap items-end justify-between gap-4 pb-4 border-b border-[#E5E3DC]">
     <div>
       <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[#1B5E43] text-xs font-semibold mb-2">
         <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
-        Continuous Competency Analytics
+        PS-06 Placement Readiness &amp; Competency Telemetry
       </div>
-      <h1 class="font-serif-display text-2xl sm:text-3xl font-semibold tracking-tight text-[#1C1E1B]">Readiness Trajectory &amp; Activity Ledger</h1>
-      <p class="text-sm text-[#5C5A52] mt-1">Predictive placement readiness modeling calculated from assessment scores, curriculum completions, and verified skill depth.</p>
+      <h1 class="font-serif-display text-2xl sm:text-3xl font-semibold tracking-tight text-[#1C1E1B]">
+        {{ student.name }} &mdash; Progress Center
+      </h1>
+      <div class="flex flex-wrap items-center gap-2 mt-2 text-xs text-[#5C5A52]">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] font-mono font-medium text-[#1C1E1B]">
+          {{ student.branch }}
+        </span>
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] font-mono">
+          Year {{ student.year }}
+        </span>
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] font-mono font-semibold text-[#1B5E43]">
+          CGPA {{ "%.2f"|format(student.gpa or 0.0) }}
+        </span>
+        <span class="text-[#7A776E]">|</span>
+        <span class="text-[#5C5A52]">Verified skill depth, 30-day plan velocity, and JKLU SOP-04 drive readiness</span>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <a href="/students/{{ sid }}/matches" class="btn-secondary-pill px-4 py-2 text-xs">
+        <svg class="w-3.5 h-3.5 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5"/></svg>
+        <span>Role Matches</span>
+      </a>
+      <a href="/students/{{ sid }}/plan" class="btn-secondary-pill px-4 py-2 text-xs">
+        <svg class="w-3.5 h-3.5 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg>
+        <span>30-Day Upskilling Plan</span>
+      </a>
+      <a href="/students/{{ sid }}/interviews" class="btn-primary-pill px-4 py-2 text-xs">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z"/></svg>
+        <span>Mock Interview</span>
+      </a>
     </div>
   </div>
 
-  <!-- Executive Summary Strip -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-    <div class="editorial-card p-6 relative overflow-hidden">
-      <div class="absolute top-0 left-0 right-0 h-1 bg-[#1D5C42]"></div>
-      <p class="text-xs uppercase tracking-wider text-[#6E6C64] font-semibold font-mono">Current Readiness Score</p>
-      <div class="flex items-baseline gap-2 mt-1.5">
-        <span class="font-serif-display text-3xl font-semibold text-[#1C1E1B] tabular-nums">
-          {{ series[-1].readiness if series else '—' }}
+  <!-- 2. 6-Card Executive KPI Strip -->
+  <section id="student-progress-kpi-strip" aria-label="Student Progress KPIs" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+    <!-- Card 1: Placement Readiness -->
+    <div class="editorial-card p-4 flex flex-col justify-between">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-[11px] uppercase tracking-wider font-mono font-semibold text-[#6E6C64]">Readiness</span>
+        <span id="kpi-readiness-band" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">
+          {{ kpis.readiness_band }}
+        </span>
+      </div>
+      <div class="mt-2 flex items-baseline gap-1.5">
+        <span id="kpi-current-readiness" class="font-serif-display text-3xl font-semibold text-[#1C1E1B] tabular-nums">{{ kpis.current_readiness }}</span>
+        <span class="text-xs text-[#7A776E] font-mono">/ 100</span>
+      </div>
+      <div class="mt-2 pt-2 border-t border-[#F0EEE7] flex items-center justify-between text-[11px] text-[#5C5A52] font-mono">
+        <span id="kpi-readiness-delta">
+          {% if kpis.readiness_delta >= 0 %}+{% endif %}{{ kpis.readiness_delta }} vs base ({{ kpis.baseline_readiness }})
+        </span>
+        <span id="kpi-projected-readiness" class="text-[#1D5C42] font-semibold">Target {{ kpis.projected_readiness }}</span>
+      </div>
+    </div>
+
+    <!-- Card 2: Best Role Match -->
+    <div class="editorial-card p-4 flex flex-col justify-between">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-[11px] uppercase tracking-wider font-mono font-semibold text-[#6E6C64]">Best Match</span>
+        <span id="kpi-best-tier" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#FAF9F5] text-[#4A483F] border border-[#E2DEC9]">
+          {{ kpis.best_role_tier_label }}
+        </span>
+      </div>
+      <div class="mt-2">
+        <div class="flex items-baseline gap-1.5">
+          <span id="kpi-best-score" class="font-serif-display text-3xl font-semibold text-[#1C1E1B] tabular-nums">
+            {% if kpis.best_role_score is not none %}{{ kpis.best_role_score }}%{% else %}--{% endif %}
+          </span>
+        </div>
+        <div id="kpi-best-role-title" class="text-xs font-semibold text-[#1C1E1B] truncate mt-0.5" title="{{ kpis.best_role_title }}">
+          {{ kpis.best_role_title }}
+        </div>
+      </div>
+      <div class="mt-2 pt-2 border-t border-[#F0EEE7] text-[11px] text-[#5C5A52] truncate font-mono" id="kpi-best-role-company">
+        {{ kpis.best_role_company }} &middot; {{ kpis.best_role_band }}
+      </div>
+    </div>
+
+    <!-- Card 3: 30-Day Plan Completion -->
+    <div class="editorial-card p-4 flex flex-col justify-between">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-[11px] uppercase tracking-wider font-mono font-semibold text-[#6E6C64]">30-Day Plan</span>
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-[#FAF9F5] text-[#5C5A52] border border-[#E5E3DC]">
+          &le;10h/wk
+        </span>
+      </div>
+      <div class="mt-2 flex items-baseline gap-1.5">
+        <span id="kpi-plan-pct" class="font-serif-display text-3xl font-semibold text-[#1C1E1B] tabular-nums">{{ kpis.plan_completion_pct }}%</span>
+      </div>
+      <div class="w-full bg-[#EFECE4] rounded-full h-1.5 mt-1.5 overflow-hidden">
+        <div id="kpi-plan-bar" class="bg-[#1D5C42] h-1.5 rounded-full transition-all duration-300" style="width: {{ kpis.plan_completion_pct }}%"></div>
+      </div>
+      <div id="kpi-plan-counts" class="mt-2 pt-2 border-t border-[#F0EEE7] text-[11px] text-[#5C5A52] font-mono tabular-nums">
+        {{ kpis.plan_done_items }}/{{ kpis.plan_total_items }} modules &middot; {{ kpis.plan_done_hours }}/{{ kpis.plan_total_hours }}h
+      </div>
+    </div>
+
+    <!-- Card 4: Verified Competencies -->
+    <div class="editorial-card p-4 flex flex-col justify-between">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-[11px] uppercase tracking-wider font-mono font-semibold text-[#6E6C64]">Competencies</span>
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">
+          Verified
+        </span>
+      </div>
+      <div class="mt-2 flex items-baseline gap-1.5">
+        <span id="kpi-verified-skills" class="font-serif-display text-3xl font-semibold text-[#1C1E1B] tabular-nums">{{ kpis.verified_skills_count }}</span>
+        <span id="kpi-total-skills" class="text-xs text-[#7A776E] font-mono">/ {{ kpis.total_skills }} skills</span>
+      </div>
+      <div id="kpi-skills-meta" class="mt-2 pt-2 border-t border-[#F0EEE7] text-[11px] text-[#5C5A52] font-mono">
+        {{ kpis.claimed_skills_count }} claimed &middot; {{ kpis.flagged_skills_count }} flagged
+      </div>
+    </div>
+
+    <!-- Card 5: Mock Interview Benchmark -->
+    <div class="editorial-card p-4 flex flex-col justify-between">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-[11px] uppercase tracking-wider font-mono font-semibold text-[#6E6C64]">Interview</span>
+        <span id="kpi-interviews-done" class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-[#FAF9F5] text-[#5C5A52] border border-[#E5E3DC]">
+          {{ kpis.interviews_completed }} done
+        </span>
+      </div>
+      <div class="mt-2 flex items-baseline gap-1.5">
+        <span id="kpi-interview-score" class="font-serif-display text-3xl font-semibold text-[#1C1E1B] tabular-nums">
+          {% if kpis.best_interview_score is not none %}{{ kpis.best_interview_score }}{% else %}--{% endif %}
         </span>
         <span class="text-xs text-[#7A776E] font-mono">/ 100</span>
       </div>
-      <p class="text-[11px] text-[#5C5A52] mt-1">Aggregated placement competency index</p>
+      <div id="kpi-interview-meta" class="mt-2 pt-2 border-t border-[#F0EEE7] text-[11px] text-[#5C5A52] font-mono">
+        {% if kpis.avg_wpm is not none %}{{ kpis.avg_wpm }} WPM{% else %}-- WPM{% endif %} &middot; STAR {% if kpis.avg_star_completeness is not none %}{{ kpis.avg_star_completeness }}%{% else %}--{% endif %}
+      </div>
     </div>
 
-    <div class="editorial-card p-6 relative overflow-hidden">
-      <div class="absolute top-0 left-0 right-0 h-1 bg-[#2E7D5B]"></div>
-      <p class="text-xs uppercase tracking-wider text-[#6E6C64] font-semibold font-mono">Best Matched Role</p>
-      <div class="flex items-baseline gap-2.5 mt-1.5">
-        {% if best_match %}
-        <span class="font-serif-display text-3xl font-semibold text-[#1C1E1B] tabular-nums">{{ best_match.score }}</span>
-        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold uppercase tracking-wider {% if best_match.band == 'strong' %}bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]{% elif best_match.band == 'moderate' %}bg-[#EFECE4] text-[#4A483F] border border-[#E2DEC9]{% else %}bg-[#FDECE9] text-[#9E2A20] border border-[#F5D0C8]{% endif %}">
-          {{ best_match.band }}
+    <!-- Card 6: JKLU SOP-04 Eligibility -->
+    <div class="editorial-card p-4 flex flex-col justify-between">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-[11px] uppercase tracking-wider font-mono font-semibold text-[#6E6C64]">SOP-04 Status</span>
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-[#FAF9F5] text-[#4A483F] border border-[#E2DEC9]">
+          {{ kpis.active_applications_count }} apps
         </span>
-        {% else %}
-        <span class="text-lg font-bold text-[#7A776E] font-mono">None yet</span>
-        {% endif %}
       </div>
-      <p class="text-[11px] text-[#5C5A52] mt-1">Highest ranking placement opportunity</p>
+      <div class="mt-2 flex items-baseline gap-1.5">
+        <span id="kpi-eligible-drives" class="font-serif-display text-3xl font-semibold text-[#1C1E1B] tabular-nums">{{ kpis.eligible_drives_count }}</span>
+        <span id="kpi-evaluated-drives" class="text-xs text-[#7A776E] font-mono">/ {{ kpis.total_drives_evaluated }} drives</span>
+      </div>
+      <div id="kpi-sop-tiers" class="mt-2 pt-2 border-t border-[#F0EEE7] flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
+        <span class="px-1.5 py-0.5 rounded {% if kpis.sop04_dream_ready %}bg-[#E3F2EA] text-[#1B5E43]{% else %}bg-[#FDECE9] text-[#9E2A20]{% endif %}">
+          Dream: {% if kpis.sop04_dream_ready %}Ready{% else %}Hold{% endif %}
+        </span>
+        <span class="px-1.5 py-0.5 rounded {% if kpis.sop04_super_dream_ready %}bg-[#E3F2EA] text-[#1B5E43]{% else %}bg-[#FDECE9] text-[#9E2A20]{% endif %}">
+          Super: {% if kpis.sop04_super_dream_ready %}Ready{% else %}Hold{% endif %}
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 2x2 Evidence-Based Charts Grid -->
+  <section aria-label="Readiness and Competency Analytics Charts" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <!-- Chart 1: Readiness Progression -->
+    <div class="editorial-card p-5">
+      <div class="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Readiness Progression &amp; Target Trajectory</h2>
+          <p class="text-xs text-[#5C5A52]">Baseline snapshot, verified module completions, interview evaluations, and projected target</p>
+        </div>
+        <span class="px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#FAF9F5] border border-[#E5E3DC] text-[#5C5A52] shrink-0">
+          0&ndash;100 scale
+        </span>
+      </div>
+      <div class="relative h-64 w-full">
+        <canvas id="readinessChart" aria-label="Readiness progression chart"></canvas>
+      </div>
     </div>
 
-    <div class="editorial-card p-6 relative overflow-hidden">
-      <div class="absolute top-0 left-0 right-0 h-1 bg-[#4A483F]"></div>
-      <p class="text-xs uppercase tracking-wider text-[#6E6C64] font-semibold font-mono">Logged Milestones</p>
-      <div class="flex items-baseline gap-2 mt-1.5">
-        <span class="font-serif-display text-3xl font-semibold text-[#1C1E1B] tabular-nums">{{ events|length }}</span>
-        <span class="text-xs text-[#7A776E] font-mono">events</span>
+    <!-- Chart 2: Target Role Readiness Gap -->
+    <div class="editorial-card p-5">
+      <div class="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Top Target Roles: Current vs Projected Match</h2>
+          <p class="text-xs text-[#5C5A52]">Role match impact once active upskilling modules are completed</p>
+        </div>
+        <span class="px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#E3F2EA] border border-[#C8E4D5] text-[#1B5E43] shrink-0">
+          Gap Lift
+        </span>
       </div>
-      <p class="text-[11px] text-[#5C5A52] mt-1">Audited learning and assessment achievements</p>
+      <div class="relative h-64 w-full">
+        <canvas id="targetRolesChart" aria-label="Target role current vs projected match chart"></canvas>
+      </div>
     </div>
-  </div>
 
-  <!-- Readiness Curve Card -->
-  <div class="editorial-card p-6 md:p-7">
-    <div class="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-[#ECEAE2]">
+    <!-- Chart 3: 4-Week Upskilling Load -->
+    <div class="editorial-card p-5">
+      <div class="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">4-Week Upskilling Load (Hours)</h2>
+          <p class="text-xs text-[#5C5A52]">Completed vs pending study hours across your prerequisite-sequenced curriculum</p>
+        </div>
+        <span class="px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#FAF9F5] border border-[#E5E3DC] text-[#5C5A52] shrink-0">
+          Hours / Week
+        </span>
+      </div>
+      <div class="relative h-64 w-full">
+        <canvas id="weeklyPlanChart" aria-label="Weekly upskilling hours chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Chart 4: Skill Verification & Depth Distribution -->
+    <div class="editorial-card p-5">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Skill Verification &amp; Depth Distribution</h2>
+          <p class="text-xs text-[#5C5A52]">Audit status breakdown across resume claims, verified quizzes, and proficiency tiers</p>
+        </div>
+        <div id="skill-level-pills" class="flex flex-wrap gap-1.5 text-[10px] font-mono">
+          <span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43]">Adv {{ report.skill_breakdown.by_level.advanced }}</span>
+          <span class="px-2 py-0.5 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] text-[#4A483F]">Int {{ report.skill_breakdown.by_level.intermediate }}</span>
+          <span class="px-2 py-0.5 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] text-[#7A776E]">Basic {{ report.skill_breakdown.by_level.basic }}</span>
+        </div>
+      </div>
+      <div class="relative h-64 w-full">
+        <canvas id="skillProficiencyChart" aria-label="Skill verification distribution chart"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Role-Specific Gap & SOP Eligibility Matrix -->
+  <section id="student-role-gap-matrix" class="editorial-card overflow-hidden">
+    <div class="px-6 py-4 border-b border-[#E5E3DC] flex flex-wrap items-center justify-between gap-3 bg-[#FAF9F5]">
       <div>
-        <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Readiness Trajectory Curve</h2>
-        <p class="text-xs text-[#5C5A52] mt-0.5">Chronological score progression across resume upgrades, mock interviews, and module completions</p>
+        <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Role-Specific Gap &amp; SOP-04 Eligibility Matrix</h2>
+        <p class="text-xs text-[#5C5A52]">Visible placement opportunities evaluated against required skills, CGPA threshold, branch eligibility, and JKLU SOP-04 caps</p>
       </div>
-      <span class="text-xs font-mono px-2.5 py-1 rounded-full bg-[#EFECE4] text-[#4A483F]">Scale 0–100</span>
+      <a href="/students/{{ sid }}/matches" class="text-xs font-semibold text-[#1D5C42] hover:underline">
+        Open full matches workspace &rarr;
+      </a>
     </div>
-
-    <div class="relative w-full">
-      <canvas id="readinessChart" height="90"></canvas>
-      <p id="chart-empty" class="hidden text-[#7A776E] text-xs mt-3 text-center py-10 font-mono">
-        No progress events recorded yet. Complete an interview or upskilling module to populate your curve.
-      </p>
-    </div>
-  </div>
-
-  <!-- Activity Ledger Table -->
-  <div class="editorial-card overflow-hidden">
-    <div class="px-6 py-4 border-b border-[#ECEAE2] flex items-center justify-between">
-      <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Activity Ledger</h2>
-      <span class="text-xs font-mono text-[#7A776E]">{{ events|length }} recorded milestones</span>
-    </div>
-
     <div class="overflow-x-auto">
-      <table class="w-full text-left text-sm">
-        <thead class="bg-[#FAF9F5] text-[#5C5A52] text-xs font-semibold uppercase tracking-wider border-b border-[#ECEAE2]">
-          <tr>
-            <th class="px-6 py-3.5">Event Type</th>
-            <th class="px-6 py-3.5">Readiness Score</th>
-            <th class="px-6 py-3.5">Timestamp</th>
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="border-b border-[#E5E3DC] bg-[#FAF9F5] text-[11px] uppercase tracking-wider font-mono text-[#6E6C64]">
+            <th class="py-3 px-4 font-semibold">Role &amp; Company</th>
+            <th class="py-3 px-3 font-semibold text-right">Current</th>
+            <th class="py-3 px-3 font-semibold text-right">Projected</th>
+            <th class="py-3 px-4 font-semibold">Required Skill Coverage</th>
+            <th class="py-3 px-4 font-semibold">Eligibility &amp; Blockers</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-[#ECEAE2]">
-          {% for e in events %}
-          <tr class="hover:bg-[#FAF9F5] transition-colors">
-            <td class="px-6 py-3.5">
-              <span class="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-mono font-medium {% if 'interview' in e.kind %}bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]{% elif 'plan' in e.kind %}bg-[#F2F7F4] text-[#1D5C42] border border-[#DCE8E1]{% else %}bg-[#EFECE4] text-[#4A483F] border border-[#E2DEC9]{% endif %}">
-                {{ e.kind }}
-              </span>
-            </td>
-            <td class="px-6 py-3.5 font-mono font-bold text-[#1C1E1B] tabular-nums">
-              {{ e.readiness }}
-            </td>
-            <td class="px-6 py-3.5 text-xs font-mono text-[#5C5A52] tabular-nums">
-              {{ e.at }}
-            </td>
-          </tr>
+        <tbody id="role-gap-tbody" class="divide-y divide-[#F0EEE7]">
+          {% if report.target_roles %}
+            {% for role in report.target_roles %}
+            <tr class="hover:bg-[#FAF9F5]/70 transition-colors">
+              <td class="py-3.5 px-4 align-top">
+                <div class="font-semibold text-[#1C1E1B]">{{ role.title }}</div>
+                <div class="text-[#5C5A52] mt-0.5 flex flex-wrap items-center gap-1.5">
+                  <span>{{ role.company }}</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#FAF9F5] border border-[#E2DEC9] text-[#4A483F]">
+                    {{ role.tier_label }}
+                  </span>
+                </div>
+              </td>
+              <td class="py-3.5 px-3 text-right align-top font-mono font-semibold text-[#1C1E1B] tabular-nums">
+                {{ role.current_score }}%
+              </td>
+              <td class="py-3.5 px-3 text-right align-top font-mono font-semibold text-[#1D5C42] tabular-nums">
+                {{ role.projected_score }}%
+              </td>
+              <td class="py-3.5 px-4 align-top min-w-[240px]">
+                <div class="flex items-center justify-between text-[11px] font-mono text-[#5C5A52] mb-1">
+                  <span>{{ role.required_coverage_pct }}% required matched</span>
+                  <span>{{ role.matched_required|length }} / {{ (role.matched_required|length) + (role.missing_required|length) }}</span>
+                </div>
+                <div class="w-full bg-[#EFECE4] rounded-full h-1.5 mb-2 overflow-hidden">
+                  <div class="bg-[#1D5C42] h-1.5 rounded-full" style="width: {{ role.required_coverage_pct }}%"></div>
+                </div>
+                <div class="flex flex-wrap gap-1">
+                  {% for s in role.matched_required[:4] %}
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-[#E3F2EA] text-[#1B5E43]">{{ s }}</span>
+                  {% endfor %}
+                  {% for s in role.missing_required[:4] %}
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-[#FDECE9] text-[#9E2A20]">Gap: {{ s }}</span>
+                  {% endfor %}
+                </div>
+              </td>
+              <td class="py-3.5 px-4 align-top">
+                <div class="flex flex-wrap items-center gap-1 mb-1">
+                  {% if role.eligible_now %}
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">Eligible</span>
+                  {% else %}
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#FDECE9] text-[#9E2A20] border border-[#F5C6BF]">Blocked</span>
+                  {% endif %}
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-mono {% if role.gpa_passed %}bg-[#FAF9F5] text-[#1B5E43]{% else %}bg-[#FDECE9] text-[#9E2A20]{% endif %}">CGPA</span>
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-mono {% if role.branch_passed %}bg-[#FAF9F5] text-[#1B5E43]{% else %}bg-[#FDECE9] text-[#9E2A20]{% endif %}">Branch</span>
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-mono {% if role.sop04_passed %}bg-[#FAF9F5] text-[#1B5E43]{% else %}bg-[#FDECE9] text-[#9E2A20]{% endif %}">SOP-04</span>
+                </div>
+                <p class="text-[11px] text-[#5C5A52]">{{ role.blocker_summary }}</p>
+              </td>
+            </tr>
+            {% endfor %}
           {% else %}
-          <tr>
-            <td class="px-6 py-8 text-center text-[#7A776E] text-xs font-mono" colspan="3">
-              No progress events logged yet.
+            <tr>
+              <td colspan="5" class="py-8 px-4 text-center text-[#5C5A52]">
+                No visible role matches found yet. Visit <a href="/students/{{ sid }}/matches" class="text-[#1D5C42] font-semibold underline">Role Matches</a> to compute match scores.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 5. Interactive Upskilling Module & Skill Verification Tracker -->
+  <section id="student-plan-progress-card" class="editorial-card overflow-hidden">
+    <div class="px-6 py-4 border-b border-[#E5E3DC] flex flex-wrap items-center justify-between gap-3 bg-[#FAF9F5]">
+      <div>
+        <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Interactive Upskilling Module &amp; Skill Verification Tracker</h2>
+        <p class="text-xs text-[#5C5A52]">Complete modules directly here to verify skills and update your readiness trajectory in real time</p>
+      </div>
+      <a href="/students/{{ sid }}/plan" class="btn-secondary-pill px-3.5 py-1.5 text-xs">
+        Open Full Roadmap &amp; Quizzes
+      </a>
+    </div>
+
+    {% if report.plan_modules %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="border-b border-[#E5E3DC] bg-[#FAF9F5] text-[11px] uppercase tracking-wider font-mono text-[#6E6C64]">
+            <th class="py-3 px-4 font-semibold">Week</th>
+            <th class="py-3 px-4 font-semibold">Target Skill</th>
+            <th class="py-3 px-4 font-semibold">Course &amp; Provider</th>
+            <th class="py-3 px-3 font-semibold text-right">Hours</th>
+            <th class="py-3 px-3 font-semibold">Status</th>
+            <th class="py-3 px-4 font-semibold text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody id="plan-modules-tbody" class="divide-y divide-[#F0EEE7]">
+          {% for mod in report.plan_modules %}
+          <tr data-module-id="{{ mod.id }}" class="hover:bg-[#FAF9F5]/70 transition-colors">
+            <td class="py-3 px-4 font-mono font-semibold text-[#4A483F] whitespace-nowrap">Week {{ mod.week }}</td>
+            <td class="py-3 px-4 font-semibold text-[#1C1E1B]">{{ mod.skill_name }}</td>
+            <td class="py-3 px-4">
+              <div class="font-medium text-[#1C1E1B]">{{ mod.course_title }}</div>
+              <div class="text-[11px] text-[#5C5A52]">{{ mod.course_provider }}</div>
+            </td>
+            <td class="py-3 px-3 text-right font-mono tabular-nums text-[#5C5A52]">{{ mod.hours }}h</td>
+            <td class="py-3 px-3">
+              {% if mod.status == 'done' %}
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">Done</span>
+              {% else %}
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#FAF9F5] text-[#5C5A52] border border-[#D5D2C6]">Pending</span>
+              {% endif %}
+            </td>
+            <td class="py-3 px-4 text-right whitespace-nowrap">
+              {% if mod.status == 'done' %}
+              <span class="text-[11px] font-mono text-[#1D5C42] font-semibold">Verified</span>
+              {% else %}
+              <button type="button"
+                      onclick="completeProgressModule(this)"
+                      data-plan-id="{{ mod.plan_id }}"
+                      data-item-id="{{ mod.id }}"
+                      class="btn-primary-pill px-3 py-1.5 text-[11px]">
+                Mark Done
+              </button>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-  </div>
+    {% else %}
+    <div id="plan-modules-empty" class="p-8 text-center">
+      <h3 class="font-serif-display text-lg font-semibold text-[#1C1E1B] mb-1">No active 30-day upskilling plan yet</h3>
+      <p class="text-xs text-[#5C5A52] max-w-md mx-auto mb-4">Generate a prerequisite-ordered 30-day learning roadmap from your role match gaps to start tracking weekly hours and verified competencies.</p>
+      <a href="/students/{{ sid }}/plan" class="btn-primary-pill px-5 py-2 text-xs">Create 30-Day Upskilling Plan</a>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- 6. Audited Milestone & Assessment Activity Ledger -->
+  <section id="student-activity-ledger" class="editorial-card overflow-hidden">
+    <div class="px-6 py-4 border-b border-[#E5E3DC] flex flex-wrap items-center justify-between gap-3 bg-[#FAF9F5]">
+      <div>
+        <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Audited Milestone &amp; Assessment Activity Ledger</h2>
+        <p class="text-xs text-[#5C5A52]">Chronological record of verified course completions, skill quizzes, and mock interview checkpoints</p>
+      </div>
+      <span class="px-2.5 py-1 rounded-full text-[11px] font-mono bg-white border border-[#E5E3DC] text-[#5C5A52]">
+        <span id="ledger-count">{{ report.enriched_events|length }}</span> events
+      </span>
+    </div>
+    <div id="activity-ledger-body" class="divide-y divide-[#F0EEE7]">
+      {% if report.enriched_events %}
+        {% for ev in report.enriched_events %}
+        <div class="px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 hover:bg-[#FAF9F5]/60">
+          <div class="flex items-start gap-3 min-w-0">
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold shrink-0
+              {% if ev.kind == 'interview_completed' %}bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]
+              {% else %}bg-[#FAF9F5] text-[#4A483F] border border-[#E2DEC9]{% endif %}">
+              {{ ev.badge_label }}
+            </span>
+            <div class="min-w-0">
+              <div class="text-xs font-semibold text-[#1C1E1B]">{{ ev.title }}</div>
+              {% if ev.detail %}
+              <div class="text-[11px] text-[#5C5A52] mt-0.5">{{ ev.detail }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="flex items-center gap-3 text-xs font-mono tabular-nums shrink-0">
+            {% if ev.delta_str %}
+            <span class="px-2 py-0.5 rounded bg-[#E3F2EA] text-[#1B5E43] font-semibold text-[11px]">{{ ev.delta_str }}</span>
+            {% endif %}
+            <span class="font-semibold text-[#1C1E1B]">{{ ev.readiness }}/100</span>
+            <span class="text-[11px] text-[#7A776E]">{{ ev.date_display }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="p-8 text-center text-xs text-[#5C5A52]">
+          No readiness milestones logged yet. Complete an upskilling module or mock interview to record your first audited checkpoint.
+        </div>
+      {% endif %}
+    </div>
+  </section>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script id="progress-chart-data" type="application/json">{{ chart_payload | tojson }}</script>
+<script src="/static/vendor/chart.umd.min.js"></script>
 <script>
-fetch("/api/students/{{ sid }}/progress")
-  .then(function (r) { return r.json(); })
-  .then(function (data) {
-    var points = data.readiness || [];
-    if (points.length < 1) {
-      document.getElementById("chart-empty").classList.remove("hidden");
-      return;
+  (function () {
+    var SID = {{ sid | tojson }};
+    var initialCharts = JSON.parse(document.getElementById("progress-chart-data").textContent || "{}");
+    var chartInstances = {};
+
+    function esc(val) {
+      return String(val === null || val === undefined ? "" : val)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
     }
-    new Chart(document.getElementById("readinessChart"), {
-      type: "line",
-      data: {
-        labels: points.map(function (p) { return p.at.slice(11, 16); }),
-        datasets: [{
-          label: "Readiness",
-          data: points.map(function (p) { return p.readiness; }),
-          borderColor: "#1D5C42",
-          backgroundColor: "rgba(29, 92, 66, 0.10)",
-          fill: true,
-          tension: 0.25,
-          borderWidth: 2,
-          pointBackgroundColor: "#1D5C42",
-          pointRadius: 3
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { display: false }
-        },
-        scales: {
-          y: { min: 0, max: 100, grid: { color: "#ECEAE2" } },
-          x: { grid: { display: false } }
+
+    function renderCharts(payload) {
+      if (typeof Chart === "undefined") return;
+
+      Object.keys(chartInstances).forEach(function (k) {
+        if (chartInstances[k]) {
+          chartInstances[k].destroy();
+          delete chartInstances[k];
+        }
+      });
+
+      var series = payload.milestone_series || [];
+      var rCanvas = document.getElementById("readinessChart");
+      if (rCanvas) {
+        var labels = series.map(function (pt) { return pt.short_label || pt.stage_label || ""; });
+        var actualData = series.map(function (pt) { return pt.is_projected ? null : pt.readiness; });
+        var projectedData = series.map(function (pt, idx) {
+          if (pt.is_projected) return pt.readiness;
+          var next = series[idx + 1];
+          return next && next.is_projected ? pt.readiness : null;
+        });
+        chartInstances.readiness = new Chart(rCanvas, {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Verified Readiness",
+                data: actualData,
+                borderColor: "#1D5C42",
+                backgroundColor: "rgba(29, 92, 66, 0.12)",
+                fill: true,
+                tension: 0.25,
+                pointRadius: 4,
+                pointBackgroundColor: "#1D5C42"
+              },
+              {
+                label: "Projected Target",
+                data: projectedData,
+                borderColor: "#9A6B2F",
+                borderDash: [6, 4],
+                backgroundColor: "transparent",
+                tension: 0.2,
+                pointRadius: 4,
+                pointBackgroundColor: "#9A6B2F"
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { min: 0, max: 100 } },
+            plugins: { legend: { position: "bottom" } }
+          }
+        });
+      }
+
+      var roles = (payload.target_roles || []).slice(0, 6);
+      var tCanvas = document.getElementById("targetRolesChart");
+      if (tCanvas) {
+        chartInstances.targetRoles = new Chart(tCanvas, {
+          type: "bar",
+          data: {
+            labels: roles.map(function (r) {
+              var label = (r.title || "").slice(0, 22);
+              return r.company ? label + " (" + r.company.slice(0, 12) + ")" : label;
+            }),
+            datasets: [
+              {
+                label: "Current Match %",
+                data: roles.map(function (r) { return r.current_score || 0; }),
+                backgroundColor: "#1D5C42",
+                borderRadius: 4
+              },
+              {
+                label: "Projected Match %",
+                data: roles.map(function (r) { return r.projected_score || 0; }),
+                backgroundColor: "#A7D3BE",
+                borderRadius: 4
+              }
+            ]
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { x: { min: 0, max: 100 } },
+            plugins: { legend: { position: "bottom" } }
+          }
+        });
+      }
+
+      var weekly = payload.weekly_plan || [];
+      var wCanvas = document.getElementById("weeklyPlanChart");
+      if (wCanvas) {
+        chartInstances.weeklyPlan = new Chart(wCanvas, {
+          type: "bar",
+          data: {
+            labels: weekly.map(function (w) { return w.label || ("Week " + w.week); }),
+            datasets: [
+              {
+                label: "Done Hours",
+                data: weekly.map(function (w) { return w.done_hours || 0; }),
+                backgroundColor: "#1D5C42",
+                borderRadius: 4
+              },
+              {
+                label: "Pending Hours",
+                data: weekly.map(function (w) { return w.pending_hours || 0; }),
+                backgroundColor: "#DDD8CA",
+                borderRadius: 4
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { stacked: true },
+              y: { stacked: true, beginAtZero: true }
+            },
+            plugins: { legend: { position: "bottom" } }
+          }
+        });
+      }
+
+      var bv = payload.by_verification || {};
+      var sCanvas = document.getElementById("skillProficiencyChart");
+      if (sCanvas) {
+        chartInstances.skillProficiency = new Chart(sCanvas, {
+          type: "doughnut",
+          data: {
+            labels: ["Verified", "Claimed", "Needs Re-verification", "Unverified"],
+            datasets: [
+              {
+                data: [
+                  bv.verified || 0,
+                  bv.claimed || 0,
+                  bv.needs_reverification || 0,
+                  bv.unverified || 0
+                ],
+                backgroundColor: ["#1D5C42", "#C99A49", "#B9382C", "#D5D2C6"],
+                borderWidth: 1,
+                borderColor: "#FFFFFF"
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "62%",
+            plugins: { legend: { position: "bottom" } }
+          }
+        });
+      }
+    }
+
+    function updateDomFromReport(report) {
+      if (!report) return;
+      var k = report.kpis || {};
+      var setText = function (id, txt) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = txt;
+      };
+      setText("kpi-readiness-band", k.readiness_band || "--");
+      setText("kpi-current-readiness", String(k.current_readiness ?? 0));
+      var deltaPrefix = (k.readiness_delta || 0) >= 0 ? "+" : "";
+      setText("kpi-readiness-delta", deltaPrefix + (k.readiness_delta ?? 0) + " vs base (" + (k.baseline_readiness ?? 0) + ")");
+      setText("kpi-projected-readiness", "Target " + (k.projected_readiness ?? 0));
+      setText("kpi-best-tier", k.best_role_tier_label || "--");
+      setText("kpi-best-score", k.best_role_score !== null && k.best_role_score !== undefined ? (k.best_role_score + "%") : "--");
+      setText("kpi-best-role-title", k.best_role_title || "--");
+      setText("kpi-best-role-company", (k.best_role_company || "--") + " · " + (k.best_role_band || "--"));
+      setText("kpi-plan-pct", (k.plan_completion_pct ?? 0) + "%");
+      var planBar = document.getElementById("kpi-plan-bar");
+      if (planBar) planBar.style.width = (k.plan_completion_pct ?? 0) + "%";
+      setText("kpi-plan-counts", (k.plan_done_items ?? 0) + "/" + (k.plan_total_items ?? 0) + " modules · " + (k.plan_done_hours ?? 0) + "/" + (k.plan_total_hours ?? 0) + "h");
+      setText("kpi-verified-skills", String(k.verified_skills_count ?? 0));
+      setText("kpi-total-skills", "/ " + (k.total_skills ?? 0) + " skills");
+      setText("kpi-skills-meta", (k.claimed_skills_count ?? 0) + " claimed · " + (k.flagged_skills_count ?? 0) + " flagged");
+      setText("kpi-interviews-done", (k.interviews_completed ?? 0) + " done");
+      setText("kpi-interview-score", k.best_interview_score !== null && k.best_interview_score !== undefined ? String(k.best_interview_score) : "--");
+      setText("kpi-interview-meta", (k.avg_wpm !== null && k.avg_wpm !== undefined ? k.avg_wpm + " WPM" : "-- WPM") + " · STAR " + (k.avg_star_completeness !== null && k.avg_star_completeness !== undefined ? k.avg_star_completeness + "%" : "--"));
+      setText("kpi-eligible-drives", String(k.eligible_drives_count ?? 0));
+      setText("kpi-evaluated-drives", "/ " + (k.total_drives_evaluated ?? 0) + " drives");
+
+      var bl = (report.skill_breakdown && report.skill_breakdown.by_level) || {};
+      var lvlEl = document.getElementById("skill-level-pills");
+      if (lvlEl) {
+        lvlEl.innerHTML =
+          '<span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43]">Adv ' + esc(bl.advanced || 0) + '</span>' +
+          '<span class="px-2 py-0.5 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] text-[#4A483F]">Int ' + esc(bl.intermediate || 0) + '</span>' +
+          '<span class="px-2 py-0.5 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] text-[#7A776E]">Basic ' + esc(bl.basic || 0) + '</span>';
+      }
+
+      var roleBody = document.getElementById("role-gap-tbody");
+      if (roleBody && Array.isArray(report.target_roles)) {
+        if (!report.target_roles.length) {
+          roleBody.innerHTML = '<tr><td colspan="5" class="py-8 px-4 text-center text-[#5C5A52]">No visible role matches found yet.</td></tr>';
+        } else {
+          roleBody.innerHTML = report.target_roles.map(function (r) {
+            var matchedPills = (r.matched_required || []).slice(0, 4).map(function (s) {
+              return '<span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-[#E3F2EA] text-[#1B5E43]">' + esc(s) + '</span>';
+            }).join("");
+            var missingPills = (r.missing_required || []).slice(0, 4).map(function (s) {
+              return '<span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-[#FDECE9] text-[#9E2A20]">Gap: ' + esc(s) + '</span>';
+            }).join("");
+            var totalReq = (r.matched_required || []).length + (r.missing_required || []).length;
+            var eligBadge = r.eligible_now
+              ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">Eligible</span>'
+              : '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#FDECE9] text-[#9E2A20] border border-[#F5C6BF]">Blocked</span>';
+            return '<tr class="hover:bg-[#FAF9F5]/70 transition-colors">' +
+              '<td class="py-3.5 px-4 align-top"><div class="font-semibold text-[#1C1E1B]">' + esc(r.title) + '</div>' +
+              '<div class="text-[#5C5A52] mt-0.5 flex flex-wrap items-center gap-1.5"><span>' + esc(r.company) + '</span>' +
+              '<span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#FAF9F5] border border-[#E2DEC9] text-[#4A483F]">' + esc(r.tier_label) + '</span></div></td>' +
+              '<td class="py-3.5 px-3 text-right align-top font-mono font-semibold text-[#1C1E1B] tabular-nums">' + esc(r.current_score) + '%</td>' +
+              '<td class="py-3.5 px-3 text-right align-top font-mono font-semibold text-[#1D5C42] tabular-nums">' + esc(r.projected_score) + '%</td>' +
+              '<td class="py-3.5 px-4 align-top min-w-[240px]"><div class="flex items-center justify-between text-[11px] font-mono text-[#5C5A52] mb-1"><span>' + esc(r.required_coverage_pct) + '% required matched</span><span>' + esc((r.matched_required || []).length) + ' / ' + esc(totalReq) + '</span></div>' +
+              '<div class="w-full bg-[#EFECE4] rounded-full h-1.5 mb-2 overflow-hidden"><div class="bg-[#1D5C42] h-1.5 rounded-full" style="width: ' + esc(r.required_coverage_pct) + '%"></div></div>' +
+              '<div class="flex flex-wrap gap-1">' + matchedPills + missingPills + '</div></td>' +
+              '<td class="py-3.5 px-4 align-top"><div class="flex flex-wrap items-center gap-1 mb-1">' + eligBadge +
+              '<span class="px-1.5 py-0.5 rounded text-[10px] font-mono ' + (r.gpa_passed ? 'bg-[#FAF9F5] text-[#1B5E43]' : 'bg-[#FDECE9] text-[#9E2A20]') + '">CGPA</span>' +
+              '<span class="px-1.5 py-0.5 rounded text-[10px] font-mono ' + (r.branch_passed ? 'bg-[#FAF9F5] text-[#1B5E43]' : 'bg-[#FDECE9] text-[#9E2A20]') + '">Branch</span>' +
+              '<span class="px-1.5 py-0.5 rounded text-[10px] font-mono ' + (r.sop04_passed ? 'bg-[#FAF9F5] text-[#1B5E43]' : 'bg-[#FDECE9] text-[#9E2A20]') + '">SOP-04</span></div>' +
+              '<p class="text-[11px] text-[#5C5A52]">' + esc(r.blocker_summary) + '</p></td></tr>';
+          }).join("");
         }
       }
-    });
-  });
+
+      var modBody = document.getElementById("plan-modules-tbody");
+      if (modBody && Array.isArray(report.plan_modules)) {
+        modBody.innerHTML = report.plan_modules.map(function (m) {
+          var isDone = m.status === "done";
+          var statusPill = isDone
+            ? '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">Done</span>'
+            : '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#FAF9F5] text-[#5C5A52] border border-[#D5D2C6]">Pending</span>';
+          var actionCell = isDone
+            ? '<span class="text-[11px] font-mono text-[#1D5C42] font-semibold">Verified</span>'
+            : '<button type="button" onclick="completeProgressModule(this)" data-plan-id="' + esc(m.plan_id) + '" data-item-id="' + esc(m.id) + '" class="btn-primary-pill px-3 py-1.5 text-[11px]">Mark Done</button>';
+          return '<tr data-module-id="' + esc(m.id) + '" class="hover:bg-[#FAF9F5]/70 transition-colors">' +
+            '<td class="py-3 px-4 font-mono font-semibold text-[#4A483F] whitespace-nowrap">Week ' + esc(m.week) + '</td>' +
+            '<td class="py-3 px-4 font-semibold text-[#1C1E1B]">' + esc(m.skill_name) + '</td>' +
+            '<td class="py-3 px-4"><div class="font-medium text-[#1C1E1B]">' + esc(m.course_title) + '</div><div class="text-[11px] text-[#5C5A52]">' + esc(m.course_provider) + '</div></td>' +
+            '<td class="py-3 px-3 text-right font-mono tabular-nums text-[#5C5A52]">' + esc(m.hours) + 'h</td>' +
+            '<td class="py-3 px-3">' + statusPill + '</td>' +
+            '<td class="py-3 px-4 text-right whitespace-nowrap">' + actionCell + '</td></tr>';
+        }).join("");
+      }
+
+      var evBody = document.getElementById("activity-ledger-body");
+      var evList = report.enriched_events || [];
+      setText("ledger-count", String(evList.length));
+      if (evBody) {
+        if (!evList.length) {
+          evBody.innerHTML = '<div class="p-8 text-center text-xs text-[#5C5A52]">No readiness milestones logged yet.</div>';
+        } else {
+          evBody.innerHTML = evList.map(function (ev) {
+            var badgeCls = ev.kind === "interview_completed"
+              ? "bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]"
+              : "bg-[#FAF9F5] text-[#4A483F] border border-[#E2DEC9]";
+            var deltaBadge = ev.delta_str
+              ? '<span class="px-2 py-0.5 rounded bg-[#E3F2EA] text-[#1B5E43] font-semibold text-[11px]">' + esc(ev.delta_str) + '</span>'
+              : "";
+            var detailLine = ev.detail ? '<div class="text-[11px] text-[#5C5A52] mt-0.5">' + esc(ev.detail) + '</div>' : "";
+            return '<div class="px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 hover:bg-[#FAF9F5]/60">' +
+              '<div class="flex items-start gap-3 min-w-0">' +
+              '<span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold shrink-0 ' + badgeCls + '">' + esc(ev.badge_label) + '</span>' +
+              '<div class="min-w-0"><div class="text-xs font-semibold text-[#1C1E1B]">' + esc(ev.title) + '</div>' + detailLine + '</div></div>' +
+              '<div class="flex items-center gap-3 text-xs font-mono tabular-nums shrink-0">' + deltaBadge +
+              '<span class="font-semibold text-[#1C1E1B]">' + esc(ev.readiness) + '/100</span>' +
+              '<span class="text-[11px] text-[#7A776E]">' + esc(ev.date_display) + '</span></div></div>';
+          }).join("");
+        }
+      }
+
+      renderCharts({
+        milestone_series: report.milestone_series || [],
+        target_roles: (report.target_roles || []).slice(0, 6),
+        weekly_plan: report.weekly_plan || [],
+        by_verification: (report.skill_breakdown && report.skill_breakdown.by_verification) || {},
+        by_level: bl
+      });
+    }
+
+    window.completeProgressModule = function (btn) {
+      var planId = btn.getAttribute("data-plan-id");
+      var itemId = btn.getAttribute("data-item-id");
+      if (!planId || !itemId) return;
+      btn.disabled = true;
+      var origLabel = btn.textContent;
+      btn.textContent = "Saving...";
+      fetch("/api/plans/" + encodeURIComponent(planId) + "/items/" + encodeURIComponent(itemId) + "/complete", {
+        method: "POST"
+      }).then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      }).then(function () {
+        if (window.toast) window.toast("Module marked complete and skill readiness updated.", "success");
+        return fetch("/api/students/" + encodeURIComponent(SID) + "/progress");
+      }).then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      }).then(function (data) {
+        if (data && data.report) {
+          updateDomFromReport(data.report);
+        }
+      }).catch(function (err) {
+        btn.disabled = false;
+        btn.textContent = origLabel;
+        if (window.toast) window.toast("Could not update module: " + err.message, "error");
+      });
+    };
+
+    renderCharts(initialCharts);
+  })();
 </script>
 {% endblock %}

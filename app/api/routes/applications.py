@@ -59,6 +59,7 @@ def _app_payload(app_row: JobApplication, *, job: Job | None = None,
         "endorsed_by": app_row.endorsed_by or "",
         "approved_by": app_row.approved_by or "",
         "notes": app_row.notes or "",
+        "is_favorite": bool(getattr(app_row, "is_favorite", False)),
         "created_at": app_row.created_at.isoformat() if app_row.created_at else None,
         "updated_at": app_row.updated_at.isoformat() if app_row.updated_at else None,
         "job_title": job.title if job else "",
@@ -135,6 +136,10 @@ def create_application(
     tier = job_tier(job)
     match_score = _resolve_match_score(session, sid, job_id, elig)
     eligible = bool(elig.get("eligible"))
+    match_row = session.exec(
+        select(JobMatch).where(JobMatch.student_id == sid, JobMatch.job_id == job_id)
+    ).first()
+    initial_favorite = bool(getattr(match_row, "is_favorite", False)) if match_row is not None else False
     now = datetime.now(timezone.utc)
     app_id = f"app-{uuid4().hex[:8]}"
 
@@ -151,7 +156,7 @@ def create_application(
             eligibility_checks={"checks": elig.get("checks", []),
                                 "cited_sops": elig.get("cited_sops", [])},
             approval_id=None, endorsed_by="", approved_by="", notes=note,
-            created_at=now, updated_at=now)
+            is_favorite=initial_favorite, created_at=now, updated_at=now)
         session.add(app_row)
         session.add(ProgressEvent(
             id=f"pe-{uuid4().hex[:8]}", student_id=sid, kind="nomination",
@@ -184,7 +189,7 @@ def create_application(
             eligibility_checks={"checks": elig.get("checks", []),
                                 "cited_sops": elig.get("cited_sops", [])},
             approval_id=ap.id, endorsed_by="", approved_by="", notes=note,
-            created_at=now, updated_at=now)
+            is_favorite=initial_favorite, created_at=now, updated_at=now)
         session.add(app_row)
         _add_audit("application.submitted",
                    {"student_id": sid, "job_id": job_id, "tier": tier,
@@ -230,7 +235,7 @@ def create_application(
                             "cited_sops": elig.get("cited_sops", []),
                             "reasons": elig.get("reasons", [])},
         approval_id=ap.id, endorsed_by="", approved_by="", notes=note,
-        created_at=now, updated_at=now)
+        is_favorite=initial_favorite, created_at=now, updated_at=now)
     session.add(app_row)
     _add_audit("application.waiver_requested",
                {"student_id": sid, "job_id": job_id, "tier": tier,

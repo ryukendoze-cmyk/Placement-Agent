@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JKLU CareerOS — Starting</title>
+  <style>
+    :root {
+      --bg: #F4F3EC;
+      --green: #1D5C42;
+      --green-dark: #154531;
+      --ink: #1B2420;
+      --muted: #5B6660;
+      --border: #D8D6CB;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .card {
+      width: 100%;
+      max-width: 640px;
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 10px 30px rgba(27, 36, 32, 0.08);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--green);
+      color: var(--bg);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 18px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      color: var(--green);
+    }
+    .subtitle {
+      margin: 2px 0 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 16px 0 12px;
+    }
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--green);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    pre {
+      background: #131B17;
+      color: #D9EFE4;
+      border-radius: 10px;
+      padding: 14px;
+      height: 220px;
+      overflow-y: auto;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .actions {
+      margin-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    button {
+      background: var(--green);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: var(--green-dark); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">
+      <div class="badge">J</div>
+      <div>
+        <h1>JKLU CareerOS</h1>
+        <p class="subtitle">Placement Readiness &amp; Career Matching Agent</p>
+      </div>
+    </div>
+    <div class="status">
+      <div class="spinner" id="spinner"></div>
+      <span id="status-text">Probing backend server...</span>
+    </div>
+    <pre id="logs"></pre>
+    <div class="actions">
+      <span id="server-url-label">Server: http://127.0.0.1:8010</span>
+      <button type="button" id="retry-btn">Retry Connection</button>
+    </div>
+  </div>
+  <script>
+    const logsEl = document.getElementById("logs");
+    const statusEl = document.getElementById("status-text");
+    const urlLabel = document.getElementById("server-url-label");
+    const spinner = document.getElementById("spinner");
+    const retryBtn = document.getElementById("retry-btn");
+
+    function appendLog(line) {
+      logsEl.textContent += (logsEl.textContent ? "\n" : "") + line;
+      logsEl.scrollTop = logsEl.scrollHeight;
+    }
+
+    if (window.careerosDesktop) {
+      window.careerosDesktop.getServerUrl().then((url) => {
+        urlLabel.textContent = "Server: " + url;
+      });
+      window.careerosDesktop.onStartupLog((line) => appendLog(line));
+      window.careerosDesktop.onStartupStatus((status) => {
+        statusEl.textContent = status.message || "";
+        if (status.error) {
+          spinner.style.display = "none";
+        } else {
+          spinner.style.display = "block";
+        }
+      });
+      retryBtn.addEventListener("click", () => {
+        window.careerosDesktop.retryConnection();
+      });
+    }
+  </script>
+</body>
+</html>

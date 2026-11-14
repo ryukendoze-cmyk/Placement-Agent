@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
@@ -96,32 +97,29 @@ def purge_live_jobs(
     session: Session,
     ctx: Any | None = None,
     clear_output: bool = True,
+    *,
+    owner_student_id: str | None = None,
 ) -> int:
-    """Delete all live scraped jobs, related records, and vector embeddings (ARCHITECTURE §18.4).
+    """Delete live scraped jobs, related records, and vector embeddings (ARCHITECTURE §18.4).
 
     Institutional on-campus jobs (Job.source == "local") and student profiles/courses
-    are protected and remain untouched. Only live/external jobs (Job.source != "local"
-    or Job.id starting with "job-ext-") are removed.
+    are protected and remain untouched. When ``owner_student_id`` is provided, only
+    live jobs owned by that student are deleted; otherwise all live/external jobs
+    (Job.source != "local", Job.is_live, or Job.id starting with "job-ext-") are
+    removed.
 
     Cascades FK deletions safely in child-to-parent order:
-    PlanItem -> UpskillPlan -> Interview -> JobMatch -> Job.
+    PlanItem -> UpskillPlan -> Interview -> JobApplication -> JobMatch -> Job.
 
-    When clear_output is True, output/raw_scraped_jobs.json and
-    output/normalized_jobs.json are reset to empty JSON arrays.
-
-    Args:
-        session: Active SQLModel database session.
-        ctx: Optional application context with vector_store and job_vectors.
-        clear_output: Whether to reset output/ JSON cache files to '[]'.
-
-    Returns:
-        Number of purged live job records.
+    When clear_output is True and owner_student_id is None, output/raw_scraped_jobs.json
+    and output/normalized_jobs.json are reset to empty JSON arrays.
     """
-    jobs = list(session.exec(
-        select(Job).where(
-            (Job.source != "local") | (Job.id.like("job-ext-%"))
-        )
-    ).all())
+    live_clause = (Job.source != "local") | (Job.id.like("job-ext-%")) | (Job.is_live.is_(True))
+    if owner_student_id is not None:
+        stmt = select(Job).where(live_clause & (Job.owner_student_id == owner_student_id))
+    else:
+        stmt = select(Job).where(live_clause)
+    jobs = list(session.exec(stmt).all())
     purged_ids = [j.id for j in jobs if hasattr(j, "id")]
     if purged_ids:
         sub_plans = select(UpskillPlan.id).where(UpskillPlan.job_id.in_(purged_ids))
@@ -152,7 +150,7 @@ def purge_live_jobs(
 
         logger.info("Purged %d live scraped job record(s) from the database", len(purged_ids))
 
-    if clear_output:
+    if clear_output and owner_student_id is None:
         for out_file in (
             Path("output/raw_scraped_jobs.json"),
             Path("output/normalized_jobs.json"),
@@ -461,11 +459,28 @@ def index_job_vectors(jobs: list, vector_store, embedder,
     return len(items)
 
 
+def _apply_owner_scope(job: Job, owner_student_id: str | None) -> Job:
+    """Mark a scraped job as live and optionally scope its ID/ownership to one student."""
+    src = str(getattr(job, "source", "") or "").strip().lower()
+    if str(getattr(job, "id", "") or "").startswith("job-ext-") or src not in ("", "local", "campus", "campus_drive", "jnf"):
+        job.is_live = True
+    if owner_student_id:
+        suffix = f"-{hashlib.sha1(owner_student_id.encode('utf-8')).hexdigest()[:6]}"
+        if not str(job.id).endswith(suffix):
+            job.id = f"{job.id}{suffix}"
+        job.owner_student_id = owner_student_id
+        job.is_live = True
+    return job
+
+
 def ingest_scraped_jobs(
     raw_jobs: list[dict[str, Any]],
     session: Session,
     ctx: Any,
     taxonomy: Taxonomy | None = None,
+    *,
+    owner_student_id: str | None = None,
+    replace_existing_live: bool = False,
 ) -> dict[str, Any]:
     """Normalize raw scraped jobs, merge into database idempotently, and index in vector store.
 
@@ -476,22 +491,9 @@ def ingest_scraped_jobs(
     parallel — every DB write happens on the calling thread, so the session is
     never touched concurrently and the batch stays transactional.
 
-    Deduplicates against existing database rows and across batch records by:
-    1. Exact canonical application URL (tracking parameters stripped).
-    2. Normalized (title, company) tuple.
-
-    A record that fails to normalize is logged and skipped; it never aborts the
-    batch.
-
-    Args:
-        raw_jobs: List of raw scraped job dictionaries.
-        session: Active SQLModel database session.
-        ctx: Application context containing taxonomy, vector_store, and embedder
-            (and optionally ``llm`` for AI normalization).
-        taxonomy: Optional pre-loaded Taxonomy instance.
-
-    Returns:
-        dict containing 'ingested_count', 'job_ids', and 'jobs'.
+    When ``owner_student_id`` is provided, every ingested job gets an owner-scoped
+    deterministic ID suffix, ``owner_student_id`` set to that student, ``is_live=True``,
+    and deduplication/replacement isolated strictly to that student's jobs.
     """
     tax = taxonomy or getattr(ctx, "taxonomy", None) or load_taxonomy()
 
@@ -503,9 +505,18 @@ def ingest_scraped_jobs(
         sanitize_legacy_salaries(session)
         sanitize_legacy_experience(session, ctx)
         sanitize_legacy_skills(session, ctx)
+        if replace_existing_live:
+            if owner_student_id is not None:
+                purge_live_jobs(session, ctx, clear_output=False, owner_student_id=owner_student_id)
+            else:
+                purge_live_jobs(session, ctx, clear_output=False)
 
-    # Pre-index existing database records for cross-provider dedup
-    existing_jobs = list(session.exec(select(Job)).all())
+    # Pre-index existing database records for cross-provider dedup (scoped by owner)
+    existing_jobs = [
+        j for j in session.exec(select(Job)).all()
+        if (getattr(j, "owner_student_id", None) if isinstance(getattr(j, "owner_student_id", None), str) else None)
+        == owner_student_id
+    ]
     url_lookup: dict[str, Job] = {
         _clean_url(j.job_url): j for j in existing_jobs if j.job_url
     }
@@ -546,6 +557,7 @@ def ingest_scraped_jobs(
         normalized = [normalize_scraped_job(raw, tax) for raw in valid_raw]
 
     for job in normalized:
+        _apply_owner_scope(job, owner_student_id)
         raw = next(
             (r for r in valid_raw
              if str(r.get("job_url") or r.get("url") or "").strip()

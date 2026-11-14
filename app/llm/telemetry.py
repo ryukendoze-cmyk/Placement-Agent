@@ -148,6 +148,7 @@ class TelemetryLLM:
         self.mock = MockLLM()
 
     def complete(self, system: str, user: str, json_mode: bool = False, **kwargs) -> str:
+        prompt_text = f"{system}\n{user}".strip()
         if self.tracker.should_use_fallback(self.provider):
             self.tracker.record_fallback(self.provider)
             return self.mock.complete(system, user, json_mode=json_mode, **kwargs)
@@ -155,15 +156,16 @@ class TelemetryLLM:
         try:
             out = self.primary.complete(system, user, json_mode=json_mode, **kwargs)
         except Exception:
-            self.tracker.record(self.provider, system, "",
+            self.tracker.record(self.provider, prompt_text, "",
                                 latency_ms=(time.perf_counter() - t0) * 1000.0,
                                 error=True)
             raise
-        self.tracker.record(self.provider, system, out,
+        self.tracker.record(self.provider, prompt_text, out,
                             latency_ms=(time.perf_counter() - t0) * 1000.0)
         return out
 
     def stream(self, system: str, user: str, json_mode: bool = False) -> Iterator[str]:
+        prompt_text = f"{system}\n{user}".strip()
         if self.tracker.should_use_fallback(self.provider):
             self.tracker.record_fallback(self.provider)
             yield from self.mock.stream(system, user, json_mode=json_mode)
@@ -175,11 +177,11 @@ class TelemetryLLM:
                 chunks.append(chunk)
                 yield chunk
         except Exception:
-            self.tracker.record(self.provider, system, "".join(chunks),
+            self.tracker.record(self.provider, prompt_text, "".join(chunks),
                                 latency_ms=(time.perf_counter() - t0) * 1000.0,
                                 error=True)
             raise
-        self.tracker.record(self.provider, system, "".join(chunks),
+        self.tracker.record(self.provider, prompt_text, "".join(chunks),
                             latency_ms=(time.perf_counter() - t0) * 1000.0)
 
 

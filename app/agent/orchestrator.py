@@ -16,8 +16,60 @@ import re
 import time
 from uuid import uuid4
 
-from .tools import TOOL_REGISTRY, call_tool
+from .tools import TOOL_ALIASES, TOOL_REGISTRY, call_tool
 from .verifier import build_known_entities, verify_text
+
+
+def _inject_role_args(tool_name: str, args: dict, actor_role: str) -> dict:
+    """Force server-side actor_role for privileged tools so prompts/LLM cannot escalate roles."""
+    canonical = TOOL_ALIASES.get(tool_name, tool_name)
+    out = dict(args or {})
+    spec = TOOL_REGISTRY.get(canonical)
+    if spec and ("actor_role" in spec.input_schema or "actor_role?" in spec.input_schema):
+        out["actor_role"] = actor_role or "student"
+    elif canonical == "purge_live_market_jobs":
+        out["actor_role"] = actor_role or "student"
+    return out
+
+
+def _fallback_plan(goal: str, student_id: str | None) -> list[dict]:
+    """Deterministic fallback plan that avoids failing on student-less runs."""
+    if student_id:
+        return [{"thought": "Fallback: inspect the student profile.",
+                 "tool": "inspect_student_profile", "args": {"student_id": student_id}}]
+    g = (goal or "").lower()
+    if any(k in g for k in ("cohort", "bottleneck", "workshop", "bootcamp", "admin")):
+        return [{"thought": "Fallback: query cohort placement bottlenecks.",
+                 "tool": "query_cohort_bottlenecks", "args": {"top_n": 5}}]
+    return [{"thought": "Fallback: search placement policy SOPs.",
+             "tool": "search_placement_policy_rag", "args": {"query": goal or "placement policy", "top_k": 3}}]
+
+
+def _telemetry_totals(ctx) -> dict:
+    tracker = getattr(ctx, "llm_telemetry", None)
+    if tracker is None:
+        return {"calls": 0, "tokens": 0, "cost_usd": 0.0}
+    try:
+        totals = (tracker.stats() or {}).get("totals") or {}
+        return {
+            "calls": int(totals.get("total_calls", 0) or 0),
+            "tokens": int(totals.get("total_tokens", 0) or 0),
+            "cost_usd": float(totals.get("total_cost_usd", 0.0) or 0.0),
+        }
+    except Exception:
+        return {"calls": 0, "tokens": 0, "cost_usd": 0.0}
+
+
+def _telemetry_delta(ctx, before: dict) -> dict:
+    after = _telemetry_totals(ctx)
+    llm = getattr(ctx, "llm", None)
+    provider = str(getattr(llm, "provider", "") or type(llm).__name__ if llm else "none")
+    return {
+        "provider": provider,
+        "calls": max(0, after["calls"] - before["calls"]),
+        "tokens": max(0, after["tokens"] - before["tokens"]),
+        "cost_usd": round(max(0.0, after["cost_usd"] - before["cost_usd"]), 6),
+    }
 
 
 def _tools_doc() -> str:
@@ -79,14 +131,15 @@ def _sanitize_goal_text(session, raw_text: str, *, entity_id: str, actor_role: s
     except Exception:
         pass
     try:
-        from ..security.prompt_guard import sanitize_untrusted_text
+        from ..security.guardrails import sanitize_untrusted_text
         text, flags = sanitize_untrusted_text(text, source=source)
         if flags and session is not None:
             from ..security.audit import log_audit
             log_audit(session, action="security.prompt_injection_blocked",
                       entity_type="agent_run", entity_id=entity_id,
                       actor_role=actor_role or "student",
-                      detail={"flags": flags, "source": source})
+                      detail={"flags": flags, "source": source},
+                      commit=True)
     except Exception:
         pass
     return text
@@ -167,12 +220,29 @@ def _plan(llm, goal, student_id, actor_role) -> list[dict]:
 
 def _synthesize(llm, goal, facts, refs) -> dict:
     user = json.dumps({"goal": goal, "facts": facts, "refs": refs})
-    raw = llm.complete(system=SYNTH_SYSTEM, user=user, json_mode=True) if llm else ""
-    parsed = _safe_json(raw)
+    fallback_used = False
+    raw = ""
+    if llm is not None:
+        try:
+            raw = llm.complete(system=SYNTH_SYSTEM, user=user, json_mode=True)
+        except Exception:
+            fallback_used = True
+    parsed = _safe_json(raw) if raw else None
     if not isinstance(parsed, dict):
-        parsed = {"summary": f"Goal: {goal}", "sections": []}
+        fallback_used = True if llm is not None else fallback_used
+        fact_sections = [
+            {"heading": k.replace("_", " ").title(), "body": json.dumps(v, default=str)[:400]}
+            for k, v in (facts or {}).items()
+            if isinstance(v, (dict, list))
+        ][:4]
+        parsed = {
+            "summary": f"Completed grounded lookup for: {goal}",
+            "sections": fact_sections,
+        }
     parsed.setdefault("summary", f"Goal: {goal}")
     parsed.setdefault("sections", [])
+    if fallback_used:
+        parsed["_fallback_used"] = True
     return parsed
 
 
@@ -262,7 +332,8 @@ def _repair_failed_step(llm, tool_name: str, args: dict, student_id: str | None,
 
 def _execute_loop_iter(ctx, session, *, run, goal, student_id: str | None,
                        plan_steps: list, memory: dict,
-                       started: float, actor_role: str, initial_error_recovered: str):
+                       started: float, actor_role: str, initial_error_recovered: str,
+                       simulate_failure: bool = False):
     """Real-time generator execution engine for ``run_agent`` and ``run_agent_stream``.
 
     Yields ``(event_name, payload)`` tuples live at each step transition so SSE
@@ -271,11 +342,13 @@ def _execute_loop_iter(ctx, session, *, run, goal, student_id: str | None,
     """
     from ..models import AgentStep
 
+    t_before = _telemetry_totals(ctx)
     step_idx = 0
     executed = 0
     injected = 0
     error_recovered = initial_error_recovered
     awaiting_approval = False
+    sim_injected_once = False
     while step_idx < len(plan_steps) and executed < MAX_EXECUTED_STEPS:
         raw_step = plan_steps[step_idx]
         step_idx += 1
@@ -299,15 +372,26 @@ def _execute_loop_iter(ctx, session, *, run, goal, student_id: str | None,
             step.error_recovered = recovered
 
         if not recovered:
+            call_args = _inject_role_args(tool_name, args, actor_role)
             try:
-                output = call_tool(tool_name, ctx, session, **args)
+                if simulate_failure and not sim_injected_once:
+                    sim_injected_once = True
+                    raise RuntimeError("Simulated primary LLM/tool timeout -> testing adaptive recovery")
+                output = call_tool(tool_name, ctx, session, **call_args)
+            except PermissionError as perm_err:
+                # Never retry or self-repair authorization rejections
+                run.fallback_triggered = True
+                recovered = f"permission denied: {perm_err}"
+                output = {"error": str(perm_err), "tool": tool_name, "fallback": True}
             except Exception as e:
                 # retry once with a repair prompt, else deterministic fallback
                 try:
                     retry_args = _repair_failed_step(
                         getattr(ctx, "llm", None), tool_name, args, student_id, str(e), memory
                     )
+                    retry_args = _inject_role_args(tool_name, retry_args, actor_role)
                     output = call_tool(tool_name, ctx, session, **retry_args)
+                    run.fallback_triggered = True
                     recovered = f"recovered after repair: {e}"
                 except Exception as e2:
                     run.fallback_triggered = True
@@ -396,6 +480,8 @@ def _execute_loop_iter(ctx, session, *, run, goal, student_id: str | None,
             known.add(str(v["plan_id"]))
     verify_result = verify_text(json.dumps(facts, default=str), known)
     synthesis = _synthesize(getattr(ctx, "llm", None), goal, facts, refs)
+    if synthesis.pop("_fallback_used", False):
+        run.fallback_triggered = True
     final_answer = (synthesis.get("summary", "") or "") + "\n\n" + "\n".join(
         f"**{s.get('heading','')}**: {s.get('body','')}" for s in synthesis.get("sections", []))
     final_verified = verify_text(final_answer, known)
@@ -405,6 +491,7 @@ def _execute_loop_iter(ctx, session, *, run, goal, student_id: str | None,
         "verified": sorted(set(verify_result["verified"]) | set(final_verified["verified"])),
         "unverified": sorted(set(verify_result["unverified"]) | set(final_verified["unverified"])),
         "grounding_score": final_verified["grounding_score"],
+        "telemetry": _telemetry_delta(ctx, t_before),
     }
     run.total_latency_ms = int((time.time() - started) * 1000)
     if error_recovered:
@@ -421,20 +508,21 @@ def _execute_loop_iter(ctx, session, *, run, goal, student_id: str | None,
 def _execute_loop(ctx, session, *, run, goal, student_id: str | None,
                   plan_steps: list, memory: dict,
                   started: float, actor_role: str, initial_error_recovered: str,
-                  emit=None) -> object:
+                  emit=None, simulate_failure: bool = False) -> object:
     """Shared execution engine wrapper for ``run_agent``."""
     _emit = emit if emit is not None else (lambda _n, _p: None)
     for ev_name, ev_payload in _execute_loop_iter(
         ctx, session, run=run, goal=goal, student_id=student_id,
         plan_steps=plan_steps, memory=memory, started=started,
-        actor_role=actor_role, initial_error_recovered=initial_error_recovered
+        actor_role=actor_role, initial_error_recovered=initial_error_recovered,
+        simulate_failure=simulate_failure,
     ):
         _emit(ev_name, ev_payload)
     return run
 
 
 def run_agent(ctx, session, *, goal: str, student_id: str | None = None,
-              actor_role: str = "student") -> object:
+              actor_role: str = "student", simulate_failure: bool = False) -> object:
     from ..models import AgentRun
 
     started = time.time()
@@ -469,8 +557,7 @@ def run_agent(ctx, session, *, goal: str, student_id: str | None = None,
         run.fallback_triggered = True
         student_ref_error = (student_ref_error + "; " if student_ref_error else "") + \
             f"planner failed: {e}; using deterministic fallback plan"
-        plan_steps = [{"thought": "Fallback: inspect the student profile.",
-                       "tool": "inspect_student_profile", "args": {"student_id": student_id or ""}}]
+        plan_steps = _fallback_plan(goal, student_id)
     run.plan_json = plan_steps
     if student_ref_error:
         run.fallback_triggered = True
@@ -478,11 +565,12 @@ def run_agent(ctx, session, *, goal: str, student_id: str | None = None,
     return _execute_loop(ctx, session, run=run, goal=goal, student_id=student_id,
                          plan_steps=plan_steps, memory=memory, started=started,
                          actor_role=actor_role,
-                         initial_error_recovered=student_ref_error)
+                         initial_error_recovered=student_ref_error,
+                         simulate_failure=simulate_failure)
 
 
 def run_agent_stream(ctx, session, *, goal: str, student_id: str | None = None,
-                     actor_role: str = "student"):
+                     actor_role: str = "student", simulate_failure: bool = False):
     """Run the agent and yield ``(event_name, payload)`` tuples in real time (Milestone 17)."""
     from sqlmodel import select as _select
 
@@ -520,8 +608,7 @@ def run_agent_stream(ctx, session, *, goal: str, student_id: str | None = None,
         run.fallback_triggered = True
         student_ref_error = (student_ref_error + "; " if student_ref_error else "") + \
             f"planner failed: {e}; using deterministic fallback plan"
-        plan_steps = [{"thought": "Fallback: inspect the student profile.",
-                       "tool": "inspect_student_profile", "args": {"student_id": student_id or ""}}]
+        plan_steps = _fallback_plan(goal, student_id)
     run.plan_json = plan_steps
     if student_ref_error:
         run.fallback_triggered = True
@@ -531,7 +618,8 @@ def run_agent_stream(ctx, session, *, goal: str, student_id: str | None = None,
     for name, payload in _execute_loop_iter(
         ctx, session, run=run, goal=goal, student_id=student_id,
         plan_steps=plan_steps, memory=memory, started=started,
-        actor_role=actor_role, initial_error_recovered=student_ref_error
+        actor_role=actor_role, initial_error_recovered=student_ref_error,
+        simulate_failure=simulate_failure,
     ):
         yield (name, payload)
 
@@ -612,6 +700,7 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
     known = build_known_entities(session)
     existing_tools = {s.get("tool") for s in (run.plan_json or []) if isinstance(s, dict)}
 
+    t_before = _telemetry_totals(ctx)
     try:
         new_steps = _plan(getattr(ctx, "llm", None), run.goal, run.student_id,
                           run.actor_role)
@@ -619,9 +708,7 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
     except Exception as e:
         run.fallback_triggered = True
         error_recovered = f"replanner failed: {e}; using deterministic fallback"
-        added = [{"thought": "Fallback after clarification: inspect the student profile.",
-                  "tool": "inspect_student_profile",
-                  "args": {"student_id": run.student_id or ""}}]
+        added = _fallback_plan(run.goal, run.student_id)
 
     prior_plan = list(run.plan_json or [])
     plan_steps = prior_plan + added
@@ -653,13 +740,19 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
             recovered = f"skipped {tool_name}: no student in context"
             step.error_recovered = recovered
         if not recovered:
+            call_args = _inject_role_args(tool_name, args, run.actor_role)
             try:
-                output = call_tool(tool_name, ctx, session, **args)
+                output = call_tool(tool_name, ctx, session, **call_args)
+            except PermissionError as perm_err:
+                run.fallback_triggered = True
+                recovered = f"permission denied: {perm_err}"
+                output = {"error": str(perm_err), "tool": tool_name, "fallback": True}
             except Exception as e:
                 try:
                     retry_args = _repair_failed_step(
                         getattr(ctx, "llm", None), tool_name, args, run.student_id, str(e), memory
                     )
+                    retry_args = _inject_role_args(tool_name, retry_args, run.actor_role)
                     output = call_tool(tool_name, ctx, session, **retry_args)
                     recovered = f"recovered after repair: {e}"
                 except Exception as e2:
@@ -746,6 +839,7 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
                              | set(verify_result["unverified"])
                              | set(final_verified["unverified"])),
         "grounding_score": final_verified["grounding_score"],
+        "telemetry": _telemetry_delta(ctx, t_before),
     }
     run.total_latency_ms = int((time.time() - started) * 1000)
     if error_recovered:

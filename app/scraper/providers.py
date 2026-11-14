@@ -39,6 +39,21 @@ from urllib.parse import parse_qsl, quote_plus, urlencode, urlsplit, urlunsplit
 
 logger = logging.getLogger(__name__)
 
+
+def _is_offline_or_sandbox(kwargs: dict[str, Any] | None = None) -> bool:
+    """True when offline/sandbox mode is active via kwargs, env, or test harness."""
+    kw = kwargs or {}
+    if kw.get("offline") is True or kw.get("sandbox") is True:
+        return True
+    if kw.get("live") is True:
+        return False
+    for env_key in ("PS06_OFFLINE_MODE", "PS06_SANDBOX_SCRAPER", "JOB_SCRAPER_SANDBOX"):
+        if os.environ.get(env_key, "").strip().lower() in ("1", "true", "yes", "on"):
+            return True
+    if "pytest" in sys.modules:
+        return True
+    return False
+
 #: Sites JobSpy is configured to query (superset the provider advertises).
 JOBSPY_SITES: list[str] = ["naukri", "linkedin", "indeed", "glassdoor", "zip_recruiter"]
 
@@ -167,6 +182,15 @@ class JobSpyProvider(BaseJobScraperProvider):
         **kwargs: Any,
     ) -> list[dict[str, Any]]:
         """Delegate to ``JobSpyScraper.fetch_jobs`` preserving all original parameters."""
+        if (
+            kwargs.get("offline") is True
+            or kwargs.get("sandbox") is True
+            or os.environ.get("PS06_OFFLINE_MODE", "").strip().lower() in ("1", "true", "yes", "on")
+            or os.environ.get("PS06_SANDBOX_SCRAPER", "").strip().lower() in ("1", "true", "yes", "on")
+        ) and not kwargs.get("live"):
+            # Explicit offline/sandbox policy: avoid outbound JobSpy scrapes without breaking injected mocks in tests
+            if type(self._scraper).__module__.startswith("app.scraper"):
+                return []
         sites = kwargs.get("sites")
         hours_old = kwargs.get("hours_old", 168)
         country_indeed = kwargs.get("country_indeed", "India")
@@ -229,7 +253,7 @@ class RapidJobScraperProvider(BaseJobScraperProvider):
             terms = [t for t in terms if t] or ["Software Engineer"]
 
             feed_url = os.environ.get("RAPID_JOBS_FEED_URL", "").strip()
-            if feed_url:
+            if feed_url and not _is_offline_or_sandbox(kwargs):
                 # Optional live integration point; degrade silently when unavailable.
                 try:
                     return self._fetch_from_feed(feed_url, terms, location, results_wanted)
@@ -358,20 +382,22 @@ class AutomationJobScraperProvider(BaseJobScraperProvider):
             terms = [t for t in terms if t] or ["Software Engineer"]
 
             boards_url = os.environ.get("AUTOMATION_BOARDS_URL", "").strip()
-            if boards_url:
+            if boards_url and not _is_offline_or_sandbox(kwargs):
                 try:
                     return self._fetch_boards(boards_url, terms, location, results_wanted)
                 except Exception as exc:  # noqa: BLE001 - zero-crash guarantee
                     logger.warning("Automation provider boards %s failed: %s", boards_url, exc)
 
-            # Try live public developer feed: RemoteOK API
-            try:
-                remote_jobs = self._fetch_remoteok(terms, location, results_wanted)
-                if len(remote_jobs) >= results_wanted:
-                    return remote_jobs[:results_wanted]
-            except Exception as exc:  # noqa: BLE001 - resilient fallback guarantee
-                logger.debug("RemoteOK feed unavailable (%s); using authentic portal fallbacks", exc)
-                remote_jobs = []
+            remote_jobs: list[dict[str, Any]] = []
+            if not _is_offline_or_sandbox(kwargs):
+                # Try live public developer feed: RemoteOK API when online scraping is permitted
+                try:
+                    remote_jobs = self._fetch_remoteok(terms, location, results_wanted)
+                    if len(remote_jobs) >= results_wanted:
+                        return remote_jobs[:results_wanted]
+                except Exception as exc:  # noqa: BLE001 - resilient fallback guarantee
+                    logger.debug("RemoteOK feed unavailable (%s); using authentic portal fallbacks", exc)
+                    remote_jobs = []
 
             # If RemoteOK yielded partial results, fill remainder with authentic portal fallbacks
             needed = results_wanted - len(remote_jobs)
@@ -556,7 +582,7 @@ class ProxyAPIJobScraperProvider(BaseJobScraperProvider):
         scraper_api_key = os.environ.get("SCRAPER_API_KEY", "").strip()
         proxy_url = os.environ.get("JOB_SCRAPER_PROXY_URL", "").strip()
 
-        if proxy_url or scraper_api_key:
+        if (proxy_url or scraper_api_key) and not _is_offline_or_sandbox(kwargs):
             try:
                 return self._fetch_via_gateway(
                     search_term, location, results_wanted, proxy_url, scraper_api_key, kwargs

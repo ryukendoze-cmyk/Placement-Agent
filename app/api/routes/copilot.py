@@ -74,7 +74,7 @@ def _student_context(session, student_id: str | None, ctx=None) -> dict:
                                                 Interview.finished == True)).all()  # noqa: E712
     scores = [int(r.score) for r in rows if r.score is not None]
 
-    # Verified Technical Competencies
+    # Candidate Technical Competencies (status reflects StudentSkill.verification_status)
     ss_rows = session.exec(select(StudentSkill).where(StudentSkill.student_id == student_id)).all()
     skills_list = []
     for ss in ss_rows:
@@ -91,6 +91,7 @@ def _student_context(session, student_id: str | None, ctx=None) -> dict:
             "level": ss.level,
             "category": category,
             "mentions": ss.mentions,
+            "verification_status": getattr(ss, "verification_status", "claimed"),
         })
 
     skills_by_level = {
@@ -208,11 +209,122 @@ def _clean_job_ids(text: str) -> str:
     return cleaned
 
 
+def _enforce_copilot_student_scope(user, student_id: str | None) -> str | None:
+    """Enforce student row-level isolation with explicit 403 on cross-student requests."""
+    if user is not None and user.role == "student":
+        if student_id and user.student_id and student_id != user.student_id:
+            raise HTTPException(
+                403,
+                "Students may only access their own placement Copilot context.",
+            )
+        return user.student_id
+    return student_id
+
+
+def _sanitize_copilot_question(session, question: str, *, student_id: str | None,
+                               actor_role: str) -> str:
+    """Scrub PII, neutralize prompt-injection, and audit blocked injections."""
+    from app.security.guardrails import sanitize_untrusted_text
+    from app.security.pii import scrub_for_llm
+
+    question, _ = scrub_for_llm(question)
+    question, inj_flags = sanitize_untrusted_text(question, source="copilot")
+    if inj_flags:
+        try:
+            from app.security.audit import log_audit
+            log_audit(
+                session,
+                action="security.prompt_injection_blocked",
+                entity_type="copilot",
+                entity_id=student_id or "general",
+                actor_role=actor_role,
+                detail={"flags": inj_flags, "source": "copilot"},
+                commit=True,
+            )
+        except Exception:
+            pass
+    return question
+
+
+def _record_copilot_agent_run(
+    session,
+    ctx,
+    *,
+    question: str,
+    student_id: str | None,
+    actor_role: str,
+    answer: str,
+    citations: dict,
+    trace: list,
+) -> str | None:
+    """Persist a compact AgentRun/AgentStep trace so Copilot queries appear in Agent Brain."""
+    if not student_id and len((question or "").strip()) < 10:
+        return None
+    try:
+        from uuid import uuid4
+
+        from app.models import AgentRun, AgentStep
+
+        llm = getattr(ctx, "llm", None) if ctx is not None else None
+        provider = str(getattr(llm, "provider", "") or (type(llm).__name__ if llm else "mock"))
+        run_id = f"run-{uuid4().hex[:8]}"
+        step_plan = [
+            {
+                "thought": str(t.get("thought") or ""),
+                "tool": str(t.get("tool") or "search_placement_policy_rag"),
+                "args": {"top_sop": t.get("top_sop")} if t.get("top_sop") else {},
+            }
+            for t in (trace or [])
+            if isinstance(t, dict)
+        ]
+        run = AgentRun(
+            id=run_id,
+            student_id=student_id,
+            actor_role=actor_role or "student",
+            goal=f"Copilot: {question[:140]}",
+            status="completed",
+            plan_json=step_plan,
+            final_answer=answer[:2000],
+            citations={
+                "verified": list(citations.get("verified") or []),
+                "unverified": list(citations.get("unverified") or []),
+                "grounding_score": int(citations.get("grounding_score", 100)),
+                "workflow_kind": "copilot",
+            },
+            total_latency_ms=0,
+            provider_used=f"copilot:{provider}",
+            fallback_triggered=False,
+        )
+        session.add(run)
+        session.flush()
+        for idx, t in enumerate(trace or [], 1):
+            if not isinstance(t, dict):
+                continue
+            session.add(
+                AgentStep(
+                    id=f"step-{uuid4().hex[:8]}",
+                    run_id=run_id,
+                    step_order=idx,
+                    thought=str(t.get("thought") or ""),
+                    tool_name=str(t.get("tool") or "search_placement_policy_rag"),
+                    tool_input={"question": question[:120], "student_id": student_id},
+                    tool_output={"top_sop": t.get("top_sop")} if t.get("top_sop") else {"ok": True},
+                    verification_passed=True,
+                    error_recovered="",
+                    latency_ms=0,
+                )
+            )
+        session.commit()
+        return run_id
+    except Exception:
+        return None
+
+
 def _copilot_synthesis(session, ctx, *, question: str, student_id: str | None,
                        job_id: str | None, actor_role: str,
                        sources: list, student_context: dict,
                        eligibility: dict, trace: list) -> dict:
-    """Run LLM synthesis with grounded placement context and verify SOP citations."""
+    """Run LLM synthesis with grounded placement context and verify SOP + numeric citations."""
     user = {"question": question, "student": student_context,
             "sources": sources, "eligibility": eligibility}
     import json as _json
@@ -252,14 +364,47 @@ def _copilot_synthesis(session, ctx, *, question: str, student_id: str | None,
     answer = _clean_job_ids(answer)
     cited = [str(c) for c in (parsed.get("cited_sops") or [])]
 
-    # Citation guard (annotate unknown, keep known)
+    # Citation + numeric grounding guard (annotate unknown SOP ids and fabricated thresholds)
+    from app.agent.verifier import verify_sop_numeric_claims
     from app.rag.policy_rag import sop_ids
     from app.security.audit import log_audit
     known = sop_ids()
     verify = verify_policy_citations(answer, known)
+    numeric_issues = verify_sop_numeric_claims(answer)
+    annotated = verify["annotated_text"]
+    unverified_all = list(verify["unverified"])
+    for err in numeric_issues:
+        if err not in unverified_all:
+            unverified_all.append(err)
+        marker = f"[UNVERIFIED: {err}]"
+        if marker not in annotated:
+            annotated = f"{annotated} {marker}"
+
     # ensure cited_sops are all known; drop unknown ones from the trusted list
     cited = [c.upper() for c in cited if c.upper() in known]
     verified_all = sorted(set(verify["verified"]) | set(cited))
+    denom = len(verified_all) + len(unverified_all)
+    grounding_score = round(100 * len(verified_all) / denom) if denom else verify["grounding_score"]
+    citations_out = {
+        "verified": verified_all,
+        "unverified": unverified_all,
+        "grounding_score": grounding_score,
+    }
+    verification_out = {
+        **citations_out,
+        "numeric_issues": numeric_issues,
+        "annotated_text": annotated,
+    }
+    agent_run_id = _record_copilot_agent_run(
+        session,
+        ctx,
+        question=question,
+        student_id=student_id,
+        actor_role=actor_role,
+        answer=annotated,
+        citations=citations_out,
+        trace=trace,
+    )
     try:
         log_audit(
             session,
@@ -269,8 +414,10 @@ def _copilot_synthesis(session, ctx, *, question: str, student_id: str | None,
             actor_role=actor_role,
             detail={
                 "question": question[:120],
-                "grounding_score": verify["grounding_score"],
+                "grounding_score": grounding_score,
                 "verified_sops": verified_all,
+                "numeric_issues": numeric_issues,
+                "agent_run_id": agent_run_id,
             },
             commit=True,
         )
@@ -281,12 +428,10 @@ def _copilot_synthesis(session, ctx, *, question: str, student_id: str | None,
         "question": question,
         "student_id": student_id,
         "job_id": job_id,
-        "answer": verify["annotated_text"],
-        "citations": {
-            "verified": verified_all,
-            "unverified": verify["unverified"],
-            "grounding_score": verify["grounding_score"],
-        },
+        "answer": annotated,
+        "citations": citations_out,
+        "verification": verification_out,
+        "agent_run_id": agent_run_id,
         "sources": sources,
         "student_context": student_context,
         "eligibility": eligibility or None,
@@ -298,25 +443,9 @@ def _copilot_synthesis(session, ctx, *, question: str, student_id: str | None,
 def _copilot_core(session, ctx, *, question: str, student_id: str | None,
                   job_id: str | None, actor_role: str) -> dict:
     """Shared retrieval + synthesis + citation-guard pipeline for ask endpoints."""
-    from app.security.guardrails import sanitize_untrusted_text
-    from app.security.pii import scrub_for_llm
-
-    question, _ = scrub_for_llm(question)
-    question, inj_flags = sanitize_untrusted_text(question, source="copilot")
-    if inj_flags:
-        try:
-            from app.security.audit import log_audit
-            log_audit(
-                session,
-                action="security.prompt_injection_blocked",
-                entity_type="copilot",
-                entity_id=student_id or "general",
-                actor_role=actor_role,
-                detail={"flags": inj_flags, "source": "copilot"},
-                commit=True,
-            )
-        except Exception:
-            pass
+    question = _sanitize_copilot_question(
+        session, question, student_id=student_id, actor_role=actor_role
+    )
     # 1) Retrieval
     search = search_sops(question, top_k=3, embedder=ctx.embedder)
     sources = search.get("results", [])
@@ -339,9 +468,14 @@ def _copilot_core(session, ctx, *, question: str, student_id: str | None,
         "top_sop": search.get("top_sop_id"),
     }]
     if student_context:
-        skill_cnt = len(student_context.get("skills", []))
+        skills = student_context.get("skills", [])
+        skill_cnt = len(skills)
+        ver_cnt = sum(1 for s in skills if s.get("verification_status") == "verified")
         trace.append({
-            "thought": f"Inspected student profile for {student_context.get('name', 'student')} ({skill_cnt} verified skills, GPA {student_context.get('gpa')}).",
+            "thought": (
+                f"Inspected student profile for {student_context.get('name', 'student')} "
+                f"({ver_cnt}/{skill_cnt} verified skills, GPA {student_context.get('gpa')})."
+            ),
             "tool": "inspect_student_profile",
         })
         if student_context.get("top_matches"):
@@ -379,13 +513,10 @@ def copilot_ask_stream(payload: dict, request: Request,
     user = get_current_user_optional(request)
     if user is not None:
         actor_role = user.role
-        if user.role == "student":
-            student_id = user.student_id
-    from app.security.guardrails import sanitize_untrusted_text
-    from app.security.pii import scrub_for_llm
-
-    question, _ = scrub_for_llm(question)
-    question, _ = sanitize_untrusted_text(question, source="copilot")
+    student_id = _enforce_copilot_student_scope(user, student_id)
+    question = _sanitize_copilot_question(
+        session, question, student_id=student_id, actor_role=actor_role
+    )
 
     def event_stream():
         try:
@@ -406,9 +537,14 @@ def copilot_ask_stream(payload: dict, request: Request,
                 "top_sop": search.get("top_sop_id"),
             }]
             if student_context:
-                skill_cnt = len(student_context.get("skills", []))
+                skills = student_context.get("skills", [])
+                skill_cnt = len(skills)
+                ver_cnt = sum(1 for s in skills if s.get("verification_status") == "verified")
                 trace.append({
-                    "thought": f"Inspected student profile for {student_context.get('name', 'student')} ({skill_cnt} verified skills, GPA {student_context.get('gpa')}).",
+                    "thought": (
+                        f"Inspected student profile for {student_context.get('name', 'student')} "
+                        f"({ver_cnt}/{skill_cnt} verified skills, GPA {student_context.get('gpa')})."
+                    ),
                     "tool": "inspect_student_profile",
                 })
                 if student_context.get("top_matches"):
@@ -461,6 +597,8 @@ def copilot_ask_stream(payload: dict, request: Request,
             yield _sse_chunk("complete", {
                 "answer": result["answer"],
                 "citations": result["citations"],
+                "verification": result["verification"],
+                "agent_run_id": result.get("agent_run_id"),
                 "sources": result["sources"],
                 "student_context": result["student_context"],
                 "eligibility": result["eligibility"],
@@ -491,14 +629,10 @@ def copilot_ask(payload: dict, request: Request,
     job_id = (payload or {}).get("job_id") or None
     actor_role = (payload or {}).get("actor_role", "student")
 
-    # Row-level security (§17.2.B.2): a student's query is forcibly bound to
-    # their own identity, so they cannot request another student's metrics,
-    # GPA or transcript through the Copilot.
     user = get_current_user_optional(request)
     if user is not None:
         actor_role = user.role
-        if user.role == "student":
-            student_id = user.student_id
+    student_id = _enforce_copilot_student_scope(user, student_id)
 
     return _copilot_core(session, ctx, question=question, student_id=student_id,
                          job_id=job_id, actor_role=actor_role)
@@ -531,7 +665,11 @@ def copilot_page(request: Request, session: Session = Depends(get_session)):
     else:
         students = session.exec(select(Student).order_by(Student.created_at.desc())).all()
 
-    cohort_students = session.exec(select(Student).order_by(Student.created_at.desc())).all()
+    cohort_students = [] if role == "student" else list(students)
+
+    from app.config import settings as _settings
+    is_strict = str(getattr(_settings, "auth_mode", "demo")).strip().lower() == "strict"
+    allow_demo = bool(getattr(_settings, "demo_role_switch", True))
 
     return request.app.state.templates.TemplateResponse(
         request, "copilot.html",
@@ -541,6 +679,8 @@ def copilot_page(request: Request, session: Session = Depends(get_session)):
          "department": dept,
          "user_name": (user.name if user else ""),
          "user_department": dept,
+         "demo_role_switch": allow_demo,
+         "auth_mode": "strict" if is_strict else "demo",
          "quick_prompts": QUICK_PROMPTS,
          "sop_ids": sorted(sop_ids()), "error": ""})
 

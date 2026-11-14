@@ -69,11 +69,11 @@ limiter = RateLimiter()
 
 
 def _identity(request: Request) -> str:
-    hdr = str(request.headers.get("x-demo-student-id", "") or "").strip()
-    if hdr:
-        return hdr
+    is_strict = False
     try:
+        from ..config import settings as _settings
         from .rbac import decode_session
+        is_strict = str(getattr(_settings, "auth_mode", "demo")).strip().lower() == "strict"
         claims = decode_session(request.cookies.get("ps06_session")) or {}
         sid = str(claims.get("student_id") or "").strip()
         if sid:
@@ -83,6 +83,10 @@ def _identity(request: Request) -> str:
             return uid
     except Exception:  # pragma: no cover - defensive
         pass
+    if not is_strict:
+        hdr = str(request.headers.get("x-demo-student-id", "") or "").strip()
+        if hdr:
+            return hdr
     xff = str(request.headers.get("x-forwarded-for", "") or "").strip()
     if xff:
         return xff.split(",")[0].strip()

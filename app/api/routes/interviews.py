@@ -1,8 +1,9 @@
 import logging
+import os
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 
@@ -11,10 +12,10 @@ from app.api.deps import get_ctx, get_session
 # Imported at module level so the §19.5 re-rank after finalization runs through
 # this name (also lets tests spy on the re-rank trigger).
 from app.api.routes.students import _rank_and_persist
-from app.interview.bank import get_question, load_bank
+from app.interview.bank import Question, get_question, load_bank
 from app.interview.engine import InterviewSession, role_for_job
 from app.interview.feedback_loop import QuestionTelemetryManager
-from app.interview.quality import audit_question_bank
+from app.interview.quality import audit_question_bank, load_vetted_bank
 from app.interview.speech_analytics import aggregate_speech_delivery, analyze_speech_delivery
 from app.models import (
     AuditLog,
@@ -30,15 +31,60 @@ from app.security.rbac import enforce_student_scope, require_role
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+_ORIG_LOAD_BANK = load_bank
 
 #: Skill-promotion thresholds for mock-interview verification (ARCHITECTURE §19.5.1).
 INTERVIEW_PROMOTE_SCORE = 80
+INTERVIEW_REVERIFY_SCORE = 70
 INTERVIEW_REMEDIAL_SCORE = 45
+MAX_AUDIO_BYTES = 15 * 1024 * 1024
+
+
+def _load_session_bank():
+    if load_bank is not _ORIG_LOAD_BANK:
+        return load_bank()
+    vetted = load_vetted_bank()
+    return vetted if vetted else load_bank()
+
+
+def _deserialize_probes(raw_list) -> list[Question]:
+    out: list[Question] = []
+    for item in raw_list or []:
+        if not isinstance(item, dict) or not item.get("id"):
+            continue
+        out.append(
+            Question(
+                id=str(item["id"]),
+                role=str(item.get("role") or "generic"),
+                skill_id=str(item.get("skill_id") or "generic"),
+                difficulty=int(item.get("difficulty", 2)),
+                question=str(item.get("question") or ""),
+                keywords=tuple(item.get("keywords") or ()),
+                outline=tuple(item.get("outline") or ()),
+            )
+        )
+    return out
+
+
+def _serialize_probes(questions: list[Question]) -> list[dict]:
+    return [
+        {
+            "id": q.id,
+            "role": q.role,
+            "skill_id": q.skill_id,
+            "difficulty": q.difficulty,
+            "question": q.question,
+            "keywords": list(q.keywords),
+            "outline": list(q.outline),
+        }
+        for q in (questions or [])
+    ]
 
 
 def _session(session: Session, interview: Interview, ctx, enable_followups: bool = False) -> InterviewSession:
     job = session.get(Job, interview.job_id) if interview.job_id else None
-    role = role_for_job(job) if job else "backend"
+    persisted_role = str(getattr(interview, "role", None) or "").strip()
+    role = persisted_role or (role_for_job(job) if job else "backend")
 
     # Query candidate skills
     candidate_skills: list[StudentSkill] = []
@@ -67,83 +113,177 @@ def _session(session: Session, interview: Interview, ctx, enable_followups: bool
     else:
         prefer = candidate_skill_ids
 
-    # M18.2: resume-grounded probes are regenerated deterministically each turn
-    # (idempotent) and served before static bank questions via the session.
-    resume_questions = []
+    # M18.2: reuse cached resume-grounded probes stored on interview.feedback when
+    # available so multi-turn interviews do not repeat probe synthesis calls on every turn.
+    resume_questions: list[Question] = []
     if getattr(interview, "include_resume_probes", False) and interview.student_id:
-        from app.interview.resume_probe import generate_resume_project_questions
-        student = session.get(Student, interview.student_id)
-        if student is not None:
-            resume_questions = generate_resume_project_questions(
-                student, sorted_candidate_skills, getattr(ctx, "taxonomy", None),
-                llm=getattr(ctx, "llm", None))
+        fb = interview.feedback if isinstance(interview.feedback, dict) else {}
+        if "_resume_probes" in fb:
+            resume_questions = _deserialize_probes(fb.get("_resume_probes"))
+        elif not any(str(t.get("q_id", "")).startswith("q-resume-") for t in (interview.transcript or [])):
+            from app.interview.resume_probe import generate_resume_project_questions
+            student = session.get(Student, interview.student_id)
+            if student is not None:
+                resume_questions = generate_resume_project_questions(
+                    student, sorted_candidate_skills, getattr(ctx, "taxonomy", None),
+                    llm=getattr(ctx, "llm", None))
 
     # M18.1: adaptive follow-up probing is opt-in (flag stored per-interview when
     # requested at creation, or passed per-answer via ``adaptive_followup``).
     followups = bool(enable_followups) or bool(getattr(interview, "adaptive_followup", False))
 
-    return InterviewSession(role, load_bank(), ctx.llm, prefer, interview.transcript or [],
+    return InterviewSession(role, _load_session_bank(), ctx.llm, prefer, interview.transcript or [],
                             enable_followups=followups,
                             resume_questions=resume_questions)
 
 
-def _promote_skills_from_summary(session: Session, student_id: str | None, summary) -> None:
-    """§19.5.1 — promote verified skill levels from the interview's per_skill scores.
-
-    Score >= INTERVIEW_PROMOTE_SCORE promotes basic -> intermediate -> advanced and
-    records a verification quote in StudentSkill.evidence. Score < INTERVIEW_REMEDIAL_SCORE
-    records an empirical remedial gap in evidence (never a promotion). Mid-band scores
-    leave the level untouched. ``per_skill`` values may arrive as strings on the wire.
-    """
+def _promote_skills_from_summary(session: Session, student_id: str | None, summary) -> list[dict]:
+    """Closed-loop skill verification from interview per_skill scores."""
     if not student_id or not getattr(summary, "per_skill", None):
-        return
+        return []
     rows = {
         ss.skill_id: ss
         for ss in session.exec(
             select(StudentSkill).where(StudentSkill.student_id == student_id)
         ).all()
     }
+    now = datetime.now(timezone.utc)
     changed = False
+    updates: list[dict] = []
+    remedial_skills: list[str] = []
+
     for skill_id, raw_score in summary.per_skill.items():
         try:
-            score = round(float(raw_score))
+            score = max(0, min(100, round(float(raw_score))))
         except (TypeError, ValueError):
             continue
         row = rows.get(skill_id)
-        if score >= INTERVIEW_PROMOTE_SCORE:
+        prev_status = str(getattr(row, "verification_status", "claimed") or "claimed").lower() if row else None
+        current_level = str(getattr(row, "level", "basic") or "basic").lower() if row else "basic"
+
+        is_reverify_pass = (
+            score >= INTERVIEW_REVERIFY_SCORE
+            and row is not None
+            and (prev_status in ("unverified", "needs_reverification") or current_level == "basic")
+        )
+        if score >= INTERVIEW_PROMOTE_SCORE or is_reverify_pass:
             quote = f"interview verified ({score}): {str(summary.feedback or '').strip()}"
             if row is None:
-                # A promoted skill the student did not previously own: create the
-                # row only for a real taxonomy skill (never "generic" or an
-                # unseeded id, which would violate the StudentSkill -> Skill FK).
-                if skill_id and skill_id != "generic" and session.get(Skill, skill_id) is not None:
+                if score >= INTERVIEW_PROMOTE_SCORE and skill_id and skill_id != "generic" and session.get(Skill, skill_id) is not None:
                     row = StudentSkill(
-                        student_id=student_id, skill_id=skill_id, mentions=1,
-                        level="intermediate", evidence=[quote] if quote else [])
+                        student_id=student_id,
+                        skill_id=skill_id,
+                        mentions=1,
+                        level="intermediate",
+                        evidence=[quote] if quote else [],
+                        verification_status="verified",
+                        confidence=round(max(0.7, min(1.0, score / 100.0)), 2),
+                        source="interview",
+                        last_verified_score=score,
+                        last_verified_at=now,
+                    )
                     session.add(row)
-                    rows[skill_id] = row  # keep the dict current for later iterations
+                    rows[skill_id] = row
                     changed = True
+                    updates.append({
+                        "skill_id": skill_id,
+                        "score": score,
+                        "previous_status": None,
+                        "verification_status": "verified",
+                        "level": row.level,
+                        "confidence": row.confidence,
+                    })
                 continue
-            current = str(row.level or "basic").lower()
-            if current == "basic":
-                row.level = "intermediate"
-            elif current == "intermediate":
-                row.level = "advanced"
-            # advanced stays advanced; still record the verification.
+
+            if score >= INTERVIEW_PROMOTE_SCORE:
+                if current_level == "basic":
+                    row.level = "intermediate"
+                elif current_level == "intermediate":
+                    row.level = "advanced"
+            row.verification_status = "verified"
+            row.confidence = round(max(0.7, min(1.0, score / 100.0)), 2)
+            row.source = "interview"
+            row.last_verified_score = score
+            row.last_verified_at = now
             if quote and quote not in row.evidence:
                 row.evidence = list(row.evidence) + [quote]
             session.add(row)
             changed = True
+            updates.append({
+                "skill_id": skill_id,
+                "score": score,
+                "previous_status": prev_status,
+                "verification_status": "verified",
+                "level": row.level,
+                "confidence": row.confidence,
+            })
         elif score < INTERVIEW_REMEDIAL_SCORE:
+            if skill_id and skill_id != "generic":
+                remedial_skills.append(skill_id)
             if row is None:
                 continue
+            row.verification_status = "unverified"
+            row.confidence = round(max(0.1, score / 100.0), 2)
+            row.source = "interview"
+            row.last_verified_score = score
+            row.last_verified_at = now
             note = f"interview remedial gap ({score}): skill tested below threshold"
             if note not in row.evidence:
                 row.evidence = list(row.evidence) + [note]
             session.add(row)
             changed = True
+            updates.append({
+                "skill_id": skill_id,
+                "score": score,
+                "previous_status": prev_status,
+                "verification_status": "unverified",
+                "level": row.level,
+                "confidence": row.confidence,
+            })
+        else:
+            if skill_id and skill_id != "generic":
+                remedial_skills.append(skill_id)
+            if row is None:
+                continue
+            row.verification_status = "needs_reverification"
+            row.confidence = round(score / 100.0, 2)
+            row.source = "interview"
+            row.last_verified_score = score
+            row.last_verified_at = now
+            note = f"interview needs reverification ({score}): verify applied proficiency"
+            if note not in row.evidence:
+                row.evidence = list(row.evidence) + [note]
+            session.add(row)
+            changed = True
+            updates.append({
+                "skill_id": skill_id,
+                "score": score,
+                "previous_status": prev_status,
+                "verification_status": "needs_reverification",
+                "level": row.level,
+                "confidence": row.confidence,
+            })
+
     if changed:
+        if updates:
+            session.add(AuditLog(
+                id=f"aud-{uuid4().hex[:8]}",
+                action="skill.verification_updated",
+                entity_type="student",
+                entity_id=student_id,
+                actor_role="system",
+                detail={"updates": updates},
+            ))
         session.commit()
+
+    if remedial_skills:
+        try:
+            from app.plan.planner import ensure_remedial_plan_items
+            ensure_remedial_plan_items(session, student_id, remedial_skills)
+        except Exception:
+            logger.warning("ensure_remedial_plan_items failed for %s", student_id, exc_info=True)
+
+    return updates
 
 
 def _aggregate_speech(transcript: list) -> dict:
@@ -177,7 +317,13 @@ def _finalize(session: Session, row: Interview, summary, turn=None,
                 "student_id": row.student_id, "per_skill": summary.per_skill}))
     session.commit()
     # §19.5.1 — promote verified skills from this interview's scores.
-    _promote_skills_from_summary(session, row.student_id, summary)
+    skill_updates = _promote_skills_from_summary(session, row.student_id, summary)
+    if skill_updates:
+        fb = dict(row.feedback or {})
+        fb["skill_updates"] = skill_updates
+        row.feedback = fb
+        session.add(row)
+        session.commit()
     # §19.5.2 — re-score matches + refresh the upskilling roadmap now that levels
     # moved. Always attempted (so the trigger is observable); any failure — e.g.
     # a missing ctx — is contained so it never undoes the finalize/promote writes.
@@ -209,11 +355,18 @@ def _finalize(session: Session, row: Interview, summary, turn=None,
             session.commit()
     except Exception:
         logger.warning("match re-rank after interview finalization failed", exc_info=True)
+    summary_payload = {
+        "score": summary.score,
+        "per_skill": summary.per_skill,
+        "feedback": summary.feedback,
+        "rubric_overall": summary.rubric_overall,
+        "skill_updates": skill_updates,
+    }
+    if speech_summary:
+        summary_payload["speech_summary"] = speech_summary
     content = {
         "finished": True,
-        "summary": {"score": summary.score, "per_skill": summary.per_skill,
-                    "feedback": summary.feedback,
-                    "rubric_overall": summary.rubric_overall},
+        "summary": summary_payload,
     }
     if turn is not None:
         content.update({
@@ -263,17 +416,21 @@ def start_interview(sid: str, request: Request, payload: dict | None = None,
             raise HTTPException(404, "job not found")
 
     job_id_val = job.id if job else "j-general"
+    resolved_role = str(role_arg).strip() if role_arg else (role_for_job(job) if job else "backend")
     iid = f"int-{uuid4().hex[:8]}"
     row = Interview(id=iid, student_id=sid, job_id=job_id_val, transcript=[], score=None,
-                    feedback={}, finished=False)
+                    feedback={}, finished=False, role=resolved_role)
     # M18.1/18.2: persist per-interview flags so each reconstructed turn keeps them.
     row.include_resume_probes = include_resume_probes
     row.adaptive_followup = adaptive_followup
     session.add(row)
     session.commit()
     s = _session(session, row, ctx, enable_followups=adaptive_followup)
-    if role_arg:
-        s.role = role_arg
+    s.role = resolved_role
+    if s.resume_questions:
+        fb = dict(row.feedback or {})
+        fb["_resume_probes"] = _serialize_probes(s.resume_questions)
+        row.feedback = fb
     q = s.next_question()
     row.transcript = s.transcript
     session.add(row)
@@ -313,8 +470,11 @@ def answer_interview(iid: str, request: Request, payload: dict,
     # M18.3: acoustic telemetry for this turn (duration optional; typed => wpm 0).
     raw_duration = (payload or {}).get("duration_seconds")
     speech = analyze_speech_delivery(text, raw_duration)
-    # attach to the pending (now answered) transcript turn
-    if s.transcript:
+    # Attach telemetry to the exact turn just answered (before any appended follow-up turn).
+    answered_turns = s.answered
+    if answered_turns:
+        answered_turns[-1]["speech_analytics"] = speech
+    elif s.transcript:
         s.transcript[-1]["speech_analytics"] = speech
     if turn.injection_flags:
         # M15: record the neutralized attempt (append-only audit row).
@@ -363,6 +523,7 @@ def answer_interview(iid: str, request: Request, payload: dict,
         "ideal_answer_hint": turn.ideal_answer_hint,
         "injection_flags": turn.injection_flags,
         "followup_probe": turn.followup_probe,
+        "error_recovered": turn.error_recovered,
         "speech_analytics": speech,
         "question": {"id": nq.id, "question": nq.question, "skill_id": nq.skill_id,
                      "difficulty": nq.difficulty},
@@ -376,14 +537,19 @@ def get_interview(iid: str, request: Request, session: Session = Depends(get_ses
         raise HTTPException(404, "interview not found")
     if row.student_id:
         enforce_student_scope(request, row.student_id)
+    fb = dict(row.feedback or {}) if isinstance(row.feedback, dict) else {}
+    fb.pop("_resume_probes", None)
     return {
         "interview_id": row.id,
         "student_id": row.student_id,
         "job_id": row.job_id,
+        "role": getattr(row, "role", None),
         "finished": row.finished,
         "score": row.score,
-        "feedback": row.feedback,
+        "feedback": fb,
         "transcript": row.transcript,
+        "speech_summary": fb.get("speech_summary"),
+        "skill_updates": fb.get("skill_updates", []),
         "started_at": row.started_at.isoformat(),
     }
 
@@ -417,15 +583,13 @@ def get_question_quality_audit(
 
 @router.post("/api/interview/questions/refine")
 def refine_questions(role: str = Depends(require_role("faculty_mentor", "tpo_admin"))):
-    telemetry = QuestionTelemetryManager().analyze_feedback_loop()
-    calibrated_count = (
-        len(telemetry.get("flagged_too_easy", []))
-        + len(telemetry.get("flagged_too_hard", []))
-        + len(telemetry.get("flagged_keyword_mismatch", []))
-    )
+    mgr = QuestionTelemetryManager()
+    result = mgr.apply_calibration()
+    telemetry = result["analysis"]
     return {
-        "status": "calibrated",
-        "calibrated_count": calibrated_count,
+        "status": "calibrated" if result["calibrated_count"] > 0 else "no_outliers",
+        "calibrated_count": result["calibrated_count"],
+        "updates": result["updates"],
         "recommendations": telemetry.get("recommendations", []),
         "analysis": telemetry,
         "flags": {
@@ -437,9 +601,139 @@ def refine_questions(role: str = Depends(require_role("faculty_mentor", "tpo_adm
 
 
 @router.post("/api/speech/analyze")
-def speech_analyze(payload: dict):
+def speech_analyze(
+    payload: dict,
+    role: str = Depends(require_role("student", "faculty_mentor", "tpo_admin")),
+):
     """Stateless acoustic telemetry for one answer (Milestone 18.3)."""
     text = str((payload or {}).get("text") or "").strip()
     if not text:
         raise HTTPException(400, "text is required")
     return analyze_speech_delivery(text, (payload or {}).get("duration_seconds"))
+
+
+@router.post("/api/speech/transcribe")
+async def speech_transcribe(
+    request: Request,
+    file: UploadFile | None = File(default=None),
+    role: str = Depends(require_role("student", "faculty_mentor", "tpo_admin")),
+):
+    """Transcribe uploaded audio via OpenAI Whisper / local faster-whisper when available,
+    falling back gracefully with structured browser Web Speech guidance when offline."""
+    transcript_hint = ""
+    duration_seconds = None
+    audio_bytes = b""
+    content_type = ""
+    filename = "recording.webm"
+
+    if file is not None:
+        audio_bytes = await file.read(MAX_AUDIO_BYTES + 1)
+        if len(audio_bytes) > MAX_AUDIO_BYTES:
+            raise HTTPException(413, f"audio file exceeds {MAX_AUDIO_BYTES} byte limit")
+        content_type = file.content_type or "audio/webm"
+        filename = file.filename or "recording.webm"
+    else:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        if isinstance(body, dict):
+            transcript_hint = str(body.get("transcript_hint") or "").strip()
+            duration_seconds = body.get("duration_seconds")
+
+    from app.config import settings
+    if audio_bytes and settings.llm_provider == "openai" and settings.openai_api_key:
+        try:
+            import io
+
+            from openai import OpenAI
+            client = OpenAI(api_key=settings.openai_api_key)
+            buf = io.BytesIO(audio_bytes)
+            buf.name = filename
+            resp = client.audio.transcriptions.create(model="whisper-1", file=buf)
+            text = str(getattr(resp, "text", "") or "").strip()
+            if text:
+                return {
+                    "ok": True,
+                    "engine": "openai_whisper",
+                    "fallback": False,
+                    "transcript": text,
+                    "analytics": analyze_speech_delivery(text, duration_seconds),
+                }
+        except Exception as exc:
+            logger.warning("OpenAI Whisper transcription failed (%s)", exc)
+
+    if audio_bytes:
+        try:
+            import tempfile
+
+            from faster_whisper import WhisperModel  # type: ignore[import-not-found]
+            with tempfile.NamedTemporaryFile(suffix=os.path.splitext(filename)[1] or ".webm") as tmp:
+                tmp.write(audio_bytes)
+                tmp.flush()
+                model = WhisperModel("tiny", device="cpu")
+                segments, _ = model.transcribe(tmp.name)
+                text = " ".join(seg.text.strip() for seg in segments).strip()
+            if text:
+                return {
+                    "ok": True,
+                    "engine": "faster_whisper",
+                    "fallback": False,
+                    "transcript": text,
+                    "analytics": analyze_speech_delivery(text, duration_seconds),
+                }
+        except ImportError:
+            pass
+        except Exception as exc:
+            logger.warning("Local faster_whisper failed (%s)", exc)
+
+    return {
+        "ok": True,
+        "engine": "browser_webspeech_fallback",
+        "fallback": True,
+        "audio_received_bytes": len(audio_bytes),
+        "content_type": content_type,
+        "transcript": transcript_hint,
+        "detail": "Offline demo environment uses browser Web Speech STT + editable review.",
+        "analytics": analyze_speech_delivery(transcript_hint, duration_seconds) if transcript_hint else None,
+    }
+
+
+@router.post("/api/speech/tts")
+def speech_tts(
+    payload: dict,
+    role: str = Depends(require_role("student", "faculty_mentor", "tpo_admin")),
+):
+    """Synthesize prompt audio via OpenAI TTS when configured, or return clean Web Speech guidance."""
+    text = str((payload or {}).get("text") or "").strip()[:1500]
+    if not text:
+        raise HTTPException(400, "text is required")
+    voice = str((payload or {}).get("voice") or "alloy")[:32]
+
+    from app.config import settings
+    if settings.llm_provider == "openai" and settings.openai_api_key:
+        try:
+            import base64
+
+            from openai import OpenAI
+            client = OpenAI(api_key=settings.openai_api_key)
+            resp = client.audio.speech.create(model="tts-1", voice=voice, input=text)
+            audio_b64 = base64.b64encode(resp.read()).decode("ascii")
+            return {
+                "ok": True,
+                "engine": "openai_tts",
+                "fallback": False,
+                "mime_type": "audio/mpeg",
+                "audio_b64": audio_b64,
+                "text": text,
+            }
+        except Exception as exc:
+            logger.warning("OpenAI TTS failed (%s); falling back to browser SpeechSynthesis", exc)
+
+    return {
+        "ok": True,
+        "engine": "browser_speech_synthesis",
+        "fallback": True,
+        "text": text,
+        "speech_params": {"rate": 0.98, "pitch": 1.0},
+    }

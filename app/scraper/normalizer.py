@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import hashlib
 import html
+import ipaddress
 import json
 import logging
 import math
+import os
 import re
+import threading
 import time
 import uuid
 from typing import Any
+from urllib.parse import urlsplit
 
 from app.config import settings
 from app.matching.engine import (
@@ -52,9 +56,33 @@ CORE_FALLBACK_SKILLS = ["python", "sql", "git"]
 DEFAULT_BRANCHES = ["CSE", "IT", "ECE"]
 
 
+def _is_safe_public_http_url(url: str) -> bool:
+    """Reject non-HTTP schemes, offline sandbox mode, and localhost/private SSRF targets."""
+    if os.environ.get("PS06_OFFLINE_MODE", "").strip().lower() in ("1", "true", "yes", "on"):
+        return False
+    if os.environ.get("PS06_SANDBOX_SCRAPER", "").strip().lower() in ("1", "true", "yes", "on"):
+        return False
+    try:
+        parts = urlsplit(str(url or "").strip())
+    except Exception:
+        return False
+    if parts.scheme not in ("http", "https"):
+        return False
+    host = (parts.hostname or "").strip().lower()
+    if not host or host in ("localhost", "ip6-localhost"):
+        return False
+    try:
+        ip = ipaddress.ip_address(host)
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+            return False
+    except ValueError:
+        pass
+    return True
+
+
 def fetch_external_job_description(url: str, timeout: float = 4.0) -> str:
     """Safely fetch public job description for external postings when raw scraper returned empty body."""
-    if not url:
+    if not url or not _is_safe_public_http_url(url):
         return ""
     try:
         import httpx
@@ -508,38 +536,46 @@ Respond ONLY with valid JSON conforming to this schema:
 """
 
 
+_CIRCUIT_LOCK = threading.Lock()
 _CIRCUIT_FAILURES = 0
 _CIRCUIT_OPEN_UNTIL = 0.0
 
 
 def reset_ai_normalizer_circuit() -> None:
     global _CIRCUIT_OPEN_UNTIL, _CIRCUIT_FAILURES
-    _CIRCUIT_OPEN_UNTIL = 0.0
-    _CIRCUIT_FAILURES = 0
+    with _CIRCUIT_LOCK:
+        _CIRCUIT_OPEN_UNTIL = 0.0
+        _CIRCUIT_FAILURES = 0
 
 
 def is_ai_normalizer_circuit_open() -> bool:
-    global _CIRCUIT_OPEN_UNTIL
-    return time.time() < _CIRCUIT_OPEN_UNTIL
+    with _CIRCUIT_LOCK:
+        return time.time() < _CIRCUIT_OPEN_UNTIL
 
 
 def trip_ai_normalizer_circuit(duration_seconds: float = 300.0) -> None:
     global _CIRCUIT_OPEN_UNTIL, _CIRCUIT_FAILURES
-    _CIRCUIT_OPEN_UNTIL = time.time() + duration_seconds
-    _CIRCUIT_FAILURES = 0
+    with _CIRCUIT_LOCK:
+        _CIRCUIT_OPEN_UNTIL = time.time() + duration_seconds
+        _CIRCUIT_FAILURES = 0
     logger.warning("AI normalizer circuit breaker TRIPPED for %.1fs due to consecutive errors", duration_seconds)
 
 
 def record_ai_normalizer_failure(exc: Exception | None = None) -> None:
     global _CIRCUIT_FAILURES
-    _CIRCUIT_FAILURES += 1
-    if _CIRCUIT_FAILURES >= 3:
+    should_trip = False
+    with _CIRCUIT_LOCK:
+        _CIRCUIT_FAILURES += 1
+        if _CIRCUIT_FAILURES >= 3:
+            should_trip = True
+    if should_trip:
         trip_ai_normalizer_circuit(300.0)
 
 
 def record_ai_normalizer_success() -> None:
     global _CIRCUIT_FAILURES
-    _CIRCUIT_FAILURES = 0
+    with _CIRCUIT_LOCK:
+        _CIRCUIT_FAILURES = 0
 
 
 def normalize_job_with_ai(

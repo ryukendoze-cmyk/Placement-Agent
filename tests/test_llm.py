@@ -115,7 +115,7 @@ def test_bedrock_complete_builds_converse_request(monkeypatch):
     captured.clear()
     llm.complete(system="s", user="u", json_mode=False)
     assert "additionalModelRequestFields" not in captured
-    assert captured["inferenceConfig"] == {"maxTokens": 2000}
+    assert captured["inferenceConfig"] == {"maxTokens": 2000, "temperature": 0.0}
 
 
 def test_openai_complete_builds_chat_request(monkeypatch):

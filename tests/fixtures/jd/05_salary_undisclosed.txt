@@ -1,0 +1,16 @@
+Company: Vertex Systems
+Role: Full Stack Developer
+Location: Hyderabad
+Work Mode: Hybrid
+Compensation: Competitive, as per industry standards (Salary not disclosed)
+Eligibility: Open to all branches, 2027 batch
+
+Required:
+- JavaScript
+- Node.js
+- MongoDB
+- React
+
+Good to have:
+- Docker
+- AWS

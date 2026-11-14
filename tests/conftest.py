@@ -4,7 +4,13 @@ from sqlalchemy import event
 from sqlmodel import Session
 
 from app.api.main import AppContext, create_app
+from app.config import settings
 from app.db import init_db, make_engine
+
+# Keep automated pytest runs deterministic in demo mode even when `.env`
+# ships hardened strict production defaults (`AUTH_MODE=strict`).
+settings.auth_mode = "demo"
+settings.demo_role_switch = True
 from app.embeddings.embedder import HashingEmbedder
 from app.embeddings.store import MemoryVectorStore
 from app.llm.mock import MockLLM

@@ -11,6 +11,12 @@
       <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-[#1A211D] font-serif">HITL Approvals Center</h1>
       <p class="text-sm text-[#57605A] mt-1">Human-in-the-loop review for policy exceptions, student drive nominations, and cohort bootcamp launches. Every decision is immutably audited.</p>
     </div>
+    <div id="approval-status-filters" class="flex flex-wrap items-center gap-1.5">
+      <button type="button" data-status-filter="all" class="approval-filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#1D5C42] text-white cursor-pointer">All</button>
+      <button type="button" data-status-filter="pending_review" class="approval-filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#4A4943] hover:bg-[#E2DEC9] cursor-pointer">Pending Review</button>
+      <button type="button" data-status-filter="approved" class="approval-filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#4A4943] hover:bg-[#E2DEC9] cursor-pointer">Approved</button>
+      <button type="button" data-status-filter="rejected" class="approval-filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#4A4943] hover:bg-[#E2DEC9] cursor-pointer">Rejected</button>
+    </div>
   </div>
 
   <!-- Approvals Queue Surface -->
@@ -22,16 +28,164 @@
   </div>
 </div>
 
+{% if role == 'tpo_admin' %}
+{% include "campus/_smart_jd_modal.html" %}
+<script src="/static/campus_drive.js"></script>
+{% endif %}
+
 <script>
 (function () {
   var box = document.getElementById("approvals");
   var activeRole = "{{ role|default('tpo_admin') }}";
+  var activeFilter = "all";
+  var allLoadedItems = [];
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
     if (cls) n.className = cls;
     if (text != null) n.textContent = text;
     return n;
+  }
+
+  function formatTier(tier) {
+    if (tier === "super_dream") return { text: "Super Dream (SOP-01)", cls: "bg-[#1D5C42] text-white" };
+    if (tier === "dream") return { text: "Dream (SOP-01)", cls: "bg-[#E3F2EA] text-[#164934] border border-[#C8E4D5]" };
+    if (tier === "standard") return { text: "Standard (SOP-01)", cls: "bg-[#EEF5FB] text-[#16436E] border border-[#C8D9E8]" };
+    return { text: "Not classified", cls: "bg-[#EFECE4] text-[#4A4943]" };
+  }
+
+  function formatCompensation(d) {
+    if (d.experience_level === "Internship" && d.stipend_inr_per_month) {
+      return "Stipend: INR " + Number(d.stipend_inr_per_month).toLocaleString() + "/mo";
+    }
+    if (d.salary_disclosed === false) {
+      return "Compensation: Undisclosed";
+    }
+    if (d.ctc_lpa_min != null && d.ctc_lpa_max != null && d.ctc_lpa_min !== d.ctc_lpa_max) {
+      return "CTC: " + d.ctc_lpa_min + " - " + d.ctc_lpa_max + " LPA";
+    }
+    if (d.ctc_lpa_max != null) {
+      return "CTC: " + d.ctc_lpa_max + " LPA";
+    }
+    if (d.ctc_lpa_min != null) {
+      return "CTC: " + d.ctc_lpa_min + " LPA";
+    }
+    return "Compensation: Not specified";
+  }
+
+  function renderCampusDriveCard(a, card) {
+    var p = a.payload || {};
+    var d = p.campus_drive ? Object.assign({}, p, p.campus_drive) : p;
+    var elig = d.eligibility || {};
+    var meta = d.parser_metadata || {};
+    var traceId = d.trace_id || p.trace_id || "";
+
+    var topBadges = el("div", "flex flex-wrap items-center gap-2 mt-2");
+    var tierInfo = formatTier(d.policy_tier);
+    topBadges.appendChild(el("span", "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold " + tierInfo.cls, tierInfo.text));
+
+    var isJnf = d.origin === "recruiter_jnf";
+    topBadges.appendChild(el(
+      "span",
+      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold " + (isJnf ? "bg-[#FEF6E7] text-[#9A5B13] border border-[#F3D9A4]" : "bg-[#E3F2EA] text-[#164934] border border-[#C8E4D5]"),
+      isJnf ? "Recruiter JNF" : "TPO Smart JD"
+    ));
+
+    if (meta.engine_used) {
+      topBadges.appendChild(el("span", "inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-[#F9F8F4] text-[#4A4943] border border-[#E5E3DA]", meta.engine_used));
+    }
+
+    if (traceId) {
+      var traceLink = el("a", "inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-white text-[#1D5C42] border border-[#C8E4D5] hover:bg-[#E3F2EA] transition-colors", "trace: " + traceId);
+      traceLink.href = "/admin/audit?trace_id=" + encodeURIComponent(traceId);
+      traceLink.title = "Inspect full audit trail for this JD";
+      topBadges.appendChild(traceLink);
+    }
+    card.appendChild(topBadges);
+
+    var headerRow = el("div", "mt-3 flex flex-wrap items-baseline justify-between gap-2");
+    headerRow.appendChild(el("h2", "text-lg font-bold text-[#1A211D] font-serif tracking-tight", (d.role_title || a.title || "Campus Drive") + (d.company ? (" - " + d.company) : "")));
+    headerRow.appendChild(el("span", "text-xs font-mono font-semibold text-[#1D5C42]", formatCompensation(d)));
+    card.appendChild(headerRow);
+
+    if (d.location || d.work_mode || d.experience_level) {
+      var subMeta = [d.location || "Location TBD", d.work_mode || "On-site", d.experience_level || "Fresher"].join(" | ");
+      card.appendChild(el("p", "text-xs text-[#57605A] mt-0.5", subMeta));
+    }
+
+    var eligBox = el("div", "mt-3.5 bg-[#F9F8F4] rounded-xl p-3.5 border border-[#E5E3DA] text-xs text-[#3B423E] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 font-mono");
+    eligBox.appendChild(el("div", "", "Min CGPA: " + (elig.min_cgpa != null ? elig.min_cgpa : "None")));
+    var branches = Array.isArray(elig.allowed_branches) && elig.allowed_branches.length ? elig.allowed_branches.join(", ") : "All Branches";
+    eligBox.appendChild(el("div", "", "Branches: " + branches));
+    eligBox.appendChild(el("div", "", "Max Backlogs: " + (elig.max_active_backlogs != null ? elig.max_active_backlogs : "Dept. Clearance")));
+    eligBox.appendChild(el("div", "", "Batch: " + (elig.graduation_year != null ? elig.graduation_year : "2027")));
+    card.appendChild(eligBox);
+
+    var reqSkills = Array.isArray(d.required_skills) ? d.required_skills : [];
+    var prefSkills = Array.isArray(d.preferred_skills) ? d.preferred_skills : [];
+    if (reqSkills.length || prefSkills.length) {
+      var skillsRow = el("div", "mt-3 flex flex-wrap items-center gap-1.5");
+      reqSkills.forEach(function (s) {
+        skillsRow.appendChild(el("span", "px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]", s));
+      });
+      prefSkills.forEach(function (s) {
+        skillsRow.appendChild(el("span", "px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#EFECE4] text-[#4A4943] border border-[#D5D2C6]", s + " (pref)"));
+      });
+      card.appendChild(skillsRow);
+    }
+
+    if (a.review_note) {
+      var noteBox = el("div", "mt-3 text-xs text-[#57605A] bg-[#F9F8F4] rounded-xl px-3.5 py-2.5 border-l-2 border-[#1D5C42] italic");
+      noteBox.textContent = "Decision note: " + a.review_note;
+      card.appendChild(noteBox);
+    }
+
+    if (a.status === "pending_review") {
+      var actions = el("div", "flex flex-wrap items-center gap-2.5 mt-4 pt-4 border-t border-[#EDEBE3]");
+      var note = document.createElement("input");
+      note.type = "text";
+      note.placeholder = "Review note (optional)";
+      note.className = "note-input flex-1 min-w-[14rem] text-xs rounded-full border border-[#D4D1C7] bg-[#FBFBF9] px-4 py-2 text-[#1A211D] placeholder:text-[#8E9690] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]";
+      actions.appendChild(note);
+
+      var isTpo = activeRole === "tpo_admin";
+
+      var editBtn = el("button", (isTpo ? "btn-secondary-pill text-xs" : "btn-secondary-pill text-xs opacity-60 cursor-not-allowed"), "Edit Drive");
+      editBtn.type = "button";
+      if (!isTpo) {
+        editBtn.disabled = true;
+        editBtn.title = "TPO Admin role required to edit campus drive";
+      } else {
+        editBtn.addEventListener("click", function () {
+          if (window.CampusDriveUI && typeof window.CampusDriveUI.openSmartJdModalForEdit === "function") {
+            window.CampusDriveUI.openSmartJdModalForEdit(a.target_id, d, function () { load(); });
+          }
+        });
+      }
+
+      var approveBtn = el("button", (isTpo ? "btn-primary-pill text-xs" : "btn-secondary-pill text-xs opacity-60 cursor-not-allowed"), "Approve & Publish (TPO Only)");
+      approveBtn.type = "button";
+      if (!isTpo) {
+        approveBtn.disabled = true;
+        approveBtn.title = "Separation of duties: only TPO Admin can approve and publish campus drives.";
+      } else {
+        approveBtn.addEventListener("click", function () { decide(a.id, "approve", note.value, approveBtn, card); });
+      }
+
+      var rejectBtn = el("button", (isTpo ? "inline-flex items-center justify-center whitespace-nowrap gap-1.5 px-4 py-2 rounded-full bg-[#FBECE9] hover:bg-[#F5D8D2] border border-[#F3D2CC] text-[#9E2A20] text-xs font-semibold transition-colors cursor-pointer" : "inline-flex items-center justify-center whitespace-nowrap gap-1.5 px-4 py-2 rounded-full bg-[#FBECE9] border border-[#F3D2CC] text-[#9E2A20] text-xs font-semibold opacity-60 cursor-not-allowed"), "Reject");
+      rejectBtn.type = "button";
+      if (!isTpo) {
+        rejectBtn.disabled = true;
+        rejectBtn.title = "TPO Admin role required";
+      } else {
+        rejectBtn.addEventListener("click", function () { decide(a.id, "reject", note.value, rejectBtn, card); });
+      }
+
+      actions.appendChild(editBtn);
+      actions.appendChild(approveBtn);
+      actions.appendChild(rejectBtn);
+      card.appendChild(actions);
+    }
   }
 
   function render(items) {
@@ -67,23 +221,40 @@
       head.appendChild(el("span", "text-xs font-mono text-[#767F79]", a.id));
       card.appendChild(head);
 
+      if (a.kind === "campus_drive_publish") {
+        renderCampusDriveCard(a, card);
+        box.appendChild(card);
+        return;
+      }
+
       card.appendChild(el("h2", "text-lg font-bold text-[#1A211D] font-serif tracking-tight", a.title || a.kind));
       if (a.summary) {
         card.appendChild(el("p", "text-sm text-[#57605A] mt-1 leading-relaxed", a.summary));
       }
 
       if (a.payload) {
-        var payloadBox = el("div", "mt-3.5 bg-[#F9F8F4] rounded-xl p-3.5 border border-[#E5E3DA] font-mono text-xs text-[#3B423E] space-y-1");
-        if (a.payload.job_id) {
-          payloadBox.appendChild(el("div", "text-[#57605A]", "Target Job: " + a.payload.job_id));
+        var contextPills = [];
+        if (a.payload.student_name) {
+          var candLabel = a.payload.student_name + (a.payload.student_branch ? (" (" + a.payload.student_branch + ")") : "");
+          contextPills.push({ label: "Candidate", value: candLabel });
         }
-        if (a.payload.student_id) {
-          payloadBox.appendChild(el("div", "text-[#57605A]", "Target Candidate: " + a.payload.student_id));
+        if (a.payload.job_title) {
+          var roleLabel = a.payload.job_title + (a.payload.job_company ? (" · " + a.payload.job_company) : "");
+          contextPills.push({ label: "Role", value: roleLabel });
         }
         if (a.payload.skill_id) {
-          payloadBox.appendChild(el("div", "text-[#57605A]", "Target Competency: " + a.payload.skill_id));
+          contextPills.push({ label: "Competency", value: String(a.payload.skill_id).replace(/_/g, " ") });
         }
-        card.appendChild(payloadBox);
+        if (contextPills.length > 0) {
+          var payloadBox = el("div", "mt-3.5 bg-[#F9F8F4] rounded-xl p-3.5 border border-[#E5E3DA] flex flex-wrap gap-2");
+          contextPills.forEach(function (cp) {
+            var badge = el("span", "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E5E3DA] text-xs text-[#3B423E]");
+            badge.appendChild(el("span", "font-semibold text-[#57605A]", cp.label + ":"));
+            badge.appendChild(el("span", "font-medium text-[#1A211D]", cp.value));
+            payloadBox.appendChild(badge);
+          });
+          card.appendChild(payloadBox);
+        }
       }
 
       if (a.review_note) {
@@ -107,35 +278,56 @@
         actions.appendChild(note);
 
         var isNomination = (a.kind === "job_application_nomination" || a.kind === "nomination");
-        var mentorBlockedFromFinalApprove = (activeRole === "faculty_mentor" && (isNomination || a.endorsed_by === "faculty_mentor"));
+        var isBootcamp = (a.kind === "cohort_bootcamp_publish");
+        var isResumeReupload = (a.kind === "resume_reupload_request");
+        var isTpoOnlyGeneric = (isBootcamp || isResumeReupload);
+        var mentorBlockedFromFinalApprove = (activeRole === "faculty_mentor" && (isNomination || isTpoOnlyGeneric || a.endorsed_by === "faculty_mentor"));
+        var mentorBlockedFromReject = (activeRole === "faculty_mentor" && isTpoOnlyGeneric);
 
-        var endorseBtn = el("button", (activeRole === "faculty_mentor" ? "btn-primary-pill text-xs" : "btn-secondary-pill text-xs"), "Endorse (Tier 1)");
-        endorseBtn.type = "button";
+        var endorseBtn = null;
+        if (!isTpoOnlyGeneric) {
+          endorseBtn = el("button", (activeRole === "faculty_mentor" ? "btn-primary-pill text-xs" : "btn-secondary-pill text-xs"), "Endorse (Tier 1)");
+          endorseBtn.type = "button";
+          endorseBtn.addEventListener("click", function () { decide(a.id, "endorse", note.value, endorseBtn, card); });
+        }
 
         var approveBtn = el("button", (mentorBlockedFromFinalApprove ? "btn-secondary-pill text-xs opacity-60 cursor-not-allowed" : "btn-primary-pill text-xs"),
                             mentorBlockedFromFinalApprove ? "Approve & Execute (TPO Only)" : "Approve & Execute (Tier 2)");
         approveBtn.type = "button";
         if (mentorBlockedFromFinalApprove) {
-          approveBtn.title = "Separation of duties: TPO administrator sign-off is required for final drive nomination.";
+          approveBtn.disabled = true;
+          approveBtn.title = isTpoOnlyGeneric
+            ? "Separation of duties: only TPO Admin can approve this request."
+            : "Separation of duties: TPO administrator sign-off is required for final drive nomination.";
+        } else {
+          approveBtn.addEventListener("click", function () { decide(a.id, "approve", note.value, approveBtn, card); });
         }
 
-        var rejectBtn = el("button", "inline-flex items-center justify-center whitespace-nowrap gap-1.5 px-4 py-2 rounded-full bg-[#FBECE9] hover:bg-[#F5D8D2] border border-[#F3D2CC] text-[#9E2A20] text-xs font-semibold transition-colors", "Reject");
+        var rejectBtn = el("button",
+          (mentorBlockedFromReject
+            ? "inline-flex items-center justify-center whitespace-nowrap gap-1.5 px-4 py-2 rounded-full bg-[#FBECE9] border border-[#F3D2CC] text-[#9E2A20] text-xs font-semibold opacity-60 cursor-not-allowed"
+            : "inline-flex items-center justify-center whitespace-nowrap gap-1.5 px-4 py-2 rounded-full bg-[#FBECE9] hover:bg-[#F5D8D2] border border-[#F3D2CC] text-[#9E2A20] text-xs font-semibold transition-colors cursor-pointer"),
+          "Reject");
         rejectBtn.type = "button";
+        if (mentorBlockedFromReject) {
+          rejectBtn.disabled = true;
+          rejectBtn.title = "TPO Admin role required";
+        } else {
+          rejectBtn.addEventListener("click", function () { decide(a.id, "reject", note.value, rejectBtn, card); });
+        }
 
-        var withdrawBtn = el("button", "inline-flex items-center justify-center whitespace-nowrap gap-1.5 px-4 py-2 rounded-full bg-[#FAF8F5] hover:bg-[#F2EFE9] border border-[#D5D2C6] text-[#5C5A52] text-xs font-semibold transition-colors", "Withdraw / Remove");
-        withdrawBtn.type = "button";
-
-        endorseBtn.addEventListener("click", function () { decide(a.id, "endorse", note.value, endorseBtn, card); });
-        approveBtn.addEventListener("click", function () { decide(a.id, "approve", note.value, approveBtn, card); });
-        rejectBtn.addEventListener("click", function () { decide(a.id, "reject", note.value, rejectBtn, card); });
-        withdrawBtn.addEventListener("click", function () {
-          decide(a.id, "reject", (note.value ? (note.value + " (Withdrawn / Closed)") : "Withdrawn / Closed by Administrator"), withdrawBtn, card);
-        });
-
-        actions.appendChild(endorseBtn);
+        if (endorseBtn) actions.appendChild(endorseBtn);
         actions.appendChild(approveBtn);
         actions.appendChild(rejectBtn);
-        actions.appendChild(withdrawBtn);
+
+        if (activeRole === "tpo_admin") {
+          var withdrawBtn = el("button", "inline-flex items-center justify-center whitespace-nowrap gap-1.5 px-4 py-2 rounded-full bg-[#FAF8F5] hover:bg-[#F2EFE9] border border-[#D5D2C6] text-[#5C5A52] text-xs font-semibold transition-colors cursor-pointer", "Withdraw / Remove");
+          withdrawBtn.type = "button";
+          withdrawBtn.addEventListener("click", function () {
+            decide(a.id, "reject", (note.value ? (note.value + " (Withdrawn / Closed)") : "Withdrawn / Closed by Administrator"), withdrawBtn, card);
+          });
+          actions.appendChild(withdrawBtn);
+        }
         card.appendChild(actions);
       }
 
@@ -159,6 +351,9 @@
         window.toast(verbLabel + " " + j.kind + "." + executed,
           verb === "approve" ? "success" : (verb === "endorse" ? "success" : "info"));
       }
+      if (verb === "approve" && j.kind === "campus_drive_publish" && j.executed && j.executed.task_id && window.CampusDriveUI) {
+        window.CampusDriveUI.pollCohortTask(j.executed.task_id, j.executed.cohort_summary);
+      }
       load();
     }).catch(function (e) {
       btn.disabled = false;
@@ -168,14 +363,38 @@
     });
   }
 
+  function applyFilter() {
+    var filtered = allLoadedItems;
+    if (activeFilter !== "all") {
+      filtered = allLoadedItems.filter(function (a) { return a.status === activeFilter; });
+    } else {
+      var pending = allLoadedItems.filter(function (a) { return a.status === "pending_review"; });
+      var done = allLoadedItems.filter(function (a) { return a.status !== "pending_review"; }).slice(0, 15);
+      filtered = pending.concat(done);
+    }
+    render(filtered);
+  }
+
+  document.querySelectorAll(".approval-filter-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      activeFilter = btn.getAttribute("data-status-filter") || "all";
+      document.querySelectorAll(".approval-filter-btn").forEach(function (b) {
+        var on = (b === btn);
+        b.className = on
+          ? "approval-filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#1D5C42] text-white cursor-pointer"
+          : "approval-filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#4A4943] hover:bg-[#E2DEC9] cursor-pointer";
+      });
+      applyFilter();
+    });
+  });
+
   function load() {
     fetch("/api/approvals").then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function (items) {
-      var pending = items.filter(function (a) { return a.status === "pending_review"; });
-      var done = items.filter(function (a) { return a.status !== "pending_review"; }).slice(0, 10);
-      render(pending.concat(done));
+      allLoadedItems = Array.isArray(items) ? items : [];
+      applyFilter();
     }).catch(function (e) {
       box.innerHTML = "";
       box.appendChild(el("p", "text-sm text-[#9E2A20] p-4 bg-[#FDF2F0] rounded-2xl border border-[#F3D2CC]", "Could not load approvals: " + e.message));

@@ -56,13 +56,13 @@ class TaskQueueManager:
         self._stop_event = threading.Event()
         self._consumer: threading.Thread | None = None
         self._redis = None
-        self._executor: ThreadPoolExecutor | None = None
+        self._executor: ThreadPoolExecutor | None = ThreadPoolExecutor(
+            max_workers=max(1, int(max_workers or 4)),
+            thread_name_prefix="ps06-task",
+        )
 
         if (backend or "memory").lower() == "redis" and redis_url:
             self._init_redis(redis_url)
-        if self._redis is None and self._executor is None:
-            self._executor = ThreadPoolExecutor(max_workers=max_workers,
-                                                thread_name_prefix="ps06-task")
 
     @classmethod
     def from_settings(cls, settings) -> "TaskQueueManager":
@@ -100,7 +100,10 @@ class TaskQueueManager:
             _queue, raw = item
             try:
                 job = json.loads(raw)
-                self._run(job["task_id"], job.get("kind"), job.get("payload"))
+                if self._executor is not None:
+                    self._executor.submit(self._run, job["task_id"], job.get("kind"), job.get("payload"))
+                else:
+                    self._run(job["task_id"], job.get("kind"), job.get("payload"))
             except Exception as e:
                 logger.warning("malformed task job dropped: %s", e)
 
@@ -118,6 +121,13 @@ class TaskQueueManager:
             return task_id
         with self._lock:
             self._states[task_id] = state
+            if len(self._states) > 2000:
+                terminal = [
+                    k for k, v in self._states.items()
+                    if v.status in ("completed", "failed")
+                ]
+                for k in terminal[: len(self._states) - 1500]:
+                    self._states.pop(k, None)
         self._executor.submit(self._run, task_id, kind, payload)
         return task_id
 

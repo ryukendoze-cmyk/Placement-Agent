@@ -4,7 +4,14 @@ import re
 
 
 class MockLLM:
-    def complete(self, system: str, user: str, json_mode: bool = False, **kwargs) -> str:
+    def complete(
+        self,
+        system: str,
+        user: str,
+        json_mode: bool = False,
+        temperature: float = 0.0,
+        **kwargs,
+    ) -> str:
         tokens = system.split()
         task = ""
         for i, token in enumerate(tokens):
@@ -48,16 +55,23 @@ class MockLLM:
         if task == "extract_job_posting":
             return self._extract_job_posting(user)
 
+        if task == "parse_campus_jd":
+            return self._parse_campus_jd(user)
+
         if task == "plan_narrative":
             payload = json.loads(user) if user else {}
             gaps = payload.get("gaps", [])
-            hours = payload.get("total_hours", 0)
+            hours = float(payload.get("total_hours", 0) or 0)
+            weeks_raw = payload.get("weeks") or payload.get("total_weeks")
+            weeks = max(1, int(weeks_raw)) if weeks_raw else max(1, min(8, math.ceil((hours or 1) / 6)))
+            hrs_label = int(hours) if hours == int(hours) else round(hours, 1)
+            weekly_hrs = max(1, round(hours / weeks)) if hours else 0
             narrative = (
                 f"Focus on {', '.join(gaps) if gaps else 'core fundamentals'} first - "
                 f"these are the highest-leverage gaps for your target role. "
-                f"Your plan totals {hours} hours; spread across the week "
-                f"(about {max(1, round(hours / 4))}h x 4 weeks) keeps it sustainable. "
-                "Complete items in order and mark them done to watch your readiness climb."
+                f"Your plan totals {hrs_label} hours; spread across {weeks} "
+                f"{'week' if weeks == 1 else 'weeks'} (about {weekly_hrs}h/wk x {weeks} weeks) "
+                "keeps it sustainable. Complete items in order and mark them done to watch your readiness climb."
             )
             if json_mode:
                 return json.dumps({"narrative": narrative})
@@ -66,20 +80,62 @@ class MockLLM:
         if task == "evaluate_answer":
             payload = json.loads(user) if user else {}
             answer = (payload.get("answer") or "").lower()
-            keywords = [k.lower() for k in payload.get("keywords", [])]
-            matched = [k for k in keywords if k in answer]
-            missed = [k for k in keywords if k not in answer]
+            keywords = [k.lower().strip() for k in payload.get("keywords", []) if str(k).strip()]
+            word_list = re.findall(r"[a-z0-9_+#.-]+", answer)
+            token_set = [w.strip(".,;:!?()[]{}\"'") for w in word_list if w.strip(".,;:!?()[]{}\"'")]
+
+            def _stem_match(tok: str, kw_tok: str) -> bool:
+                if tok == kw_tok:
+                    return True
+                # Common regular plural / inflection stems (e.g. dict <-> dicts, index <-> indexes)
+                # for base tokens >= 3 chars without false-matching e.g. "go" -> "good".
+                if len(tok) >= 3 and len(kw_tok) >= 3:
+                    for suf in ("s", "es", "ed", "ing"):
+                        if tok == kw_tok + suf or kw_tok == tok + suf:
+                            return True
+                    if len(kw_tok) >= 4:
+                        base_kw = kw_tok.rstrip("e")
+                        base_tok = tok.rstrip("e")
+                        for suf in ("ed", "ing"):
+                            if tok == base_kw + suf or kw_tok == base_tok + suf:
+                                return True
+                if len(tok) < 5 or len(kw_tok) < 5:
+                    return False
+                pref = 0
+                for a, b in zip(tok, kw_tok):
+                    if a != b:
+                        break
+                    pref += 1
+                min_len = min(len(tok), len(kw_tok))
+                return pref >= max(5, math.ceil(min_len * 0.72))
+
+            def _kw_present(kw: str) -> bool:
+                if re.search(rf"(?<![a-z0-9]){re.escape(kw)}(?![a-z0-9])", answer):
+                    return True
+                parts = [p for p in re.findall(r"[a-z0-9_+#.-]+", kw) if p]
+                if len(parts) > 1:
+                    return all(
+                        any(_stem_match(t, p) for t in token_set)
+                        for p in parts
+                    )
+                return bool(parts and any(_stem_match(t, parts[0]) for t in token_set))
+
+            matched = [k for k in keywords if _kw_present(k)]
+            missed = [k for k in keywords if k not in matched]
             hits = len(matched)
             denom = max(1, len(keywords))
             keyword_score = round(70 * hits / denom)
-            word_list = answer.split()
-            words = len(word_list)
-            unique_ratio = (len(set(word_list)) / words) if words > 0 else 1.0
+            words = len(token_set)
+            unique_ratio = (len(set(token_set)) / words) if words > 0 else 1.0
+            max_freq = max((token_set.count(w) for w in set(token_set)), default=0) if words > 0 else 0
             length_bonus = 30 if words >= 12 else max(0, round(30 * words / 12))
-            if words >= 6 and unique_ratio < 0.4:
+            is_stuffed = words >= 5 and (
+                unique_ratio < 0.45 or (words >= 6 and max_freq / words > 0.35)
+            )
+            if is_stuffed:
                 # Anti-gaming guard: penalize repetitive keyword stuffing
                 length_bonus = min(length_bonus, 5)
-                keyword_score = round(keyword_score * unique_ratio)
+                keyword_score = round(keyword_score * unique_ratio * 0.75)
             score = max(0, min(100, keyword_score + length_bonus))
             technical = score
             depth = max(0, min(100, round(0.6 * length_bonus + 0.4 * keyword_score)))
@@ -192,7 +248,43 @@ class MockLLM:
             return json.dumps({"echo": user})
         return f"mock response to: {user[:80]}"
 
-    def stream(self, system: str, user: str, json_mode: bool = False):
+    def _parse_campus_jd(self, user: str) -> str:
+        """TASK: parse_campus_jd - deterministic mock structured JD output."""
+        from app.campus.static_parser import parse_jd_static
+        from app.taxonomy.taxonomy import load_taxonomy
+
+        payload: dict = {}
+        try:
+            if user and user.strip().startswith("{"):
+                payload = json.loads(user)
+        except Exception:
+            payload = {}
+        jd_text = str(payload.get("jd_text") or user or "")
+        parsed = parse_jd_static(jd_text, load_taxonomy())
+        return json.dumps({
+            "company": parsed.get("company", ""),
+            "role_title": parsed.get("role_title", ""),
+            "location": parsed.get("location", ""),
+            "work_mode": parsed.get("work_mode"),
+            "ctc_lpa_min": parsed.get("ctc_lpa_min"),
+            "ctc_lpa_max": parsed.get("ctc_lpa_max"),
+            "salary_disclosed": bool(parsed.get("salary_disclosed", False)),
+            "stipend_inr_per_month": parsed.get("stipend_inr_per_month"),
+            "experience_level": parsed.get("experience_level"),
+            "eligibility": parsed.get("eligibility", {}),
+            "required_skills": parsed.get("required_skills", []),
+            "preferred_skills": parsed.get("preferred_skills", []),
+            "evidence": (parsed.get("parser_metadata") or {}).get("evidence", {}),
+        })
+
+    def stream(
+        self,
+        system: str,
+        user: str,
+        json_mode: bool = False,
+        temperature: float = 0.0,
+        **kwargs,
+    ):
         """Deterministic offline streaming: same output as ``complete``, yielded
         in realistic 4-6 word chunks (Milestone 17).
 
@@ -200,7 +292,7 @@ class MockLLM:
         JSON payload is preserved intact (splitting only on whitespace never
         breaks tokens) while producing a believable token cadence for SSE.
         """
-        text = self.complete(system, user, json_mode=json_mode)
+        text = self.complete(system, user, json_mode=json_mode, temperature=temperature, **kwargs)
         words = text.split()
         if not words:
             yield text
@@ -518,55 +610,106 @@ class MockLLM:
         return profile
 
     def _copilot_answer(self, user: str) -> dict:
-        """Deterministic, intent-driven grounded answer citing only known SOP ids."""
+        """Deterministic, intent-driven grounded answer dynamically reading retrieved SOP sources."""
         payload = json.loads(user) if user else {}
         question = str(payload.get("question", ""))
         q = question.lower()
         student = payload.get("student") or {}
         elig = payload.get("eligibility") or {}
         sources = payload.get("sources") or []
-        src_ids = [s.get("sop_id") for s in sources if isinstance(s, dict) and s.get("sop_id")]
+        src_map = {
+            str(s.get("sop_id") or s.get("id")): s
+            for s in sources
+            if isinstance(s, dict) and (s.get("sop_id") or s.get("id"))
+        }
+        src_ids = list(src_map.keys())
 
         gpa = student.get("gpa")
         mock = student.get("mock_interview_score")
         status = elig.get("status")
 
         def cite(*ids):
-            # keep only ids that actually appear in retrieved sources (grounded)
+            # Cite only retrieved sources when sources exist; preserve order
             out = [i for i in ids if i in src_ids]
-            return out or src_ids[:2]
+            return out or src_ids[:2] or [i for i in ids if i]
+
+        def rule_text_for(sop_id: str, fallback: str) -> str:
+            row = src_map.get(sop_id)
+            if row and str(row.get("rule_text") or "").strip():
+                return str(row["rule_text"]).strip()
+            return fallback
+
+        def min_mock_threshold() -> int:
+            row = src_map.get("SOP-04") or {}
+            params = row.get("parameters") if isinstance(row.get("parameters"), dict) else {}
+            try:
+                return int(params.get("min_mock_score", 65))
+            except (TypeError, ValueError):
+                return 65
 
         stripped = q.strip().rstrip("?!., ")
         if stripped in ("what", "what do you mean", "why", "hello", "hi", "hey", "who are you", "help", "help me"):
             c = cite("SOP-01", "SOP-04")
             sname = student.get("name", "Student")
+            c_txt = " and ".join(f"[{i}]" for i in c) or "[SOP-01]"
             answer = (f"Hello {sname}! I am your Placement Copilot. I can sort and rank your top job matches, "
-                      f"analyze your verified competencies and weaknesses, or check institutional placement rules. "
-                      f"Under [SOP-01] and [SOP-04], I can guide your pathway toward Dream and Super-Dream placements. "
+                      f"analyze your competencies and weaknesses, or check institutional placement rules. "
+                      f"Under {c_txt}, I can guide your pathway toward Dream and Super-Dream placements. "
                       f"Try asking: 'Rank my top job matches' or 'What skills of mine are weak?'.")
             return {"answer": answer, "cited_sops": [i.strip("[]") for i in c]}
 
         if any(k in q for k in ("mock", "interview")):
             c = cite("SOP-04", "SOP-01")
-            answer = ("[SOP-04] requires a mock-interview score of >= 65 to be nominated for "
-                      "Dream and Super-Dream drives")
+            s4_rule = rule_text_for(
+                "SOP-04",
+                "requires a mock-interview score of >= 65 to be nominated for Dream and Super-Dream drives.",
+            )
+            answer = f"[SOP-04]: {s4_rule}"
             if mock is not None:
-                answer += f"; your current score is {mock}"
-            answer += ". [SOP-01] classifies 8-15 LPA as Dream and >= 15 LPA as Super-Dream."
+                answer += f" Your current score is {mock}."
+            if "SOP-01" in c:
+                s1_rule = rule_text_for(
+                    "SOP-01",
+                    "Standard is below 8.0 LPA, Dream is 8.0 to 14.99 LPA, Super-Dream is 15.0 LPA and above.",
+                )
+                answer += f" [SOP-01]: {s1_rule}"
             if status == "blocked":
-                answer += " You are currently blocked until a re-interview reaches 65."
+                answer += f" You are currently blocked until a re-interview reaches {min_mock_threshold()}."
         elif any(k in q for k in ("tier", "salary", "ctc", "upgrade", "offer", "lpa")):
             c = cite("SOP-01", "SOP-02")
-            answer = ("[SOP-01] tiers: Standard < 8 LPA, Dream 8-14.99 LPA, Super-Dream >= 15 LPA. "
-                      "[SOP-02] allows at most one offer per tier and upward-only mobility.")
+            parts = []
+            if "SOP-01" in c or not src_ids:
+                parts.append(
+                    f"[SOP-01]: {rule_text_for('SOP-01', 'Standard is below 8.0 LPA, Dream is 8.0 to 14.99 LPA, Super-Dream is 15.0 LPA and above.')}"
+                )
+            if "SOP-02" in c:
+                parts.append(
+                    f"[SOP-02]: {rule_text_for('SOP-02', 'A student may hold at most one offer per tier with upward-only mobility.')}"
+                )
+            for extra_sid in c:
+                if extra_sid not in ("SOP-01", "SOP-02"):
+                    rt = rule_text_for(extra_sid, "")
+                    if rt:
+                        parts.append(f"[{extra_sid}]: {rt}")
+            answer = " ".join(parts)
         elif any(k in q for k in ("backlog", "gpa", "cgpa", "standing", "academic")):
             c = cite("SOP-03")
-            answer = "[SOP-03] enforces the recruiter CGPA cutoff and limits active backlogs (0 for Super-Dream, <=1 for Dream)."
+            primary_sid = c[0] if c else "SOP-03"
+            rule_body = rule_text_for(
+                primary_sid,
+                "enforces the recruiter CGPA cutoff and limits active backlogs (0 for Super-Dream, <=1 for Dream).",
+            )
+            answer = f"[{primary_sid}]: {rule_body}"
             if gpa is not None:
                 answer += f" Your GPA is {gpa}."
         elif any(k in q for k in ("resume", "fake", "fabricat", "cheat", "integrity")):
             c = cite("SOP-08")
-            answer = "[SOP-08] mandates zero fabrication: every resume claim needs verifiable evidence; violations cause debarment."
+            primary_sid = c[0] if c else "SOP-08"
+            rule_body = rule_text_for(
+                primary_sid,
+                "mandates zero fabrication: every resume claim needs verifiable evidence; violations cause debarment.",
+            )
+            answer = f"[{primary_sid}]: {rule_body}"
         elif any(k in q for k in ("rank", "job", "match", "sort", "recommend", "priorit")):
             top_matches = student.get("top_matches") or []
             c = cite("SOP-01", "SOP-04")
@@ -578,23 +721,27 @@ class MockLLM:
                     tier = m.get("tier", "Standard")
                     items.append(f"{i}. {m.get('title', 'Role')}{co} (Match Score: {m.get('score', 0)}, Tier: {tier})")
                 match_txt = " ".join(items)
-                lines.append(f"Here are your top job matches sorted by profile compatibility: {match_txt}. [SOP-01] classifies placement tiers.")
+                lead_c = c[0] if c else "SOP-01"
+                lines.append(f"Here are your top job matches sorted by profile compatibility: {match_txt}. [{lead_c}] governs placement eligibility & tiers.")
             else:
                 skills = student.get("skills_by_level", {}).get("advanced", [])
                 skill_str = (", ".join(skills[:4])) if skills else "technical skills"
-                lines.append(f"Evaluating your profile with key skills in {skill_str}. [SOP-01] governs job tier classification.")
+                lead_c = c[0] if c else "SOP-01"
+                lines.append(f"Evaluating your profile with key skills in {skill_str}. [{lead_c}] governs job tier classification.")
 
+            cutoff = min_mock_threshold()
+            sop4_tag = "[SOP-04]" if "SOP-04" in c else f"[{c[0]}]"
             if any(k in q for k in ("prepar", "standing", "fit", "ready", "gate")):
-                if mock is not None and mock < 65:
-                    lines.append(f"On preparedness: your mock interview score is {mock}/100, which is below the 65 verified score required under [SOP-04] for Dream (8-14.99 LPA) and Super-Dream (15+ LPA) roles. You are currently eligible for Standard tier roles; completing a re-interview will unlock recruiter shortlists for higher tiers.")
+                if mock is not None and mock < cutoff:
+                    lines.append(f"On preparedness: your mock interview score is {mock}/100, which is below the {cutoff} verified score required under {sop4_tag} for Dream and Super-Dream roles. Completing a re-interview will unlock recruiter shortlists for higher tiers.")
                 elif mock is not None:
-                    lines.append(f"On preparedness: your mock interview score is {mock}/100, which satisfies the [SOP-04] readiness requirement for Dream drives.")
-            elif mock is not None and mock < 65:
-                lines.append(f"Note: Under [SOP-04], you require a mock interview score >= 65 for Dream/Super-Dream nomination (your current score: {mock}).")
+                    lines.append(f"On preparedness: your mock interview score is {mock}/100, which satisfies the {sop4_tag} readiness requirement for Dream drives.")
+            elif mock is not None and mock < cutoff:
+                lines.append(f"Note: Under {sop4_tag}, you require a mock interview score >= {cutoff} for Dream/Super-Dream nomination (your current score: {mock}).")
 
             answer = " ".join(lines)
         elif any(k in q for k in ("weak", "skill", "gap", "prepar", "strength", "improv", "learn", "competenc")):
-            c = cite("SOP-01", "SOP-04")
+            c = cite("SOP-01", "SOP-04", "SOP-05", "SOP-08")
             by_level = student.get("skills_by_level") or {}
             basic_skills = by_level.get("basic") or []
             adv_skills = by_level.get("advanced") or []
@@ -603,26 +750,29 @@ class MockLLM:
 
             lines = []
             if basic_skills:
-                lines.append(f"Based on your profile, your verified skills currently at 'Basic' proficiency include: {', '.join(basic_skills[:6])}.")
+                lines.append(f"Based on your profile, your skills currently at 'Basic' proficiency include: {', '.join(basic_skills[:6])}.")
             if missing:
                 lines.append(f"For your lead job match ({top_m.get('title', 'top role')}), key missing required skills include: {', '.join(missing[:4])}.")
             if adv_skills:
                 lines.append(f"Your strongest skills (Advanced) are: {', '.join(adv_skills[:5])}.")
 
-            # If the user requested details, provide structured actionable steps
+            cutoff = min_mock_threshold()
+            sop_primary = c[0] if c else "SOP-01"
             if any(k in q for k in ("detail", "talk", "explain", "how", "plan", "roadmap", "priorit")):
                 lines.append("\nRecommended Upskilling Action Plan:")
+                ev_tag = "[SOP-08]" if "SOP-08" in c else f"[{sop_primary}]"
                 if missing:
                     for i, m_sk in enumerate(missing[:3], 1):
-                        lines.append(f"{i}. {m_sk} (High Priority): Build and commit a hands-on project demonstrating core operations, indexing, and REST integration to earn verified evidence under [SOP-08].")
+                        lines.append(f"{i}. {m_sk} (High Priority): Build and commit a hands-on project demonstrating core operations, indexing, and REST integration to earn verified evidence under {ev_tag}.")
                 if basic_skills:
                     for i, b_sk in enumerate(basic_skills[:2], len(missing[:3]) + 1):
                         lines.append(f"{i}. Elevate {b_sk}: Advance from Basic to Intermediate by passing technical mock evaluations and adding production-style tests.")
 
-            if mock is not None and mock < 65:
-                lines.append(f"\nMost critically, under [SOP-04], your AI mock interview score is {mock}/100, which is below the mandatory 65 cutoff required to unblock Dream and Super-Dream drive nominations.")
+            sop4_tag = "[SOP-04]" if "SOP-04" in c else f"[{sop_primary}]"
+            if mock is not None and mock < cutoff:
+                lines.append(f"\nMost critically, under {sop4_tag}, your AI mock interview score is {mock}/100, which is below the mandatory {cutoff} cutoff required to unblock Dream and Super-Dream drive nominations.")
             else:
-                lines.append("\nUnder [SOP-01], leveling up these foundational skills will unlock higher placement tiers (Dream 8-14.99 LPA and Super-Dream 15+ LPA).")
+                lines.append(f"\nUnder [{sop_primary}], closing these skill gaps raises your eligibility and readiness for higher placement tiers.")
             answer = "\n".join(lines)
         else:
             c = src_ids[:2]

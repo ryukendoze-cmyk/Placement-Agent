@@ -155,6 +155,11 @@ def normalize_role(value: str | None) -> str | None:
     return v if v in ROLES else None
 
 
+def _is_strict() -> bool:
+    from ..config import settings
+    return str(getattr(settings, "auth_mode", "demo")).strip().lower() == "strict"
+
+
 def _session_claims(request: Request) -> dict[str, Any]:
     return decode_session(request.cookies.get(_SESSION_COOKIE)) or {}
 
@@ -162,12 +167,14 @@ def _session_claims(request: Request) -> dict[str, Any]:
 def current_role(request: Request) -> str:
     """Resolve the active role from header, session, legacy cookie, else default.
 
-    Priority: X-Demo-Role > ps06_session.role > ps06_role cookie > DEFAULT_ROLE.
-    When NO explicit role is provided (all sources absent) we return the
-    permissive DEFAULT_ROLE and `require_role` treats an unset role as "open"
-    (demo mode) so read-only unit tests keep passing. Once a role is explicitly
-    chosen it is enforced for real.
+    In ``auth_mode == "strict"``, headers (``X-Demo-Role``) and unsigned legacy
+    cookies (``ps06_role``) are ignored; only a valid signed ``ps06_session``
+    cookie sets a role, and an unauthenticated request resolves to
+    ``"anonymous"`` (never ``DEFAULT_ROLE``).
     """
+    if _is_strict():
+        session_role = normalize_role(_session_claims(request).get("role"))
+        return session_role or "anonymous"
     hdr = normalize_role(request.headers.get(_HEADER))
     if hdr:
         return hdr
@@ -181,7 +188,9 @@ def current_role(request: Request) -> str:
 
 
 def role_explicitly_set(request: Request) -> bool:
-    """True only when the caller actually declared a role (header or cookie)."""
+    """True only when the caller actually declared a role (session only in strict mode)."""
+    if _is_strict():
+        return normalize_role(_session_claims(request).get("role")) is not None
     if normalize_role(request.headers.get(_HEADER)) is not None:
         return True
     if normalize_role(_session_claims(request).get("role")) is not None:
@@ -197,17 +206,29 @@ def get_current_user_optional(request: Request) -> CurrentUser | None:
 
 
 def get_current_user(request: Request) -> CurrentUser:
-    """Resolve the CurrentUser identity for this request (§17.2.A).
-
-    Merges claims from header overrides, the ps06_session cookie, and the
-    legacy ps06_role cookie (in that priority order for role/student_id),
-    falling back to demo defaults for any missing profile fields. For
-    ``role == "student"`` the ``student_id`` is locked to whichever claim
-    source provides it (header > session > legacy > synthetic default), and
-    a synthetic ``demo-student`` id is used when none exists so the
-    CurrentUser validator invariant always holds.
-    """
+    """Resolve the CurrentUser identity for this request (§17.2.A)."""
     claims = _session_claims(request)
+
+    if _is_strict():
+        role = normalize_role(claims.get("role"))
+        if not role:
+            raise HTTPException(401, "Authentication required")
+        session_sid = str(claims.get("student_id") or "").strip() or None
+        student_id = (session_sid or "demo-student") if role == "student" else None
+        user_id = str(claims.get("user_id") or "").strip() or (
+            student_id if student_id else f"demo-{role}"
+        )
+        email = str(claims.get("email") or "").strip() or f"{user_id}@jklu.edu.in"
+        name = str(claims.get("name") or "").strip() or role.replace("_", " ").title()
+        department = str(claims.get("department") or "").strip() or None
+        return CurrentUser(
+            user_id=user_id,
+            email=email,
+            name=name,
+            role=role,  # type: ignore[arg-type]
+            student_id=student_id,
+            department=department,
+        )
 
     # Role: header > session > legacy cookie > default
     role = (
@@ -258,15 +279,18 @@ _IMPLIES: dict[str, set[str]] = {
 
 
 def require_role(*allowed: str):
-    """FastAPI dependency: 403 unless the active role is permitted.
+    """FastAPI dependency: 401/403 unless the active role is permitted.
 
+    - In strict mode, missing signed session raises 401.
     - If the caller declared a role (header/session/cookie) it must be allowed (403 otherwise).
-    - If no role was declared (demo/open mode) the request is allowed; the returned
+    - If no role was declared in demo mode, the request is allowed; the returned
       role is still the resolved default so handlers can log it.
     """
     allowed = tuple(a for a in allowed if a in ROLES) or (DEFAULT_ROLE,)
 
     def _dep(request: Request) -> str:
+        if _is_strict() and not role_explicitly_set(request):
+            raise HTTPException(401, "Authentication required")
         role = current_role(request)
         if role_explicitly_set(request) and not any(role_allows(role, a) for a in allowed):
             raise HTTPException(403, f"role '{role}' is not permitted; requires one of {list(allowed)}")
@@ -278,9 +302,12 @@ def require_role(*allowed: str):
 def enforce_student_scope(request: Request, sid: str) -> None:
     """Row-level security guard (ARCHITECTURE §17.2.B.1).
 
-    Raises 403 when an explicitly-declared student identity tries to reach a
-    record belonging to a different student. Faculty mentors and TPO admins
-    (and open demo mode with no declared identity) pass through.
+    Raises 403 when:
+    - An explicitly-declared student identity tries to reach a record belonging to
+      a different student.
+    - An explicitly-declared faculty_mentor with a department claim tries to reach
+      a student belonging to a different department.
+    TPO admins (and open demo mode with no declared identity) pass through.
     """
     user = get_current_user_optional(request)
     if user is None:
@@ -290,3 +317,23 @@ def enforce_student_scope(request: Request, sid: str) -> None:
             403,
             "Access denied: Students may only access their own placement records",
         )
+    if user.role == "faculty_mentor":
+        dept = (user.department or "").strip().lower()
+        if dept:
+            state = getattr(getattr(request, "app", None), "state", None)
+            ctx_obj = getattr(state, "ctx", None) if state is not None else None
+            engine = getattr(ctx_obj, "engine", None) if ctx_obj is not None else None
+            if engine is not None:
+                from sqlmodel import Session as _Session
+
+                from app.models import Student as _Student
+
+                with _Session(engine) as _db:
+                    stu = _db.get(_Student, sid)
+                if stu is not None:
+                    s_branch = (stu.branch or "").strip().lower()
+                    if s_branch and s_branch != dept:
+                        raise HTTPException(
+                            403,
+                            f"Access denied: Faculty mentor ({user.department}) may not access {stu.branch} student records",
+                        )

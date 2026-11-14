@@ -1,0 +1,14 @@
+{
+  "appId": "in.edu.jklu.careeros",
+  "appName": "JKLU CareerOS",
+  "webDir": "www",
+  "server": {
+    "cleartext": true,
+    "allowNavigation": [
+      "*"
+    ]
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

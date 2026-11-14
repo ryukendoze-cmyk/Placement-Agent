@@ -1,0 +1,30 @@
+From: hr-notifications@cloudscale.in
+Sent: Thursday, November 12, 2026 10:15 AM
+To: tpo@jklu.edu.in
+Subject: Fwd: Campus Drive - CloudScale Systems (Class of 2027)
+
+---------- Forwarded message ---------
+From: talent@cloudscale.in
+Date: Thu, 12 Nov 2026
+
+Company: CloudScale Systems
+Role: Cloud Platform Engineer
+Location: Pune
+Compensation: INR 12,00,000 per annum
+Eligibility: 70% throughout in 10th, 12th and B.Tech. Class of 2027. B.Tech CSE/IT/AI&DS.
+Backlogs: Max 1 backlog allowed.
+
+Technical Skills Required:
+• Python
+* Kubernetes
+1. Terraform
+2. AWS
+
+Nice to have:
+- Prometheus
+
+--
+Thanks & Regards,
+Priya Sharma
+Talent Acquisition Lead
+Sent from my iPhone

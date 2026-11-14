@@ -30,30 +30,49 @@ def _skill_name(skill) -> str:
     return str(getattr(skill, "skill_id", "") or "the stack")
 
 
-def _evidence_lines(student, skills) -> list[tuple[str, str]]:
-    """Return ``[(snippet, skill_name), ...]`` grounded in resume + evidence.
+def _evidence_entries(student, skills) -> list[tuple[str, str, str]]:
+    """Return ``[(snippet, skill_name, skill_id), ...]`` grounded in resume + evidence.
 
-    Prefers ``StudentSkill.evidence`` lines (already-scraped resume bullets);
-    falls back to meaningful resume sentences when no evidence rows exist.
-    Empty result => no probes (never fabricate questions from a blank resume).
+    Prefers distinct skills first (round-robin across skills' evidence lines) so
+    multi-skill resumes get diverse probes; falls back to resume sentences.
     """
-    lines: list[tuple[str, str]] = []
+    entries: list[tuple[str, str, str]] = []
     seen: set[str] = set()
+    # Collect per-skill clean evidence lists, then pick round-robin up to 2.
+    per_skill: list[list[tuple[str, str, str]]] = []
     for sk in skills or []:
+        sid = str(getattr(sk, "skill_id", "") or "generic")
+        sname = _skill_name(sk)
+        bucket: list[tuple[str, str, str]] = []
         for ev in list(getattr(sk, "evidence", []) or []):
             snippet = str(ev).strip()
-            if len(snippet) < 15 or snippet.lower() in seen:
+            if len(snippet) < 15 or snippet.lower() in seen or snippet.lower().startswith(("[interview ", "interview ")):
                 continue
             seen.add(snippet.lower())
-            lines.append((snippet, _skill_name(sk)))
-    if lines:
-        return lines[:2]
+            bucket.append((snippet, sname, sid))
+        if bucket:
+            per_skill.append(bucket)
+    depth = 0
+    while len(entries) < 2 and per_skill:
+        added_this_round = False
+        for bucket in per_skill:
+            if depth < len(bucket) and len(entries) < 2:
+                entries.append(bucket[depth])
+                added_this_round = True
+        if not added_this_round:
+            break
+        depth += 1
+    if entries:
+        return entries[:2]
 
     # Fallback: pull meaningful sentences from the raw resume text.
     resume = str(getattr(student, "resume_text", "") or "").strip()
     if not resume:
         return []
-    skill_names = [s.name if hasattr(s, "name") else _skill_name(s) for s in (skills or [])]
+    skill_pairs = [
+        (s.name if hasattr(s, "name") else _skill_name(s), str(getattr(s, "skill_id", "") or "generic"))
+        for s in (skills or [])
+    ]
     for sentence in _split_sentences(resume):
         low = sentence.lower()
         if len(sentence) < 25:
@@ -61,13 +80,26 @@ def _evidence_lines(student, skills) -> list[tuple[str, str]]:
         if not any(tok in low for tok in ("built", "developed", "implemented", "designed",
                                           "project", "internship", "led", "created")):
             continue
-        matched = next((n for n in skill_names if n and n.lower() in low), skill_names[0] if skill_names else "the stack")
+        matched_name, matched_sid = next(
+            ((n, sid) for n, sid in skill_pairs if n and n.lower() in low),
+            skill_pairs[0] if skill_pairs else ("the stack", "generic"),
+        )
         key = sentence.lower()
         if key in seen:
             continue
         seen.add(key)
-        lines.append((sentence, matched or "the stack"))
-    return lines[:2]
+        entries.append((sentence, matched_name or "the stack", matched_sid or "generic"))
+    return entries[:2]
+
+
+def _evidence_lines(student, skills) -> list[tuple[str, str]]:
+    """Return ``[(snippet, skill_name), ...]`` grounded in resume + evidence.
+
+    Prefers ``StudentSkill.evidence`` lines (already-scraped resume bullets);
+    falls back to meaningful resume sentences when no evidence rows exist.
+    Empty result => no probes (never fabricate questions from a blank resume).
+    """
+    return [(snippet, skill_name) for snippet, skill_name, _ in _evidence_entries(student, skills)]
 
 
 def _split_sentences(text: str) -> list[str]:
@@ -82,19 +114,27 @@ def generate_resume_project_questions(student, skills, taxonomy, llm=None) -> li
     canonical skill display names. Returns ``[]`` when the resume/evidence gives
     nothing real to probe (never fabricates).
     """
-    pairs = _evidence_lines(student, skills)
-    if not pairs:
+    entries = _evidence_entries(student, skills)
+    if not entries:
         return []
 
     questions: list[Question] = []
-    for idx, (snippet, skill_name) in enumerate(pairs[:2], start=1):
-        # Prefer the taxonomy display name when available.
+    for idx, (snippet, skill_name, entry_sid) in enumerate(entries[:2], start=1):
+        # Prefer the taxonomy display name and canonical skill_id when available.
         display = skill_name
+        resolved_sid = entry_sid or "generic"
         if taxonomy is not None:
             try:
-                resolved = taxonomy.resolve(skill_name) or taxonomy.resolve(skill_name.lower())
+                resolved = (
+                    taxonomy.resolve(resolved_sid)
+                    or taxonomy.resolve(skill_name)
+                    or taxonomy.resolve(skill_name.lower())
+                )
                 if resolved:
-                    display = taxonomy.get_opt(resolved).name or skill_name
+                    resolved_sid = resolved
+                    opt = taxonomy.get_opt(resolved)
+                    if opt and opt.name:
+                        display = opt.name
             except Exception:
                 display = skill_name
         question_text = _synthesize(snippet, display, llm)
@@ -110,7 +150,7 @@ def generate_resume_project_questions(student, skills, taxonomy, llm=None) -> li
         questions.append(Question(
             id=f"q-resume-{idx:02d}",
             role="generic",
-            skill_id=(skills[0].skill_id if skills else "generic"),
+            skill_id=resolved_sid,
             difficulty=2,
             question=question_text,
             keywords=tuple(keywords),

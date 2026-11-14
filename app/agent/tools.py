@@ -49,7 +49,12 @@ def _inspect_student_profile(ctx, session, student_id: str, **_):
     if student is None:
         raise ValueError(f"student '{student_id}' not found")
     skills = [
-        {"skill": ss.skill_id, "level": ss.level, "mentions": ss.mentions}
+        {
+            "skill": ss.skill_id,
+            "level": ss.level,
+            "mentions": ss.mentions,
+            "verification_status": getattr(ss, "verification_status", "claimed"),
+        }
         for ss in session.exec(_select(StudentSkill, student_id)).all()
     ]
     xray = xray_resume(student.resume_text or "", ctx.taxonomy) if (student.resume_text or "").strip() else None
@@ -389,7 +394,7 @@ def _search_live_market_jobs(ctx, session, student_id: str | None = None,
 
 def _purge_live_market_jobs(ctx, session, actor_role: str | None = None, **_):
     """Purge all live scraped job postings from the database and vector index."""
-    if actor_role and str(actor_role).lower() == "student":
+    if actor_role is not None and str(actor_role).strip().lower() not in ("tpo_admin", "faculty_mentor"):
         raise PermissionError("purge_live_market_jobs requires faculty_mentor or tpo_admin privileges")
     from ..scraper.pipeline import purge_live_jobs
     count = purge_live_jobs(session, ctx=ctx, clear_output=True)

@@ -21,10 +21,19 @@
         <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#767F79]">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
         </div>
-        <input id="audit-filter" type="text" placeholder="Filter by action, entity ID, actor role, or payload..."
+        <input id="audit-filter" type="text" placeholder="Filter by action, trace_id, entity ID, actor role, or payload..."
                class="w-full pl-10 pr-4 py-2 text-xs rounded-full border border-[#D4D1C7] bg-white text-[#1A211D] placeholder:text-[#8E9690] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] transition-all font-sans" />
       </div>
-      <span id="audit-count" class="text-xs font-mono font-semibold text-[#4A4943] tabular-nums px-3 py-1 rounded-full bg-[#EFECE4]"></span>
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="inline-flex items-center gap-2 text-xs text-[#4A4943] cursor-pointer select-none px-3 py-1 rounded-full bg-white border border-[#D4D1C7]">
+          <input id="audit-include-sessions" type="checkbox" class="rounded border-[#C7C4B8] text-[#1D5C42] focus:ring-[#1D5C42]" />
+          <span>Include routine auth sessions &amp; role switches</span>
+        </label>
+        <button id="audit-clear-filter" type="button" class="hidden px-3 py-1 rounded-full text-xs font-mono font-semibold bg-[#E3F2EA] text-[#164934] border border-[#C8E4D5] hover:bg-[#D1EAD9] cursor-pointer">
+          Clear trace filter &times;
+        </button>
+        <span id="audit-count" class="text-xs font-mono font-semibold text-[#4A4943] tabular-nums px-3 py-1 rounded-full bg-[#EFECE4]"></span>
+      </div>
     </div>
 
     <!-- Log Table -->
@@ -52,10 +61,24 @@
   var body = document.getElementById("audit-log");
   var count = document.getElementById("audit-count");
   var filter = document.getElementById("audit-filter");
+  var clearBtn = document.getElementById("audit-clear-filter");
+  var includeSessions = document.getElementById("audit-include-sessions");
   var rows = [];
 
+  try {
+    var params = new URLSearchParams(window.location.search || "");
+    var initialTrace = params.get("trace_id");
+    if (initialTrace && filter) {
+      filter.value = initialTrace;
+    }
+  } catch (e) {}
+
+  function scrubEmails(s) {
+    return String(s == null ? "" : s).replace(/[A-Za-z0-9._%*+-]+@(?:[A-Za-z0-9.-]+\.[A-Za-z]{2,}|\[external-domain\])/g, "[redacted-id]");
+  }
+
   function esc(s) {
-    return String(s == null ? "" : s)
+    return scrubEmails(s)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
@@ -63,11 +86,46 @@
       .replace(/'/g, "&#39;");
   }
 
+  function actionBadgeHtml(action) {
+    var act = String(action || "");
+    var cls = "bg-[#EFECE4] text-[#4A4943]";
+    if (act.indexOf("campus_drive.fallback_triggered") === 0) {
+      cls = "bg-[#FEF6E7] text-[#9A5B13] border border-[#F3D9A4]";
+    } else if (act.indexOf("campus_drive.") === 0) {
+      cls = "bg-[#EEF5FB] text-[#16436E] border border-[#C8D9E8]";
+    } else if (act.indexOf("jnf.") === 0) {
+      cls = "bg-[#FEF6E7] text-[#9A5B13] border border-[#F3D9A4]";
+    } else if (act === "auth.denied") {
+      cls = "bg-[#FBECE9] text-[#9E2A20] border border-[#F3D2CC]";
+    } else if (act.indexOf("auth.") === 0) {
+      cls = "bg-[#F3EEF8] text-[#5B2C82] border border-[#DECFF0]";
+    } else if (act.indexOf("approval") >= 0) {
+      cls = "bg-[#FBECE9] text-[#9E2A20]";
+    } else if (act.indexOf("interview") >= 0) {
+      cls = "bg-[#E3F2EA] text-[#164934]";
+    }
+    return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium whitespace-nowrap ' + cls + '">' + esc(act) + '</span>';
+  }
+
   function render() {
-    var q = (filter.value || "").toLowerCase();
+    var q = (filter.value || "").trim().toLowerCase();
+    if (clearBtn) {
+      clearBtn.classList.toggle("hidden", !q);
+    }
+    var showSessions = Boolean(includeSessions && includeSessions.checked);
     var shown = rows.filter(function (r) {
+      var act = String(r.action || "");
+      var det = r.detail || {};
+      if (!showSessions) {
+        if (act === "auth.login" || act === "auth.logout" || act === "auth.role_switched") {
+          return false;
+        }
+        if (act === "auth.denied" && det.reason === "demo_role_switch_disabled") {
+          return false;
+        }
+      }
       if (!q) return true;
-      return (String(r.action || "") + " " + String(r.entity_type || "") + " " + String(r.entity_id || "") + " " + String(r.actor_role || "") + " " + JSON.stringify(r.detail || "")).toLowerCase().indexOf(q) >= 0;
+      return scrubEmails(act + " " + String(r.entity_type || "") + " " + String(r.entity_id || "") + " " + String(r.actor_role || "") + " " + JSON.stringify(det)).toLowerCase().indexOf(q) >= 0;
     });
 
     count.textContent = shown.length + " / " + rows.length + " entries";
@@ -78,21 +136,23 @@
     }
 
     body.innerHTML = shown.map(function (r) {
-      var actionBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-[#EFECE4] text-[#4A4943]">' + esc(r.action) + '</span>';
-      if ((r.action || "").indexOf("approval") >= 0) {
-        actionBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-[#FBECE9] text-[#9E2A20]">' + esc(r.action) + '</span>';
-      } else if ((r.action || "").indexOf("interview") >= 0) {
-        actionBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-[#E3F2EA] text-[#164934]">' + esc(r.action) + '</span>';
-      }
+      var actionBadge = actionBadgeHtml(r.action);
 
       var roleBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#EFECE4] text-[#4A4943]">' + esc(r.actor_role) + '</span>';
       if (r.actor_role === "tpo_admin") {
         roleBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#E3F2EA] text-[#164934]">TPO Admin</span>';
+      } else if (r.actor_role === "faculty_mentor") {
+        roleBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#EEF5FB] text-[#16436E]">Faculty Mentor</span>';
       } else if (r.actor_role === "student") {
         roleBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#EFECE4] text-[#3B423E]">Student</span>';
       }
 
-      var detailJson = JSON.stringify(r.detail || {});
+      var detailObj = r.detail || {};
+      var detailJson = JSON.stringify(detailObj);
+      var traceChip = "";
+      if (detailObj && detailObj.trace_id) {
+        traceChip = '<button type="button" data-trace-id="' + esc(detailObj.trace_id) + '" class="trace-filter-chip mr-2 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-[#E3F2EA] text-[#164934] border border-[#C8E4D5] hover:bg-[#D1EAD9] cursor-pointer" title="Filter audit trail by trace_id">' + esc(detailObj.trace_id) + '</button>';
+      }
 
       return '<tr class="hover:bg-[#F9F8F4] transition-colors">' +
         '<td class="px-6 py-3.5 text-xs font-mono text-[#57605A] whitespace-nowrap tabular-nums">' + esc(r.created_at) + '</td>' +
@@ -102,10 +162,27 @@
         '</td>' +
         '<td class="px-6 py-3.5">' + roleBadge + '</td>' +
         '<td class="px-6 py-3.5 text-xs font-mono text-[#57605A] max-w-xs md:max-w-md truncate" title="' + esc(detailJson) + '">' +
-          esc(detailJson) +
+          traceChip + esc(detailJson) +
         '</td>' +
       '</tr>';
     }).join("");
+
+    body.querySelectorAll(".trace-filter-chip").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var tid = btn.getAttribute("data-trace-id") || "";
+        if (filter) {
+          filter.value = tid;
+          render();
+        }
+      });
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener("click", function () {
+      if (filter) filter.value = "";
+      render();
+    });
   }
 
   fetch("/api/admin/audit?limit=200").then(function (r) {
@@ -118,6 +195,9 @@
     body.innerHTML = '<tr><td colspan="5" class="px-6 py-6 text-center text-xs text-[#9E2A20] bg-[#FDF2F0]">Could not load audit log: ' + esc(e.message) + '</td></tr>';
   });
 
+  if (includeSessions) {
+    includeSessions.addEventListener("change", render);
+  }
   filter.addEventListener("input", render);
 })();
 </script>

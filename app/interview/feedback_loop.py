@@ -5,6 +5,9 @@ and detects outliers (questions that are too easy, too hard, or have misaligned 
 """
 import json
 import logging
+import os
+import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -14,11 +17,18 @@ DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 DEFAULT_TELEMETRY_PATH = DATA_DIR / "question_telemetry.json"
 
 
+def _default_runtime_telemetry_path() -> Path:
+    """Isolate pytest runs from mutating repository data/question_telemetry.json."""
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return Path(tempfile.gettempdir()) / f"jklu_question_telemetry_{os.getpid()}.json"
+    return DEFAULT_TELEMETRY_PATH
+
+
 class QuestionTelemetryManager:
     """Manages telemetry recording and feedback loop analysis for interview questions."""
 
     def __init__(self, path: Path | str | None = None) -> None:
-        self.path = Path(path) if path else DEFAULT_TELEMETRY_PATH
+        self.path = Path(path) if path else _default_runtime_telemetry_path()
         self._ledger: dict[str, dict[str, Any]] = {}
         self.load_telemetry()
 
@@ -125,6 +135,49 @@ class QuestionTelemetryManager:
             "flagged_keyword_mismatch": flagged_kw_mismatch,
             "recommendations": recommendations,
         }
+
+    def apply_calibration(self) -> dict[str, Any]:
+        """Persist concrete difficulty/keyword calibration suggestions on flagged questions."""
+        analysis = self.analyze_feedback_loop()
+        updates: list[dict[str, Any]] = []
+        now = datetime.now(timezone.utc).isoformat()
+
+        for item in analysis["flagged_too_easy"]:
+            qid = item["q_id"]
+            rec = self._ledger.get(qid)
+            if not rec:
+                continue
+            cur = int(rec.get("calibrated_difficulty", rec.get("last_difficulty", 1)))
+            nxt = min(2, cur + 1)
+            rec["calibrated_difficulty"] = nxt
+            rec["calibration_action"] = "raise_difficulty"
+            rec["calibrated_at"] = now
+            updates.append({"q_id": qid, "action": "raise_difficulty", "from": cur, "to": nxt})
+
+        for item in analysis["flagged_too_hard"]:
+            qid = item["q_id"]
+            rec = self._ledger.get(qid)
+            if not rec:
+                continue
+            cur = int(rec.get("calibrated_difficulty", rec.get("last_difficulty", 1)))
+            nxt = max(0, cur - 1)
+            rec["calibrated_difficulty"] = nxt
+            rec["calibration_action"] = "lower_difficulty"
+            rec["calibrated_at"] = now
+            updates.append({"q_id": qid, "action": "lower_difficulty", "from": cur, "to": nxt})
+
+        for item in analysis["flagged_keyword_mismatch"]:
+            qid = item["q_id"]
+            rec = self._ledger.get(qid)
+            if not rec:
+                continue
+            rec["keyword_review_flagged"] = True
+            rec["calibrated_at"] = now
+            updates.append({"q_id": qid, "action": "flag_keyword_review"})
+
+        if updates:
+            self.persist_telemetry()
+        return {"calibrated_count": len(updates), "updates": updates, "analysis": analysis}
 
     def persist_telemetry(self, path: Path | str | None = None) -> None:
         """Persist in-memory telemetry to JSON file."""

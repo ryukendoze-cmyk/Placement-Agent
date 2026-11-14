@@ -35,6 +35,23 @@
       <p class="text-sm text-[#5C5A52] mt-1">Hybrid lexical, dense semantic vector, and skill-graph alignment with grounded resume evidence.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2.5">
+      {% if role == 'tpo_admin' %}
+      <button id="open-smart-jd-modal" type="button"
+              class="btn-primary-pill text-xs px-4 py-2">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+        <span>+ Add Campus Drive (Smart JD)</span>
+      </button>
+      <button id="open-jnf-drawer-btn" type="button"
+              class="btn-secondary-pill text-xs px-4 py-2">
+        <svg class="w-3.5 h-3.5 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+        </svg>
+        <span>Share Recruiter JNF Link</span>
+      </button>
+      {% endif %}
+      {% if role in ('student', 'tpo_admin') %}
       <button id="open-scrape-modal" type="button"
               class="btn-secondary-pill text-xs px-4 py-2">
         <svg class="w-3.5 h-3.5 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -45,12 +62,13 @@
       <button id="purge-live-jobs-header-btn" type="button"
               onclick="purgeAllLiveJobs(this)"
               class="btn-secondary-pill text-xs px-3.5 py-2 text-[#9E2A20] hover:bg-[#FDF0ED] border-[#F5D0C8] hover:border-[#9E2A20] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-              title="Remove all current live market jobs from the database">
+              title="Remove live market jobs from your workspace">
         <svg class="w-3.5 h-3.5 text-[#9E2A20] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
         </svg>
         <span>Remove All Live Jobs</span>
       </button>
+      {% endif %}
       {% if has_matches %}
       <button hx-get="/api/students/{{ sid }}/matches" hx-indicator="#rerun-spinner" hx-on::after-request="location.reload()"
               class="btn-primary-pill text-xs px-4 py-2">
@@ -88,8 +106,16 @@
       fetch("/api/students/" + encodeURIComponent(sid) + "/applications")
         .then(function (r) { return r.ok ? r.json() : []; })
         .then(function (apps) {
+          var byJob = {};
+          if (Array.isArray(apps)) {
+            apps.forEach(function (a) {
+              if (a && a.job_id) byJob[a.job_id] = a;
+            });
+          }
+          window._studentAppsByJob = byJob;
           if (!Array.isArray(apps) || !apps.length) {
             if (panel) panel.classList.add("hidden");
+            if (typeof window.renderFavoritesPanel === "function") window.renderFavoritesPanel();
             return;
           }
           if (panel) panel.classList.remove("hidden");
@@ -148,6 +174,47 @@
   })();
   </script>
 
+  <!-- Saved & Favorited Opportunities Panel (V4) -->
+  <div id="student-favorites-panel" class="editorial-card p-5 {% if not favorite_matches %}hidden{% endif %}">
+    <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#ECEAE2]">
+      <div class="flex items-center gap-2.5">
+        <svg class="w-4 h-4 text-[#D97706] shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5-4.8-4.6 6.6-.9L12 2.5z"/></svg>
+        <h2 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Saved &amp; Favorited Opportunities</h2>
+        <span id="student-favorites-count" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#FEF3C7] text-[#92400E]">{{ favorite_matches|length if favorite_matches is defined else 0 }}</span>
+      </div>
+      <span class="text-[11px] font-mono text-[#7A776E]">Persisted across re-ranking &amp; synced with applications</span>
+    </div>
+    <div id="student-favorites-list" class="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      {% if favorite_matches %}
+      {% for fc in favorite_matches %}
+      {% set f_app = (student_applications|selectattr('job_id', 'equalto', fc.job_id)|first) if student_applications else None %}
+      <div class="rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] p-3.5 text-xs flex flex-col justify-between gap-2" data-fav-panel-card="{{ fc.job_id }}">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <p class="font-semibold text-[#1C1E1B] truncate">{{ fc.title }}</p>
+            <p class="text-[11px] text-[#5C5A52] truncate mt-0.5">{{ fc.company }}</p>
+          </div>
+          <span class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#E3F2EA] text-[#1B5E43] shrink-0">{{ fc.score }}%</span>
+        </div>
+        <div class="flex items-center justify-between gap-2 pt-2 border-t border-[#ECEAE2]">
+          <div class="flex items-center gap-1.5">
+            {% if f_app %}
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-[#EFECE4] text-[#4A483F]">{{ f_app.status|replace('_', ' ')|title }}</span>
+            {% else %}
+            <span class="text-[11px] text-[#7A776E]">Not applied yet</span>
+            {% endif %}
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="selectMasterCard('{{ fc.job_id }}')" class="text-[#1D5C42] hover:underline font-semibold cursor-pointer">Open</button>
+            <button type="button" onclick="toggleFavoriteJob('{{ sid }}', '{{ fc.job_id }}', this)" class="text-[#9E2A20] hover:underline font-semibold cursor-pointer">Unfavorite</button>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+
   {% if not has_matches %}
   <!-- Empty State -->
   <div class="editorial-card p-12 text-center max-w-xl mx-auto">
@@ -203,6 +270,11 @@
             <span class="w-1.5 h-1.5 rounded-full bg-[#4A483F]"></span>
             <span>On-Campus</span>
             <span id="count-local" class="px-1.5 py-0.5 rounded-full font-mono text-[11px] bg-[#EFECE4] text-[#4A483F] font-bold">0</span>
+          </button>
+          <button id="filter-source-favorites" type="button" class="match-tab-btn px-3.5 py-1.5 rounded-full text-[#5C5A52] hover:text-[#1C1E1B] transition-all inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap" data-filter="favorites" data-source-filter="favorites">
+            <svg class="w-3.5 h-3.5 text-[#D97706] shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5-4.8-4.6 6.6-.9L12 2.5z"/></svg>
+            <span>Favorites</span>
+            <span id="count-source-favorites" class="px-1.5 py-0.5 rounded-full font-mono text-[11px] bg-[#FEF3C7] text-[#92400E] font-bold">{{ (favorite_matches|length) if favorite_matches is defined else 0 }}</span>
           </button>
         </div>
 
@@ -305,8 +377,10 @@
           <button id="btn-portal-scraped" type="button" class="px-2.5 py-0.5 rounded-full text-[#1B5E43] hover:bg-[#E3F2EA] cursor-pointer whitespace-nowrap">Scraped Only</button>
           <span class="text-[#C7C4B8]">&middot;</span>
           <button id="btn-portal-campus" type="button" class="px-2.5 py-0.5 rounded-full text-[#4A483F] hover:bg-[#EFECE4] cursor-pointer whitespace-nowrap">Campus Only</button>
+          {% if role in ('student', 'tpo_admin') %}
           <span class="text-[#C7C4B8]">&middot;</span>
-          <button id="btn-purge-live-portal" type="button" onclick="purgeAllLiveJobs(this)" class="px-2.5 py-0.5 rounded-full text-[#9E2A20] hover:bg-[#FDF0ED] cursor-pointer whitespace-nowrap font-medium" title="Remove all live market jobs from database">Clear Live Jobs</button>
+          <button id="btn-purge-live-portal" type="button" onclick="purgeAllLiveJobs(this)" class="px-2.5 py-0.5 rounded-full text-[#9E2A20] hover:bg-[#FDF0ED] cursor-pointer whitespace-nowrap font-medium" title="Remove live market jobs from your workspace">Clear Live Jobs</button>
+          {% endif %}
         </div>
       </div>
       <div id="portal-pills" class="flex flex-wrap gap-1.5">
@@ -367,6 +441,7 @@
       <div class="master-nav-item {% if loop.first %}active-master{% endif %}"
            data-master-for="{{ c.job_id }}"
            data-master-index="{{ loop.index0 }}"
+           data-favorite="{{ 'true' if c.is_favorite else 'false' }}"
            onclick="selectMasterCard('{{ c.job_id }}')">
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-start gap-3 min-w-0 flex-1">
@@ -396,14 +471,25 @@
               </div>
             </div>
           </div>
-          <!-- Mini SVG Circular Score Ring -->
-          <div class="relative w-11 h-11 shrink-0 flex items-center justify-center">
-            <svg class="w-11 h-11 -rotate-90" viewBox="0 0 44 44" aria-hidden="true">
-              <circle cx="22" cy="22" r="18" fill="none" stroke="#E5E3DC" stroke-width="3.5" />
-              <circle class="master-ring-arc" cx="22" cy="22" r="18" fill="none" stroke="#1D5C42" stroke-width="3.5" stroke-linecap="round"
-                      stroke-dasharray="113.1" stroke-dashoffset="{{ (113.1 * (100 - score_clamped) / 100)|round(1) }}" />
-            </svg>
-            <span class="absolute font-serif-display text-xs font-bold text-[#1C1E1B] tabular-nums">{{ c.score }}</span>
+          <!-- Favorite + Mini SVG Circular Score Ring -->
+          <div class="flex items-center gap-2 shrink-0">
+            <button type="button"
+                    class="btn-favorite-job p-1.5 rounded-full border transition-colors cursor-pointer shrink-0 {% if c.is_favorite %}bg-[#FEF3C7] border-[#F59E0B] text-[#B45309]{% else %}bg-white border-[#E5E3DC] text-[#7A776E] hover:text-[#B45309] hover:border-[#F59E0B]{% endif %}"
+                    data-job-id="{{ c.job_id }}"
+                    data-favorited="{{ 'true' if c.is_favorite else 'false' }}"
+                    onclick="event.stopPropagation(); toggleFavoriteJob('{{ sid }}', '{{ c.job_id }}', this)"
+                    title="{{ 'Remove from Favorites' if c.is_favorite else 'Save to Favorites' }}"
+                    aria-label="Toggle favorite">
+              <svg class="w-4 h-4 fav-star-svg" fill="{{ 'currentColor' if c.is_favorite else 'none' }}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/></svg>
+            </button>
+            <div class="relative w-11 h-11 shrink-0 flex items-center justify-center">
+              <svg class="w-11 h-11 -rotate-90" viewBox="0 0 44 44" aria-hidden="true">
+                <circle cx="22" cy="22" r="18" fill="none" stroke="#E5E3DC" stroke-width="3.5" />
+                <circle class="master-ring-arc" cx="22" cy="22" r="18" fill="none" stroke="#1D5C42" stroke-width="3.5" stroke-linecap="round"
+                        stroke-dasharray="113.1" stroke-dashoffset="{{ (113.1 * (100 - score_clamped) / 100)|round(1) }}" />
+              </svg>
+              <span class="absolute font-serif-display text-xs font-bold text-[#1C1E1B] tabular-nums">{{ c.score }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -427,6 +513,7 @@
       {% set score_clamped = 100 if c.score > 100 else (0 if c.score < 0 else c.score) %}
       <div class="match-card job-card {% if not loop.first %}master-inactive{% endif %} bg-white rounded-[24px] border border-[#E5E3DC] shadow-[0_4px_20px_rgba(28,30,27,0.04)] p-6 md:p-8 transition-all"
            data-job-id="{{ c.job_id }}"
+           data-favorite="{{ 'true' if c.is_favorite else 'false' }}"
            data-fresher="{% if is_fresher_val %}true{% else %}false{% endif %}"
            data-job-type="{% if is_live %}live{% else %}local{% endif %}"
            data-source="{{ job_src }}"
@@ -466,14 +553,16 @@
 
               {% set job_engine = (c.job.scraper_engine if c.job else c.scraper_engine)|default('') %}
               {% set job_source = ((c.job.source if c.job else c.source)|default(''))|lower %}
-              {% if job_engine == 'stealth_harvester' or job_source in ['naukri', 'linkedin', 'indeed', 'foundit', 'internshala', 'unstop', 'instahyre', 'hirist'] %}
-              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-medium bg-[#EFECE4] text-[#4A483F] whitespace-nowrap" title="Harvested via 8-Portal Stealth Engine">
-                stealth_harvester
-              </span>
-              {% elif job_engine and job_engine != 'local' %}
-              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-medium bg-[#EFECE4] text-[#4A483F] whitespace-nowrap">
-                {{ job_engine }}
-              </span>
+              {% if is_live %}
+                {% if job_engine == 'stealth_harvester' or job_source in ['naukri', 'linkedin', 'indeed', 'foundit', 'internshala', 'unstop', 'instahyre', 'hirist'] %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-medium bg-[#EFECE4] text-[#4A483F] whitespace-nowrap" title="Harvested via Multi-Portal Stealth Engine">
+                  stealth_harvester
+                </span>
+                {% elif job_engine and job_engine not in ('local', 'campus_drive') %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-medium bg-[#EFECE4] text-[#4A483F] whitespace-nowrap">
+                  {{ job_engine }}
+                </span>
+                {% endif %}
               {% endif %}
             </div>
 
@@ -545,15 +634,26 @@
           </button>
 
           <button type="button"
-                  onclick="removeJobOpportunity('{{ sid }}', '{{ c.job_id }}', '{{ c.title|escape }}', this)"
+                  class="btn-favorite-job btn-secondary-pill px-4 py-2.5 text-xs transition-colors inline-flex items-center gap-1.5 cursor-pointer {% if c.is_favorite %}bg-[#FEF3C7] border-[#F59E0B] text-[#92400E]{% endif %}"
+                  data-job-id="{{ c.job_id }}"
+                  data-favorited="{{ 'true' if c.is_favorite else 'false' }}"
+                  onclick="toggleFavoriteJob('{{ sid }}', '{{ c.job_id }}', this)">
+            <svg class="w-3.5 h-3.5 fav-star-svg text-[#D97706] shrink-0" fill="{{ 'currentColor' if c.is_favorite else 'none' }}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/></svg>
+            <span class="fav-btn-label">{% if c.is_favorite %}Favorited{% else %}Favorite{% endif %}</span>
+          </button>
+
+          {% if is_live or role != 'student' %}
+          <button type="button"
+                  onclick="removeJobOpportunity('{{ sid }}', '{{ c.job_id }}', {{ c.title|tojson }}, this)"
                   data-job-remove="{{ c.job_id }}"
                   class="btn-secondary-pill px-4 py-2.5 text-xs text-[#9E2A20] hover:bg-[#FDF0ED] border-[#F5D0C8] hover:border-[#9E2A20] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-                  title="Remove this role if closed, expired, or unwanted">
+                  title="{% if role == 'student' %}Dismiss this role from your active matches{% else %}Remove or dismiss this opportunity{% endif %}">
             <svg class="w-3.5 h-3.5 text-[#9E2A20] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
             </svg>
-            <span>Remove</span>
+            <span>{% if role == 'student' %}Dismiss{% else %}Remove{% endif %}</span>
           </button>
+          {% endif %}
         </div>
 
         <!-- Eligibility Callout Banner -->
@@ -576,6 +676,25 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
           </svg>
           <p class="text-xs font-semibold text-[#1B5E43]">Eligible for this role under JKLU placement policy</p>
+        </div>
+        {% endif %}
+
+        {% if c.unverified_skills or c.needs_reverification_skills %}
+        <div class="mt-3 rounded-2xl bg-[#FFFBEB] border border-[#F5D08A] px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2 min-w-0">
+            <span class="text-xs font-bold text-[#92400E]">Skill Verification Warning:</span>
+            {% for sk in c.unverified_skills %}
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FDF0ED] text-[#9E2A20] border border-[#F5D0C8]">
+              Unverified &middot; {{ sk|replace('_', ' ')|title }}
+            </span>
+            {% endfor %}
+            {% for sk in c.needs_reverification_skills %}
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FEF3C7] text-[#92400E] border border-[#F5D08A]">
+              Needs Re-verification &middot; {{ sk|replace('_', ' ')|title }}
+            </span>
+            {% endfor %}
+          </div>
+          <a href="/students/{{ sid }}/plan" class="text-[11px] font-semibold text-[#92400E] hover:underline whitespace-nowrap">Complete Remedial Plan &rarr;</a>
         </div>
         {% endif %}
 
@@ -867,10 +986,12 @@
     var countAll = document.getElementById("count-all");
     var countLive = document.getElementById("count-live");
     var countLocal = document.getElementById("count-local");
+    var countFavorites = document.getElementById("count-source-favorites");
 
     var liveTotal = 0;
     var localTotal = 0;
     var fresherTotal = 0;
+    var favTotal = 0;
     var portalCounts = {};
     ALL_PORTAL_KEYS.forEach(function (k) { portalCounts[k] = 0; });
 
@@ -880,6 +1001,7 @@
       else localTotal++;
 
       if (c.getAttribute("data-fresher") === "true") fresherTotal++;
+      if (c.getAttribute("data-favorite") === "true") favTotal++;
 
       var src = (c.getAttribute("data-source") || "local").toLowerCase();
       if (portalCounts[src] !== undefined) portalCounts[src]++;
@@ -892,6 +1014,7 @@
     if (countAll) countAll.textContent = totalCardsCount;
     if (countLive) countLive.textContent = liveTotal;
     if (countLocal) countLocal.textContent = localTotal;
+    if (countFavorites) countFavorites.textContent = favTotal;
     if (totalCountEl) totalCountEl.textContent = totalCardsCount;
 
     // Render Portal Pills
@@ -1083,7 +1206,13 @@
         }
 
         // Quick Tab (Dim 0)
-        if (state.quickTab !== "all" && dType !== state.quickTab) {
+        var dFav = card.getAttribute("data-favorite") === "true";
+        if (state.quickTab === "favorites") {
+          if (!dFav) {
+            card.classList.add("hidden");
+            return;
+          }
+        } else if (state.quickTab !== "all" && dType !== state.quickTab) {
           card.classList.add("hidden");
           return;
         }
@@ -1444,7 +1573,7 @@
 
     function removeJobOpportunity(sid, jobId, title, btn) {
       var userRole = "{{ role }}";
-      var isStaff = (userRole === "faculty_mentor" || userRole === "tpo_admin");
+      var isTpo = (userRole === "tpo_admin");
 
       function executeRemoval(permanent) {
         if (btn) {
@@ -1541,7 +1670,7 @@
         });
       }
 
-      if (isStaff) {
+      if (isTpo) {
         var modal = document.createElement("div");
         modal.className = "fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fadeIn";
         modal.innerHTML = 
@@ -1549,7 +1678,7 @@
             '<div class="flex items-start justify-between">' +
               '<div>' +
                 '<h3 class="text-base font-bold text-[#1C1E1B] font-serif">Remove Job Opportunity</h3>' +
-                '<p class="text-xs text-[#5C5A52] mt-0.5">' + (title ? ('Role: ' + title) : 'Select removal scope') + '</p>' +
+                '<p class="js-remove-role-subtitle text-xs text-[#5C5A52] mt-0.5"></p>' +
               '</div>' +
               '<button type="button" class="modal-close text-[#7A776E] hover:text-[#1C1E1B] text-lg font-bold cursor-pointer">&times;</button>' +
             '</div>' +
@@ -1574,6 +1703,8 @@
               '<button type="button" class="modal-cancel btn-secondary-pill text-xs px-4 py-1.5 cursor-pointer">Cancel</button>' +
             '</div>' +
           '</div>';
+        var subEl = modal.querySelector(".js-remove-role-subtitle");
+        if (subEl) subEl.textContent = title ? ("Role: " + title) : "Select removal scope";
         document.body.appendChild(modal);
 
         function closeModal() {
@@ -1590,7 +1721,10 @@
           executeRemoval(true);
         };
       } else {
-        if (confirm("Remove '" + (title || "this job") + "' from your matches? It will no longer appear in your active opportunities.")) {
+        var dismissMsg = "Dismiss '" + (title || "this job") + "' from your active matches? It will no longer appear in your workspace.";
+        if (typeof window.confirmAction === "function") {
+          window.confirmAction(dismissMsg, function () { executeRemoval(false); });
+        } else {
           executeRemoval(false);
         }
       }
@@ -1598,11 +1732,131 @@
 
     window.removeJobOpportunity = removeJobOpportunity;
 
+    function _escFav(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function renderFavoritesPanel() {
+      var panel = document.getElementById("student-favorites-panel");
+      var listEl = document.getElementById("student-favorites-list");
+      var panelCount = document.getElementById("student-favorites-count");
+      var appsMap = window._studentAppsByJob || {};
+      var favCards = allCards.filter(function (card) {
+        return card.getAttribute("data-favorite") === "true";
+      });
+      favTotal = favCards.length;
+      if (countFavorites) countFavorites.textContent = favTotal;
+      if (panelCount) panelCount.textContent = favTotal;
+      if (!panel || !listEl) return;
+      if (favTotal === 0) {
+        panel.classList.add("hidden");
+        listEl.innerHTML = "";
+        return;
+      }
+      panel.classList.remove("hidden");
+      listEl.innerHTML = favCards.map(function (card) {
+        var jid = card.getAttribute("data-job-id") || "";
+        var titleEl = card.querySelector("h2");
+        var title = titleEl ? titleEl.textContent.trim() : jid;
+        var company = (card.getAttribute("data-company") || "").toUpperCase();
+        var metaP = card.querySelector("p.text-sm");
+        if (metaP && metaP.querySelector("span")) {
+          company = metaP.querySelector("span").textContent.trim();
+        }
+        var score = card.getAttribute("data-score") || "0";
+        var appInfo = appsMap[jid];
+        var statusHtml = appInfo
+          ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-[#EFECE4] text-[#4A483F]">' + _escFav(String(appInfo.status || "").replace(/_/g, " ")) + '</span>'
+          : '<span class="text-[11px] text-[#7A776E]">Not applied yet</span>';
+        return (
+          '<div class="rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] p-3.5 text-xs flex flex-col justify-between gap-2" data-fav-panel-card="' + _escFav(jid) + '">' +
+            '<div class="flex items-start justify-between gap-2">' +
+              '<div class="min-w-0">' +
+                '<p class="font-semibold text-[#1C1E1B] truncate">' + _escFav(title) + '</p>' +
+                '<p class="text-[11px] text-[#5C5A52] truncate mt-0.5">' + _escFav(company) + '</p>' +
+              '</div>' +
+              '<span class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#E3F2EA] text-[#1B5E43] shrink-0">' + _escFav(score) + '%</span>' +
+            '</div>' +
+            '<div class="flex items-center justify-between gap-2 pt-2 border-t border-[#ECEAE2]">' +
+              '<div class="flex items-center gap-1.5">' + statusHtml + '</div>' +
+              '<div class="flex items-center gap-2">' +
+                '<button type="button" onclick="selectMasterCard(\'' + _escFav(jid) + '\')" class="text-[#1D5C42] hover:underline font-semibold cursor-pointer">Open</button>' +
+                '<button type="button" onclick="toggleFavoriteJob(\'{{ sid }}\', \'' + _escFav(jid) + '\', this)" class="text-[#9E2A20] hover:underline font-semibold cursor-pointer">Unfavorite</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>'
+        );
+      }).join("");
+    }
+    window.renderFavoritesPanel = renderFavoritesPanel;
+
+    function toggleFavoriteJob(sid, jobId, btn) {
+      if (btn) btn.disabled = true;
+      fetch("/api/students/" + encodeURIComponent(sid) + "/matches/" + encodeURIComponent(jobId) + "/favorite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({})
+      })
+      .then(function (r) {
+        return r.json().then(function (j) { return { ok: r.ok, status: r.status, j: j }; });
+      })
+      .then(function (res) {
+        if (btn) btn.disabled = false;
+        if (!res.ok || !res.j) {
+          if (window.toast) window.toast("Could not update favorite status.", "error");
+          return;
+        }
+        var isFav = !!res.j.is_favorite;
+        var detailCard = document.querySelector('.match-card[data-job-id="' + jobId + '"]');
+        var masterCard = document.querySelector('.master-nav-item[data-master-for="' + jobId + '"]');
+        if (detailCard) detailCard.setAttribute("data-favorite", isFav ? "true" : "false");
+        if (masterCard) masterCard.setAttribute("data-favorite", isFav ? "true" : "false");
+
+        document.querySelectorAll('.btn-favorite-job[data-job-id="' + jobId + '"]').forEach(function (b) {
+          b.setAttribute("data-favorited", isFav ? "true" : "false");
+          b.title = isFav ? "Remove from Favorites" : "Save to Favorites";
+          var svg = b.querySelector(".fav-star-svg");
+          if (svg) svg.setAttribute("fill", isFav ? "currentColor" : "none");
+          var lbl = b.querySelector(".fav-btn-label");
+          if (lbl) lbl.textContent = isFav ? "Favorited" : "Favorite";
+          if (b.classList.contains("btn-secondary-pill")) {
+            b.classList.toggle("bg-[#FEF3C7]", isFav);
+            b.classList.toggle("border-[#F59E0B]", isFav);
+            b.classList.toggle("text-[#92400E]", isFav);
+          } else {
+            b.classList.toggle("bg-[#FEF3C7]", isFav);
+            b.classList.toggle("border-[#F59E0B]", isFav);
+            b.classList.toggle("text-[#B45309]", isFav);
+            b.classList.toggle("bg-white", !isFav);
+            b.classList.toggle("border-[#E5E3DC]", !isFav);
+            b.classList.toggle("text-[#7A776E]", !isFav);
+          }
+        });
+
+        renderFavoritesPanel();
+        if (state.quickTab === "favorites") applyFilters();
+        if (window.toast) {
+          window.toast(isFav ? "Saved to Favorites." : "Removed from Favorites.", "success");
+        }
+      })
+      .catch(function () {
+        if (btn) btn.disabled = false;
+        if (window.toast) window.toast("Network error updating favorite.", "error");
+      });
+    }
+    window.toggleFavoriteJob = toggleFavoriteJob;
+
     applyFilters();
   })();
   </script>
   {% endif %}
 
+  {% if role in ('student', 'tpo_admin') %}
   <!-- Live Scraper Modal Dialog with Telemetry Dashboard (ARCHITECTURE §16.2.B) -->
   <div id="scrape-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-[#122019]/60 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white rounded-[24px] border border-[#E5E3DC] shadow-2xl max-w-xl w-full p-6 md:p-7 relative">
@@ -1778,7 +2032,7 @@
               <div id="telemetry-progress-bar" class="bg-[#1D5C42] h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
             </div>
             <div class="flex items-center justify-between text-[11px] font-mono text-[#5C5A52]">
-              <span id="telemetry-progress-text">0 / 8 Portals Scraped (0%)</span>
+              <span id="telemetry-progress-text">0 / 11 Portals Scraped (0%)</span>
               <span id="telemetry-jobs-discovered" class="font-bold text-[#1D5C42]">0 Jobs Discovered</span>
             </div>
           </div>
@@ -2008,9 +2262,8 @@
     }
 
     function purgeAllLiveJobs(btn) {
-      if (!confirm("Are you sure you want to remove ALL current live market jobs from the database? On-campus institutional jobs will remain untouched.")) {
-        return;
-      }
+      var confirmMsg = "Are you sure you want to remove ALL current live market jobs from the database? On-campus institutional jobs will remain untouched.";
+      function _doPurge() {
       var allPurgeBtns = document.querySelectorAll("#purge-live-jobs-header-btn, #modal-purge-live-btn, #btn-purge-live-portal");
       allPurgeBtns.forEach(function (b) {
         b.disabled = true;
@@ -2057,6 +2310,12 @@
           window.toast("Error removing live jobs: " + err, "error");
         }
       });
+      }
+      if (typeof window.confirmAction === "function") {
+        window.confirmAction(confirmMsg, _doPurge);
+      } else {
+        _doPurge();
+      }
     }
     window.purgeAllLiveJobs = purgeAllLiveJobs;
 
@@ -2108,7 +2367,7 @@
       var summaryMsg = document.getElementById("telemetry-summary-msg");
       var doneBtn = document.getElementById("telemetry-done-btn");
 
-      var totalExpectedPortals = 8;
+      var totalExpectedPortals = 11;
       var completedPortals = 0;
       var totalJobsFound = 0;
 
@@ -2311,5 +2570,10 @@
     };
   })();
   </script>
+  {% endif %}
+  {% if role == 'tpo_admin' %}
+  {% include "campus/_smart_jd_modal.html" %}
+  <script src="/static/campus_drive.js"></script>
+  {% endif %}
 </div>
 {% endblock %}

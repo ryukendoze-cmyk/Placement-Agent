@@ -24,30 +24,44 @@ class BedrockLLM:
         self._c = boto3.client("bedrock-runtime", **kwargs)
         self._m = model
 
-    def complete(self, system: str, user: str, json_mode: bool = False) -> str:
-        kwargs = {
+    def complete(
+        self,
+        system: str,
+        user: str,
+        json_mode: bool = False,
+        temperature: float = 0.0,
+        **kwargs,
+    ) -> str:
+        req = {
             "modelId": self._m,
             "system": [{"text": system}],
             "messages": [{"role": "user", "content": [{"text": user}]}],
-            "inferenceConfig": {"maxTokens": 2000},
+            "inferenceConfig": {"maxTokens": 2000, "temperature": float(temperature)},
         }
         if json_mode:
-            kwargs["additionalModelRequestFields"] = {"output_format": "json"}
-        r = self._c.converse(**kwargs)
+            req["additionalModelRequestFields"] = {"output_format": "json"}
+        r = self._c.converse(**req)
         return r["output"]["message"]["content"][0]["text"]
 
-    def stream(self, system: str, user: str, json_mode: bool = False):
+    def stream(
+        self,
+        system: str,
+        user: str,
+        json_mode: bool = False,
+        temperature: float = 0.0,
+        **kwargs,
+    ):
         """Stream via ``converse_stream``; falls back to chunked ``complete()``."""
-        kwargs = {
+        req = {
             "modelId": self._m,
             "system": [{"text": system}],
             "messages": [{"role": "user", "content": [{"text": user}]}],
-            "inferenceConfig": {"maxTokens": 2000},
+            "inferenceConfig": {"maxTokens": 2000, "temperature": float(temperature)},
         }
         if json_mode:
-            kwargs["additionalModelRequestFields"] = {"output_format": "json"}
+            req["additionalModelRequestFields"] = {"output_format": "json"}
         try:
-            resp = self._c.converse_stream(**kwargs)
+            resp = self._c.converse_stream(**req)
             for event in resp.get("stream", []):
                 block = event.get("contentBlockDelta", {}).get("delta", {})
                 text = block.get("text")
@@ -55,4 +69,6 @@ class BedrockLLM:
                     yield text
         except Exception as e:
             logger.warning("Bedrock streaming failed (%s); falling back to chunked complete().", e)
-            yield from _chunk_words(self.complete(system, user, json_mode=json_mode))
+            yield from _chunk_words(
+                self.complete(system, user, json_mode=json_mode, temperature=temperature)
+            )

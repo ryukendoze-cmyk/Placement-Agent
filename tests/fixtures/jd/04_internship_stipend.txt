@@ -1,0 +1,16 @@
+Company: AeroStack AI
+Role: Backend Engineering Intern
+Location: Bengaluru
+Work Mode: Remote
+Stipend: 40,000/month
+Duration: 6 Months Internship (Graduating in 2027)
+Allowed Branches: All branches
+
+Required Skills:
+- Python
+- FastAPI
+- PostgreSQL
+
+Preferred Skills:
+- Docker
+- Redis

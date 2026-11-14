@@ -52,7 +52,7 @@ def select(bank, role: str, difficulty: int, exclude_ids, prefer_skills) -> "Que
         diff_dist = abs(q.difficulty - difficulty)
         if prefer:
             pref_match = 0 if q.skill_id in prefer else 1
-            key = (role_score, pref_match, diff_dist, q.id)
+            key = (role_score, diff_dist, pref_match, 1 if q.skill_id == "generic" else 2, q.id)
         else:
             key = (role_score, diff_dist, 1 if q.skill_id == "generic" else 2, q.id)
         if best_key is None or key < best_key:

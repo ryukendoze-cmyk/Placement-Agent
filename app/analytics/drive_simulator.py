@@ -66,9 +66,11 @@ def simulate_placement_drive(
         preferred_skills=pref_skills,
         salary_lpa=salary,
         min_gpa=float(min_gpa or 0.0),
+        max_backlogs=max_backlogs,
         allowed_branches=branches,
         job_url="",
         source="local",
+        scraper_engine="",
     )
     # Pre-embed the synthetic job so evaluate_student_eligibility hits the
     # in-memory cache and never writes to the vector store.

@@ -1,0 +1,14 @@
+Company: VoltCore Semiconductors
+Role: Embedded Systems Engineer
+Location: Noida
+Work Mode: On-site
+Package: 12L
+Eligibility: B.Tech ECE/EE only, zero backlogs, 7 CGPA and above, 2027 batch
+
+Must have:
+- C++
+- Linux
+- Git
+
+Preferred:
+- Python

@@ -7,6 +7,15 @@ let recognizing = false;
 let evaluating = false;
 let turn = 1;
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const HAS_MEDIA_RECORDER = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+const HAS_STT = !!(SR || HAS_MEDIA_RECORDER);
+let mediaRecorder = null;
+let mediaChunks = [];
+let mediaStream = null;
+let micStartMs = 0;
+let lastRecordingDurationSec = null;
+let currentTtsAudio = null;
+let ttsReqCounter = 0;
 
 function $(id) { return document.getElementById(id); }
 
@@ -49,15 +58,75 @@ const RUBRIC_LABELS = {
 let timerHandle = null;
 let timerStart = 0;
 
-function speak(text) {
+function setMicStatus(msg, isError) {
+  const el = $("mic-status");
+  if (!el) return;
+  if (!msg) {
+    el.hidden = true;
+    el.textContent = "";
+    return;
+  }
+  el.hidden = false;
+  el.className = isError
+    ? "mt-1.5 text-xs font-mono text-[#9E2A20]"
+    : "mt-1.5 text-xs font-mono text-[#1D5C42]";
+  el.textContent = msg;
+}
+
+function stopActiveSpeech() {
+  ttsReqCounter += 1;
+  try {
+    if (currentTtsAudio) {
+      currentTtsAudio.pause();
+      currentTtsAudio = null;
+    }
+  } catch (e) { /* ignore */ }
+  try {
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  } catch (e) { /* speech not available - ignore */ }
+}
+
+function speakWithBrowserTts(text, rate) {
   try {
     if ("speechSynthesis" in window && text && text.trim()) {
       const u = new SpeechSynthesisUtterance(text);
-      u.rate = 1;
+      u.rate = typeof rate === "number" ? rate : 1;
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
     }
   } catch (e) { /* speech not available - ignore */ }
+}
+
+function speak(text) {
+  if (!text || !text.trim()) return;
+  stopActiveSpeech();
+  const reqId = ttsReqCounter;
+  if ("fetch" in window) {
+    fetch("/api/speech/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text })
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (reqId !== ttsReqCounter) return;
+        if (d && !d.fallback && d.audio_b64 && d.mime_type) {
+          const audio = new Audio("data:" + d.mime_type + ";base64," + d.audio_b64);
+          currentTtsAudio = audio;
+          audio.play().catch(function () { speakWithBrowserTts(text, 1); });
+          return;
+        }
+        const rate = (d && d.speech_params && d.speech_params.rate) ? d.speech_params.rate : 1;
+        speakWithBrowserTts(text, rate);
+      })
+      .catch(function () {
+        if (reqId === ttsReqCounter) speakWithBrowserTts(text, 1);
+      });
+    return;
+  }
+  speakWithBrowserTts(text, 1);
 }
 
 function renderStepper(done, current) {
@@ -170,6 +239,7 @@ function setEvaluating(active) {
   const answerBox = $("answer");
   if (active) {
     if (sendBtn) {
+      if (!sendBtn.dataset.origHtml) sendBtn.dataset.origHtml = sendBtn.innerHTML;
       sendBtn.disabled = true;
       sendBtn.textContent = "Evaluating with AI...";
       sendBtn.classList.add("opacity-60", "cursor-wait");
@@ -187,15 +257,72 @@ function setEvaluating(active) {
   } else {
     if (sendBtn) {
       sendBtn.disabled = false;
-      sendBtn.textContent = "Send answer";
+      sendBtn.innerHTML = sendBtn.dataset.origHtml || "Send answer";
       sendBtn.classList.remove("opacity-60", "cursor-wait");
     }
-    if (micBtn && SR) micBtn.disabled = false;
+    if (micBtn && HAS_STT) micBtn.disabled = false;
     if (answerBox) answerBox.disabled = false;
   }
 }
 
+function renderSpeechSummary(ss) {
+  const box = $("speech-summary-box");
+  const content = $("speech-summary-content");
+  if (!box || !content) return;
+  if (!ss || !Object.keys(ss).length) {
+    box.hidden = true;
+    content.textContent = "";
+    return;
+  }
+  const delivery = ss.avg_delivery_score != null ? ss.avg_delivery_score : 0;
+  const star = ss.avg_star_score != null ? ss.avg_star_score : 0;
+  const pacing = ss.avg_wpm ? (ss.avg_wpm + " WPM avg") : "Text mode (no mic WPM)";
+  const fillers = ss.total_fillers || 0;
+  const turns = ss.turns_measured || 0;
+  box.hidden = false;
+  content.textContent = "Delivery " + delivery + "/100 | STAR " + star + "/100 | " +
+    pacing + " | Total fillers " + fillers + " (" + turns + " turns)";
+}
+
+function renderSkillVerification(updates) {
+  const box = $("skill-verification-box");
+  const list = $("skill-verification-list");
+  if (!box || !list) return;
+  list.innerHTML = "";
+  if (!Array.isArray(updates) || !updates.length) {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  updates.forEach(function (u) {
+    const status = String(u.verification_status || "claimed");
+    const pill = document.createElement("span");
+    let cls = "px-3 py-1 rounded-full text-xs font-semibold border ";
+    let label = "Claimed";
+    if (status === "verified") {
+      cls += "bg-[#E3F2EA] text-[#1B5E43] border-[#C8E4D5]";
+      label = "Verified";
+    } else if (status === "needs_reverification") {
+      cls += "bg-[#FEF6E6] text-[#9A5B13] border-[#F2D59B]";
+      label = "Needs Re-verification";
+    } else if (status === "unverified") {
+      cls += "bg-[#FDF0ED] text-[#9E2A20] border-[#F5D0C8]";
+      label = "Unverified";
+    } else {
+      cls += "bg-[#F4F3EC] text-[#4A483F] border-[#E5E3DC]";
+    }
+    pill.className = cls;
+    pill.textContent = u.skill_id + ": " + label + " (" + (u.score != null ? u.score : "—") + "/100)";
+    list.appendChild(pill);
+  });
+}
+
 function renderSummary(d) {
+  stopActiveSpeech();
+  lastRecordingDurationSec = null;
+  micStartMs = 0;
+  const probeBox = $("followup-probe");
+  if (probeBox) { probeBox.hidden = true; probeBox.textContent = ""; }
   $("status").textContent = "Interview complete";
   $("interview").style.display = "none";
   $("summary").style.display = "block";
@@ -253,6 +380,8 @@ function renderSummary(d) {
       ro.appendChild(row);
     });
   }
+  renderSpeechSummary(d.speech_summary);
+  renderSkillVerification(d.skill_updates);
 }
 
 function printScorecard() {
@@ -264,9 +393,14 @@ async function loadInitial() {
   if (!r.ok) { $("question").textContent = "Interview not found."; return; }
   const d = await r.json();
   if (d.finished) {
-    renderSummary({ score: d.score, per_skill: (d.feedback || {}).per_skill,
-                    feedback: (d.feedback || {}).overall,
-                    rubric_overall: (d.feedback || {}).rubric_overall });
+    renderSummary({
+      score: d.score,
+      per_skill: (d.feedback || {}).per_skill,
+      feedback: (d.feedback || {}).overall,
+      rubric_overall: (d.feedback || {}).rubric_overall,
+      speech_summary: d.speech_summary || (d.feedback || {}).speech_summary,
+      skill_updates: d.skill_updates || (d.feedback || {}).skill_updates || []
+    });
     return;
   }
   turn = d.transcript.filter(function (t) { return t.score !== null; }).length + 1;
@@ -283,17 +417,17 @@ async function submitAnswer(text) {
   if (evaluating) return;
   text = (text || "").trim();
   if (!text) return;
-  // M18.3: elapsed turn duration for acoustic telemetry (guard clock skew).
-  const elapsedSec = (timerStart > 0)
-    ? Math.max(1.0, (Date.now() - timerStart) / 1000)
+  // M18.3: only send duration_seconds measured from actual mic recording (avoid typing clock skew).
+  const recordedSec = (lastRecordingDurationSec != null && lastRecordingDurationSec > 0)
+    ? Math.max(1.0, lastRecordingDurationSec)
     : null;
   setEvaluating(true);
   try {
     const r = await fetch("/api/interviews/" + interviewId + "/answers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(elapsedSec
-        ? { text: text, duration_seconds: elapsedSec }
+      body: JSON.stringify(recordedSec
+        ? { text: text, duration_seconds: recordedSec }
         : { text: text })
     });
     const d = await r.json().catch(function () { return {}; });
@@ -307,6 +441,9 @@ async function submitAnswer(text) {
       }
       return;
     }
+    lastRecordingDurationSec = null;
+    micStartMs = 0;
+    setMicStatus("");
     if (d.finished) {
       renderSummary(d.summary);
       return;
@@ -320,11 +457,14 @@ async function submitAnswer(text) {
     }
     renderRubric(d.rubric, d.matched_keywords, d.missed_keywords, d.ideal_answer_hint);
     renderSpeechTelemetry(d.speech_analytics);
-    if (d.followup_probe) {
-      const probeBox = $("followup-probe");
-      if (probeBox) {
+    const probeBox = $("followup-probe");
+    if (probeBox) {
+      if (d.followup_probe) {
         probeBox.hidden = false;
         probeBox.textContent = "Follow-up: " + d.followup_probe;
+      } else {
+        probeBox.hidden = true;
+        probeBox.textContent = "";
       }
     }
     turn += 1;
@@ -355,21 +495,124 @@ function setMicRecording(isRecording) {
   }
 }
 
+function stopMediaStreamTracks() {
+  if (mediaStream && mediaStream.getTracks) {
+    mediaStream.getTracks().forEach(function (t) { try { t.stop(); } catch (e) { /* ignore */ } });
+    mediaStream = null;
+  }
+}
+
+function appendTranscriptToAnswer(spoken) {
+  const ans = $("answer");
+  if (!ans || !spoken) return;
+  const cleaned = String(spoken).trim();
+  if (!cleaned) return;
+  const existing = (ans.value || "").trim();
+  ans.value = existing ? (existing + " " + cleaned) : cleaned;
+  ans.focus();
+}
+
+function startMediaRecorderStt() {
+  if (!HAS_MEDIA_RECORDER || evaluating) return;
+  setMicStatus("Requesting microphone access...");
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(function (stream) {
+      mediaStream = stream;
+      mediaChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      micStartMs = Date.now();
+      mediaRecorder.ondataavailable = function (ev) {
+        if (ev && ev.data && ev.data.size > 0) mediaChunks.push(ev.data);
+      };
+      mediaRecorder.onerror = function () {
+        setMicRecording(false);
+        stopMediaStreamTracks();
+        setMicStatus("Audio recording failed — please type your answer below.", true);
+      };
+      mediaRecorder.onstop = function () {
+        setMicRecording(false);
+        stopMediaStreamTracks();
+        if (micStartMs > 0) {
+          lastRecordingDurationSec = Math.max(1.0, (Date.now() - micStartMs) / 1000);
+        }
+        const blob = new Blob(mediaChunks, { type: (mediaRecorder && mediaRecorder.mimeType) || "audio/webm" });
+        mediaChunks = [];
+        mediaRecorder = null;
+        if (!blob.size) {
+          setMicStatus("No audio captured. Please try again or type your response.", true);
+          return;
+        }
+        setMicStatus("Transcribing audio...");
+        const fd = new FormData();
+        fd.append("file", blob, "recording.webm");
+        fetch("/api/speech/transcribe", { method: "POST", body: fd })
+          .then(function (r) { return r.json().catch(function () { return {}; }); })
+          .then(function (d) {
+            if (d && d.transcript) {
+              appendTranscriptToAnswer(d.transcript);
+              setMicStatus("Transcribed (" + (d.engine || "speech") + ") — review and click Send answer.");
+            } else {
+              setMicStatus((d && d.detail) || "Server STT unavailable offline — type or edit your answer above.", true);
+            }
+          })
+          .catch(function () {
+            setMicStatus("Could not reach transcription service — please type your answer above.", true);
+          });
+      };
+      setMicRecording(true);
+      setMicStatus("Recording audio... click Stop when finished.");
+      mediaRecorder.start();
+    })
+    .catch(function () {
+      setMicRecording(false);
+      stopMediaStreamTracks();
+      setMicStatus("Microphone permission denied or unavailable — please type your answer.", true);
+    });
+}
+
 function startListening() {
-  if (!SR || evaluating) return;
-  if (recognizing) { if (recognition) recognition.stop(); setMicRecording(false); return; }
+  if (!HAS_STT || evaluating) return;
+  if (recognizing) {
+    if (micStartMs > 0) {
+      lastRecordingDurationSec = Math.max(1.0, (Date.now() - micStartMs) / 1000);
+    }
+    if (recognition) { try { recognition.stop(); } catch (e) { /* ignore */ } }
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      try { mediaRecorder.stop(); } catch (e) { /* ignore */ }
+    }
+    setMicRecording(false);
+    return;
+  }
+  if (!SR) {
+    startMediaRecorderStt();
+    return;
+  }
   recognition = new SR();
   recognition.lang = "en-US";
   recognition.interimResults = false;
+  micStartMs = Date.now();
+  lastRecordingDurationSec = null;
   recognition.onresult = function (e) {
-    const spoken = e.results[0][0].transcript;
-    if ($("answer")) $("answer").value = spoken;
-    submitAnswer(spoken);
+    if (micStartMs > 0) {
+      lastRecordingDurationSec = Math.max(1.0, (Date.now() - micStartMs) / 1000);
+    }
+    const spoken = (e && e.results && e.results[0] && e.results[0][0]) ? e.results[0][0].transcript : "";
+    appendTranscriptToAnswer(spoken);
+    setMicStatus("Transcribed via Web Speech — review and edit above, then click Send answer.");
   };
   recognition.onend = function () { setMicRecording(false); };
-  recognition.onerror = function () { setMicRecording(false); };
+  recognition.onerror = function (e) {
+    setMicRecording(false);
+    setMicStatus("Microphone error (" + ((e && e.error) || "unavailable") + "). Please type your response below.", true);
+  };
   setMicRecording(true);
-  try { recognition.start(); } catch (e) { setMicRecording(false); }
+  setMicStatus("Listening... speak now, then review your transcript before sending.");
+  try {
+    recognition.start();
+  } catch (e) {
+    setMicRecording(false);
+    setMicStatus("Could not start speech recognition — please type your answer.", true);
+  }
 }
 
 function listenAgain() { speak($("question").textContent); }
@@ -380,7 +623,11 @@ document.addEventListener("DOMContentLoaded", function () {
   // interview controls only exist on /interviews/{id}; toast/shell pages skip this block
   if (!iidEl || !sendBtn || !$("answer")) return;
   interviewId = (iidEl.textContent || "").trim();
-  if (!SR) { $("mic").disabled = true; $("mic").title = "Speech recognition not supported here - use the text box."; }
+  if (!HAS_STT) {
+    $("mic").disabled = true;
+    $("mic").title = "Speech recognition not supported here - use the text box.";
+    setMicStatus("Voice recording unavailable in this browser — type your answer below.", false);
+  }
   sendBtn.addEventListener("click", function () { submitAnswer($("answer").value); });
   $("answer").addEventListener("keydown", function (e) {
     if (e.key === "Enter" && !e.shiftKey) {

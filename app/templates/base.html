@@ -4,11 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>JKLU CareerOS - PS-06 Placement Agent</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#1D5C42" />
+  <link rel="stylesheet" href="/static/vendor/fonts.css" />
+  <link rel="stylesheet" href="/static/responsive.css" />
+  <script src="/static/vendor/tailwindcss.js"></script>
+  <script src="/static/vendor/htmx.min.js"></script>
   <style>
     :root {
       --bg-editorial: #F4F3EC;
@@ -260,8 +261,11 @@
     #menu-btn { display: none; }
   </style>
 </head>
-<body class="bg-[#F4F3EC] text-[#1C1E1B] min-h-screen">
+{% set active_role = role|default('tpo_admin') %}
+{% set target_sid = (current_user.student_id if current_user and current_user.student_id and current_user.student_id != 'demo-student' else '') or (user.student_id if user and user.student_id and user.student_id != 'demo-student' else '') or sid or (students[0].id if students and students|length > 0 else '') %}
+<body class="bg-[#F4F3EC] text-[#1C1E1B] min-h-screen" data-role="{{ active_role }}" data-student-id="{{ target_sid if active_role == 'student' else (sid|default('')) }}">
   <div class="flex min-h-screen">
+    <div id="sidebar-backdrop" class="sidebar-backdrop" aria-hidden="true"></div>
     <nav id="sidebar" class="bg-[#122019] text-[#D5E0DA] border-r border-[#21362B] flex flex-col shrink-0">
       <div class="px-4 py-4 border-b border-[#21362B] flex items-center gap-3">
         <span class="bg-[#1D5C42]/40 border border-[#2E7D5B]/50 text-[#7CE2B3] rounded-xl p-2.5 flex items-center justify-center shrink-0">
@@ -278,7 +282,6 @@
       </div>
 
       {% if role == 'student' %}
-      {% set target_sid = (current_user.student_id if current_user and current_user.student_id and current_user.student_id != 'demo-student' else '') or (user.student_id if user and user.student_id and user.student_id != 'demo-student' else '') or sid or (students[0].id if students and students|length > 0 else '') %}
       <div class="px-3 py-3 border-b border-[#21362B]">
         <span class="block text-[10px] uppercase tracking-wider text-[#789083] mb-1.5 font-semibold">Authenticated</span>
         {% set ns = namespace(sname='') %}
@@ -301,26 +304,17 @@
           {% set ns.sname = students[0].name %}
         {% endif %}
         {% if not ns.sname %}{% set ns.sname = 'Student' %}{% endif %}
-        <div id="student-identity-badge" class="px-2.5 py-2 rounded-xl bg-[#182B22] border border-[#284235] text-xs text-[#D5E0DA] font-medium flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2 min-w-0">
+        <div id="student-identity-badge" class="px-3 py-2.5 rounded-xl bg-[#182B22] border border-[#284235] text-xs text-[#D5E0DA] space-y-1">
+          <div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-[#8FA89B]">
             <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
-            <span class="truncate">Logged in as: <strong class="text-white font-semibold">{{ ns.sname }}</strong></span>
+            <span>Logged in as:</span>
           </div>
-          <button type="button" id="switch-student-btn" class="shrink-0 inline-flex items-center justify-center text-[10px] px-2.5 py-1 rounded-full border border-[#345444] bg-[#21362B] hover:bg-[#2B4638] text-[#D5E0DA] hover:text-white transition-colors cursor-pointer whitespace-nowrap" title="Switch Student Persona">Switch Student</button>
+          <p class="text-white font-semibold text-xs leading-snug break-words">{{ ns.sname }}</p>
+          {% set s_branch = (student.branch if student and student.branch else '') or (current_user.department if current_user and current_user.department else '') %}
+          {% if s_branch %}
+          <span class="inline-block mono text-[10px] px-2 py-0.5 rounded-full bg-[#21362B] border border-[#345444] text-[#A5C0B2]">{{ s_branch }} &middot; Student</span>
+          {% endif %}
         </div>
-        {% set persona_list = cohort_students if cohort_students else students %}
-        {% if persona_list and persona_list|length > 0 %}
-        <div id="student-picker-dropdown" class="hidden mt-1.5 bg-[#182B22] border border-[#284235] rounded-xl shadow-lg p-1.5 space-y-1">
-          <p class="text-[10px] uppercase font-semibold text-[#8FA89B] px-2 py-0.5">Switch Student</p>
-          {% for s in persona_list %}
-          <button type="button" class="switch-persona-item w-full text-left text-xs px-2.5 py-1.5 rounded-lg hover:bg-[#21362B] text-[#E2ECE6] flex items-center justify-between cursor-pointer"
-                  data-sid="{{ s.id }}" data-name="{{ s.name }}" data-branch="{{ s.branch }}">
-            <span class="truncate font-medium">{{ s.name }}</span>
-            <span class="mono text-[10px] text-[#8FA89B] shrink-0">{{ s.branch }}</span>
-          </button>
-          {% endfor %}
-        </div>
-        {% endif %}
       </div>
       {% else %}
       <div class="px-3 py-3 border-b border-[#21362B]">
@@ -341,13 +335,14 @@
       {% endif %}
 
       <div class="flex-1 px-3 py-3 space-y-1">
+        {% if role != 'student' or auth_mode != 'strict' %}
         <a href="/" class="nav-link {% if active == 'home' %}active{% endif %}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           Home
         </a>
+        {% endif %}
 
         {% if role == 'student' %}
-        {% set target_sid = (current_user.student_id if current_user and current_user.student_id and current_user.student_id != 'demo-student' else '') or (user.student_id if user and user.student_id and user.student_id != 'demo-student' else '') or sid or (students[0].id if students and students|length > 0 else '') %}
         {% if target_sid %}
         <p class="nav-section">Student workspace</p>
         <a href="/students/{{ target_sid }}" class="nav-link {% if active == 'profile' %}active{% endif %}">
@@ -420,6 +415,10 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 4 6v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-4Z"/><path d="m9 12 2 2 4-4"/></svg>
           Approvals
         </a>
+        <a href="/admin/policies" class="nav-link {% if active == 'policies' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+          <span>Placement Policies</span>
+        </a>
         {% if role == 'tpo_admin' %}
         <a href="/admin/audit" class="nav-link {% if active == 'audit' %}active{% endif %}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3"/><path d="M13 15h4"/></svg>
@@ -437,31 +436,37 @@
       <div class="px-3 py-2 border-t border-[#21362B] space-y-1">
         <a href="/login" class="nav-link text-xs py-1.5" title="JKLU Institutional Portal">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-          JKLU Portal
+          <span>JKLU Portal</span>
         </a>
         <form method="POST" action="/auth/logout" class="block w-full">
           <button type="submit" class="nav-link text-xs py-1.5 w-full text-left cursor-pointer border-none bg-transparent" title="Sign out of institutional session">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Sign Out
+            <span>Sign Out</span>
           </button>
         </form>
       </div>
 
       <div class="px-3 py-3 border-t border-[#21362B]">
-        <label class="block text-[10px] uppercase tracking-wider text-[#789083] mb-1.5 font-semibold">Demo role</label>
-        <div id="role-pill" class="flex gap-1" data-role="{{ role|default('tpo_admin') }}">
-          {% set active_role = role|default('tpo_admin') %}
-          <button type="button" data-role-value="student" class="role-opt flex-1 inline-flex items-center justify-center text-xs rounded-lg px-2 py-1.5 border border-[#2B4638] hover:bg-[#1B3025] whitespace-nowrap {% if active_role == 'student' %}active-role{% endif %}">Student</button>
-          <button type="button" data-role-value="faculty_mentor" class="role-opt flex-1 inline-flex items-center justify-center text-xs rounded-lg px-2 py-1.5 border border-[#2B4638] hover:bg-[#1B3025] whitespace-nowrap {% if active_role == 'faculty_mentor' %}active-role{% endif %}">Faculty</button>
-          <button type="button" data-role-value="tpo_admin" class="role-opt flex-1 inline-flex items-center justify-center text-xs rounded-lg px-2 py-1.5 border border-[#2B4638] hover:bg-[#1B3025] whitespace-nowrap {% if active_role == 'tpo_admin' %}active-role{% endif %}">TPO</button>
+        {% if demo_role_switch|default(false) and active != 'copilot' %}
+        <div class="sm:hidden mb-2">
+          <label class="block text-[10px] uppercase tracking-wider text-[#789083] mb-1.5 font-semibold">Demo role</label>
+          <div id="role-pill" class="flex gap-1" data-role="{{ active_role }}">
+            <button type="button" data-role-value="student" class="role-opt flex-1 inline-flex items-center justify-center text-xs rounded-lg px-2 py-1.5 border border-[#2B4638] hover:bg-[#1B3025] whitespace-nowrap {% if active_role == 'student' %}active-role{% endif %}">Student</button>
+            <button type="button" data-role-value="faculty_mentor" class="role-opt flex-1 inline-flex items-center justify-center text-xs rounded-lg px-2 py-1.5 border border-[#2B4638] hover:bg-[#1B3025] whitespace-nowrap {% if active_role == 'faculty_mentor' %}active-role{% endif %}">Faculty</button>
+            <button type="button" data-role-value="tpo_admin" class="role-opt flex-1 inline-flex items-center justify-center text-xs rounded-lg px-2 py-1.5 border border-[#2B4638] hover:bg-[#1B3025] whitespace-nowrap {% if active_role == 'tpo_admin' %}active-role{% endif %}">TPO</button>
+          </div>
         </div>
-        <span id="role-badge" class="mono inline-block mt-2 text-[11px] px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white border border-[#2E7D5B]">{{ role|default('tpo_admin') }}</span>
+        {% endif %}
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[10px] uppercase tracking-wider text-[#789083] font-semibold">Active Role</span>
+          <span id="role-badge" class="mono inline-block text-[11px] px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white border border-[#2E7D5B]">{{ active_role }}</span>
+        </div>
       </div>
     </nav>
 
     <div class="flex-1 flex flex-col min-w-0">
       <header id="topbar" class="bg-[#FAF9F5]/90 backdrop-blur-md border-b border-[#E5E3DC] px-5 py-3 flex items-center gap-3 sticky top-0 z-30">
-        <button id="menu-btn" class="hidden text-sm px-2.5 py-1.5 rounded-lg border border-[#D5D2C6] bg-white text-[#1C1E1B]" aria-label="Toggle navigation">
+        <button id="menu-btn" type="button" class="hidden text-sm px-2.5 py-1.5 rounded-lg border border-[#D5D2C6] bg-white text-[#1C1E1B]" aria-label="Toggle navigation" aria-expanded="false" aria-controls="sidebar">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
         </button>
         <div id="command-bar" class="flex-1 flex items-center gap-2 relative">
@@ -470,25 +475,22 @@
                  class="w-full max-w-xl text-xs sm:text-sm rounded-full border border-[#D5D2C6] bg-white pl-9 pr-16 py-2 text-[#1C1E1B] placeholder-[#7A776E] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/25 focus:border-[#1D5C42] transition-all" />
           <kbd class="mono absolute right-3.5 text-[10px] px-2 py-0.5 rounded-full border border-[#D5D2C6] bg-[#F4F3EC] text-[#5C5A52]">Ctrl K</kbd>
         </div>
+        {% set signed_user = current_user if current_user else user %}
+        <div id="topbar-user-identity" class="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EFECE4] border border-[#E2DEC9] text-xs text-[#1C1E1B] shrink-0" title="Signed-in institutional identity">
+          <span class="w-2 h-2 rounded-full {% if signed_user %}bg-[#1D5C42]{% else %}bg-[#8FA89B]{% endif %} shrink-0"></span>
+          <span class="font-semibold truncate max-w-[140px]">{{ signed_user.name if signed_user else active_role }}</span>
+          {% if signed_user and signed_user.email %}
+          <span class="mono text-[10px] text-[#5C5A52] hidden xl:inline">{{ signed_user.email }}</span>
+          {% endif %}
+        </div>
+        {% if demo_role_switch|default(false) and active != 'copilot' %}
         <div id="demo-role-bar" class="hidden sm:flex items-center gap-1 bg-[#EFECE4] p-1 rounded-full border border-[#E2DEC9] shrink-0">
           <span class="text-[10px] uppercase font-bold text-[#6E6C64] px-2">Role:</span>
-          {% set active_role = role|default('tpo_admin') %}
           <button type="button" data-role-value="student" class="demo-role-btn inline-flex items-center justify-center text-xs px-3 py-1 rounded-full font-medium transition-colors cursor-pointer whitespace-nowrap {% if active_role == 'student' %}bg-[#1D5C42] text-white shadow-xs{% else %}text-[#4A483F] hover:text-[#1C1E1B] hover:bg-[#E5E1D6]{% endif %}">Student</button>
           <button type="button" data-role-value="faculty_mentor" class="demo-role-btn inline-flex items-center justify-center text-xs px-3 py-1 rounded-full font-medium transition-colors cursor-pointer whitespace-nowrap {% if active_role == 'faculty_mentor' %}bg-[#1D5C42] text-white shadow-xs{% else %}text-[#4A483F] hover:text-[#1C1E1B] hover:bg-[#E5E1D6]{% endif %}">Faculty</button>
           <button type="button" data-role-value="tpo_admin" class="demo-role-btn inline-flex items-center justify-center text-xs px-3 py-1 rounded-full font-medium transition-colors cursor-pointer whitespace-nowrap {% if active_role == 'tpo_admin' %}bg-[#1D5C42] text-white shadow-xs{% else %}text-[#4A483F] hover:text-[#1C1E1B] hover:bg-[#E5E1D6]{% endif %}">TPO Admin</button>
         </div>
-        <div class="flex items-center gap-1.5 shrink-0">
-          <a href="/login" class="inline-flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] transition-colors whitespace-nowrap" title="JKLU Institutional Login Portal">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-            <span class="hidden md:inline">JKLU Portal</span>
-          </a>
-          <form method="POST" action="/auth/logout" class="inline">
-            <button type="submit" class="inline-flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] transition-colors cursor-pointer whitespace-nowrap" title="Sign out of current institutional session">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-              <span>Sign Out</span>
-            </button>
-          </form>
-        </div>
+        {% endif %}
         <button id="open-drawer" type="button"
                 class="inline-flex items-center justify-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-full bg-[#1D5C42] hover:bg-[#154531] text-white transition-colors whitespace-nowrap shrink-0 cursor-pointer">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2"/><path d="M15 2v2"/><path d="M9 20v2"/><path d="M15 20v2"/><path d="M2 9h2"/><path d="M2 15h2"/><path d="M20 9h2"/><path d="M20 15h2"/></svg>
@@ -504,8 +506,8 @@
     </div>
   </div>
 
-  <aside id="agent-drawer" class="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[#122019] border-l border-[#21362B] shadow-2xl z-50 flex flex-col text-[#D5E0DA]">
-    <div class="flex items-center justify-between px-5 py-4 border-b border-[#21362B]">
+  <aside id="agent-drawer" class="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-[#FAF9F5] border-l border-[#E5E3DC] shadow-2xl z-50 flex flex-col text-[#1C1E1B]">
+    <div class="flex items-center justify-between px-5 py-4 bg-[#122019] border-b border-[#21362B] text-[#D5E0DA]">
       <div>
         <h2 class="font-serif-display font-semibold text-white text-lg">Agent Brain &amp; Reasoning Trace</h2>
         <p class="text-xs text-[#8FA89B]">Latest autonomous run: plan &rarr; execute &rarr; verify &rarr; recover</p>
@@ -514,50 +516,15 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
       </button>
     </div>
-    <div class="drawer-body flex-1 p-5 space-y-3">
-      <div class="flex items-center gap-2 text-xs text-[#8FA89B]">
-        <span class="w-2 h-2 rounded-full bg-emerald-400" aria-hidden="true"></span>
-        Pipeline: plan &rarr; execute &rarr; verify &rarr; recover
-      </div>
-      <div class="space-y-2 pt-1 pb-2 border-b border-[#21362B]">
-        <label for="drawer-goal-input" class="block text-[11px] font-mono uppercase tracking-wider text-[#8FA89B]">Autonomous Agent Goal</label>
-        <input id="drawer-goal-input" type="text"
-               placeholder="e.g., Full readiness pipeline: rank jobs, audit resume &amp; build plan..."
-               class="w-full text-xs rounded-xl bg-[#182B22] border border-[#284235] px-3 py-2 text-white placeholder-[#6E8A7D] focus:outline-none focus:ring-1 focus:ring-emerald-400" />
-        <div class="flex flex-wrap gap-1.5 pt-0.5">
-          <button type="button" data-goal-preset="Full readiness pipeline: rank my top job matches and build a 4-week upskill plan"
-                  class="drawer-preset-btn text-[10px] font-mono px-2.5 py-1 rounded-full bg-[#182B22] hover:bg-[#1D5C42]/50 text-[#A5C0B2] hover:text-white border border-[#284235] cursor-pointer transition-colors">
-            Full Readiness &amp; Plan
-          </button>
-          <button type="button" data-goal-preset="Check if I am eligible for Dream tier drives and cite placement policy SOPs"
-                  class="drawer-preset-btn text-[10px] font-mono px-2.5 py-1 rounded-full bg-[#182B22] hover:bg-[#1D5C42]/50 text-[#A5C0B2] hover:text-white border border-[#284235] cursor-pointer transition-colors">
-            Check Drive Eligibility
-          </button>
-          <button type="button" data-goal-preset="Audit my resume and rewrite weak bullets into STAR format"
-                  class="drawer-preset-btn text-[10px] font-mono px-2.5 py-1 rounded-full bg-[#182B22] hover:bg-[#1D5C42]/50 text-[#A5C0B2] hover:text-white border border-[#284235] cursor-pointer transition-colors">
-            Resume &amp; STAR Audit
-          </button>
-          <button type="button" data-goal-preset="Simulate a prospective campus placement drive and analyze cohort skill gaps"
-                  class="drawer-preset-btn text-[10px] font-mono px-2.5 py-1 rounded-full bg-[#182B22] hover:bg-[#1D5C42]/50 text-[#A5C0B2] hover:text-white border border-[#284235] cursor-pointer transition-colors">
-            Simulate Cohort Drive
-          </button>
-        </div>
-      </div>
-      <div id="drawer-run" class="mono text-xs text-[#A5C0B2]">Loading latest agent run&hellip;</div>
-      <div id="drawer-trace" class="mono mt-3 space-y-2"></div>
-    </div>
-    <div class="px-5 py-3.5 border-t border-[#21362B] flex items-center justify-between gap-2">
-      <button id="drawer-run-btn" type="button" class="inline-flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2 rounded-full bg-[#1D5C42] hover:bg-[#154531] text-white border border-[#2E7D5B] whitespace-nowrap cursor-pointer">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 4 14 8-14 8V4Z"/></svg>
-        <span>Run full pipeline</span>
-      </button>
-      <span class="text-[11px] text-[#8FA89B] mono">PS-06 executor</span>
+    <div class="drawer-body flex-1 p-5 overflow-y-auto space-y-3">
+      {% include "_agent_drawer_body.html" ignore missing %}
     </div>
   </aside>
 
   <div id="toast-root" role="status" aria-live="polite"></div>
 
   <script src="/static/app.js"></script>
+  <script src="/static/agent_brain.js"></script>
   <script>
     (function () {
       function qs(id) { return document.getElementById(id); }
@@ -570,14 +537,50 @@
           .replace(/'/g, "&#39;");
       }
       var sidebar = qs("sidebar");
+      var backdrop = qs("sidebar-backdrop");
       var drawer = qs("agent-drawer");
 
       var menu = qs("menu-btn");
-      if (menu) menu.addEventListener("click", function () { sidebar.classList.toggle("open"); });
+      function closeSidebar() {
+        if (sidebar) sidebar.classList.remove("open");
+        if (backdrop) backdrop.classList.remove("open");
+        if (menu) menu.setAttribute("aria-expanded", "false");
+      }
+      function openSidebar() {
+        if (sidebar) sidebar.classList.add("open");
+        if (backdrop) backdrop.classList.add("open");
+        if (menu) menu.setAttribute("aria-expanded", "true");
+        if (sidebar) {
+          var firstLink = sidebar.querySelector("a, button, select");
+          if (firstLink) firstLink.focus();
+        }
+      }
+      if (menu) menu.addEventListener("click", function () {
+        if (sidebar && sidebar.classList.contains("open")) {
+          closeSidebar();
+        } else {
+          openSidebar();
+        }
+      });
+      if (backdrop) backdrop.addEventListener("click", closeSidebar);
+      window.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+          if (sidebar && sidebar.classList.contains("open")) {
+            closeSidebar();
+            if (menu) menu.focus();
+          }
+          if (drawer && drawer.classList.contains("open")) {
+            drawer.classList.remove("open");
+          }
+        }
+      });
 
       var openD = qs("open-drawer"), closeD = qs("close-drawer");
-      if (openD) openD.addEventListener("click", function () { drawer.classList.add("open"); loadAgentBrain(); });
-      if (closeD) closeD.addEventListener("click", function () { drawer.classList.remove("open"); });
+      if (openD) openD.addEventListener("click", function () {
+        if (drawer) drawer.classList.add("open");
+        if (!window.AgentBrain) loadAgentBrain();
+      });
+      if (closeD) closeD.addEventListener("click", function () { if (drawer) drawer.classList.remove("open"); });
 
       var sw = qs("switch-student");
       if (sw) sw.addEventListener("change", function () { location.href = sw.value || "/"; });
@@ -608,42 +611,7 @@
         });
       });
 
-      var switchBtn = qs("switch-student-btn");
-      var pickerMenu = qs("student-picker-dropdown");
-      if (switchBtn) {
-        switchBtn.addEventListener("click", function () {
-          if (pickerMenu) {
-            pickerMenu.classList.toggle("hidden");
-          } else {
-            window.location.href = "/login";
-          }
-        });
-      }
-      document.querySelectorAll(".switch-persona-item").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          var sid = btn.getAttribute("data-sid");
-          var sname = btn.getAttribute("data-name");
-          var sbranch = btn.getAttribute("data-branch");
-          fetch("/api/auth/switch-role", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ role: "student", student_id: sid, name: sname, department: sbranch })
-          }).then(function (r) {
-            if (!r.ok) throw new Error("HTTP " + r.status);
-            var path = window.location.pathname;
-            if (path.indexOf("/students/") === 0) {
-              var parts = path.split("/");
-              parts[2] = sid;
-              window.location.href = parts.join("/");
-            } else {
-              window.location.reload();
-            }
-          }).catch(function (e) {
-            if (window.toast) window.toast("Could not switch student: " + e.message, "error");
-          });
-        });
-      });
-
+      {% if active_role == 'tpo_admin' %}
       var scNav = qs("nav-scraper-controls");
       if (scNav) {
         scNav.addEventListener("click", function (e) {
@@ -654,14 +622,20 @@
           }
         });
       }
+      {% endif %}
 
       var cmd = qs("command-input");
       if (cmd) cmd.addEventListener("keydown", function (e) {
         if (e.key !== "Enter") return;
         var v = (cmd.value || "").trim().toLowerCase();
         if (!v) return;
+        var activeRole = (document.body && document.body.getAttribute("data-role")) || "student";
         if (v.indexOf("copilot") >= 0) { location.href = "/copilot"; return; }
         if (v.indexOf("purge") >= 0 || v.indexOf("clear live") >= 0 || v.indexOf("remove live") >= 0) {
+          if (activeRole !== "tpo_admin") {
+            if (window.toast) window.toast("TPO Admin role required to purge live jobs.", "error");
+            return;
+          }
           if (typeof window.purgeAllLiveJobs === "function") {
             window.purgeAllLiveJobs();
           } else if (typeof window.confirmAction === "function") {
@@ -679,15 +653,33 @@
           }
           return;
         }
-        if (v.indexOf("approval") >= 0) { location.href = "/admin/approvals"; return; }
-        if (v.indexOf("audit") >= 0) { location.href = "/admin/audit"; return; }
-        if (v.indexOf("admin") >= 0 || v.indexOf("analytic") >= 0) { location.href = "/admin"; return; }
+        if (v.indexOf("approval") >= 0) {
+          if (activeRole === "student") {
+            if (window.toast) window.toast("Approvals console is restricted to faculty and TPO staff.", "error");
+            return;
+          }
+          location.href = "/admin/approvals"; return;
+        }
+        if (v.indexOf("audit") >= 0) {
+          if (activeRole !== "tpo_admin") {
+            if (window.toast) window.toast("Audit log is restricted to TPO Admin.", "error");
+            return;
+          }
+          location.href = "/admin/audit"; return;
+        }
+        if (v.indexOf("admin") >= 0 || v.indexOf("analytic") >= 0) {
+          if (activeRole === "student") {
+            if (window.toast) window.toast("Cohort analytics is restricted to faculty and TPO staff.", "error");
+            return;
+          }
+          location.href = "/admin"; return;
+        }
         if (v.indexOf("home") >= 0) { location.href = "/"; return; }
         var opt = Array.prototype.slice.call(sw ? sw.options : []).filter(function (o) {
           return o.value && o.text.toLowerCase().indexOf(v) >= 0;
         })[0];
         if (opt && opt.value) { location.href = opt.value; return; }
-        if (window.toast) window.toast("No match for '" + cmd.value + "'. Try a student name or page (copilot, approvals, audit).", "info");
+        if (window.toast) window.toast("No match for '" + cmd.value + "'. Try a student name or page (copilot, matches, profile).", "info");
       });
       window.addEventListener("keydown", function (e) {
         if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
@@ -697,25 +689,24 @@
       });
 
       function loadAgentBrain() {
-        var run = qs("drawer-run"), trace = qs("drawer-trace");
+        if (window.AgentBrain && typeof window.AgentBrain.load === "function") {
+          return window.AgentBrain.load();
+        }
+        var trace = qs("drawer-trace"), runCtrl = qs("drawer-run");
+        if (!trace) return;
         fetch("/api/agent/runs").then(function (r) { return r.json(); }).then(function (runs) {
-          if (!runs || !runs.length) { run.textContent = "No agent runs yet - ask the copilot or generate a plan."; trace.innerHTML = ""; return; }
+          if (!runs || !runs.length) { trace.textContent = "No agent runs yet - ask the copilot or generate a plan."; return; }
+          trace.textContent = "";
           var r0 = runs[0];
-          run.innerHTML = "<p class='font-medium text-white'>" + esc(r0.goal || "") + "</p>" +
-            "<p class='text-xs text-[#8FA89B] mt-1'>" + esc(r0.status) + " &middot; " + esc(r0.provider_used || "mock") +
-            " &middot; " + Number(r0.total_latency_ms || 0) + " ms" + (r0.fallback_triggered ? " &middot; fallback used" : "") + "</p>" +
-            (r0.final_answer ? "<p class='mt-2 text-sm text-[#D5E0DA]'>" + esc(r0.final_answer) + "</p>" : "");
-          trace.innerHTML = "";
           (r0.steps || []).forEach(function (s, i) {
             var div = document.createElement("div");
-            div.className = "rounded-xl border border-[#284235] bg-[#182B22] p-3 text-xs";
-            div.innerHTML = "<p class='text-[#8FA89B]'>Step " + (i + 1) + " &middot; " + esc(s.tool_name || "") + "</p>" +
-              "<p class='mt-1 text-[#E2ECE6]'>" + esc(s.thought || "") + "</p>" +
-              "<p class='mt-1 text-[#789083]'>" + esc(JSON.stringify(s.tool_input || {}).slice(0, 220)) + "</p>";
+            div.className = "rounded-xl border border-[#DCE4DE] bg-white p-3 text-xs";
+            div.innerHTML = "<p class='text-[#57605A]'>Step " + (i + 1) + " &middot; " + esc(s.tool_name || "") + "</p>" +
+              "<p class='mt-1 text-[#1C1E1B]'>" + esc(s.thought || "") + "</p>";
             trace.appendChild(div);
           });
         }).catch(function () {
-          run.textContent = "Agent Brain unavailable (offline).";
+          if (trace) trace.textContent = "Agent Brain unavailable (offline).";
         });
       }
 
@@ -743,149 +734,21 @@
 
       // M17: live progressive rendering via SSE (POST /api/agent/run/stream).
       function runPipelineStreaming(customGoal) {
-        var run = qs("drawer-run"), trace = qs("drawer-trace"), goalInp = qs("drawer-goal-input");
-        trace.innerHTML = "";
-        run.innerHTML = "<p class='font-medium text-white'>Starting pipeline&hellip;</p>";
-        var stepCount = 0;
-        var activeRunId = null;
-
-        // Auto-detect student context from URL or student picker
-        var activeSid = null;
-        var path = window.location.pathname || "";
-        if (path.indexOf("/students/") === 0) {
-          var segs = path.split("/");
-          if (segs.length >= 3 && segs[2] && segs[2].indexOf("stu-") === 0) {
-            activeSid = segs[2];
-          }
+        if (window.AgentBrain && typeof window.AgentBrain.run === "function") {
+          return window.AgentBrain.run(customGoal);
         }
+        var trace = qs("drawer-trace"), goalInp = qs("drawer-goal");
+        if (trace) trace.textContent = "Starting pipeline...";
         var chosenGoal = (customGoal || (goalInp && goalInp.value) || "").trim() || "Rank my top job matches";
-        var reqPayload = { goal: chosenGoal };
-        if (activeSid) reqPayload.student_id = activeSid;
-
         fetch("/api/agent/run/stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(reqPayload)
-        }).then(function (resp) {
-          if (!resp.ok || !resp.body) throw new Error("stream unavailable");
-          var reader = resp.body.getReader();
-          var decoder = new TextDecoder();
-          var buf = "";
-          function handleEvent(name, data) {
-            if (name === "run_started") {
-              activeRunId = data.run_id;
-              run.innerHTML = "<p class='font-medium text-white'>" + esc(data.goal || "") + "</p>" +
-                "<p class='text-xs text-[#8FA89B] mt-1'>running &middot; " + esc(data.run_id || "") + "</p>";
-            } else if (name === "plan_created") {
-              var p = document.createElement("div");
-              p.className = "rounded-xl border border-[#284235] bg-[#182B22] p-3 text-xs mb-1";
-              p.innerHTML = "<p class='text-[#8FA89B]'>Plan (" + (data.plan || []).length + " steps)</p>";
-              trace.appendChild(p);
-            } else if (name === "step_started") {
-              stepCount = data.step_order || stepCount + 1;
-              var d = document.createElement("div");
-              d.className = "rounded-xl border border-[#2E7D5B] bg-[#1D5C42]/25 p-3 text-xs mb-1";
-              d.innerHTML = "<p class='text-[#8FA89B]'>Step " + data.step_order + " &middot; " + esc(data.tool_name || "") + " (running)</p>" +
-                "<p class='mt-1 text-[#E2ECE6]'>" + esc(data.thought || "") + "</p>";
-              trace.appendChild(d);
-            } else if (name === "step_completed") {
-              var last = trace.lastElementChild;
-              if (last) {
-                last.className = "rounded-xl border border-[#284235] bg-[#182B22] p-3 text-xs mb-1";
-                last.innerHTML = "<p class='text-[#8FA89B]'>Step " + data.step_order + " &middot; " + esc(data.tool_name || "") +
-                  (data.verification_passed ? " &middot; ok" : " &middot; recovered") + "</p>";
-              }
-            } else if (name === "verification_done") {
-              var v = document.createElement("div");
-              v.className = "rounded-xl border border-emerald-500/30 bg-emerald-950/30 p-3 text-xs mt-1";
-              var cs = (data.citations && data.citations.verified) || [];
-              v.innerHTML = "<p class='text-emerald-400'>Verified " + cs.length + " citation(s) &middot; score " +
-                (data.citations && data.citations.grounding_score) + "</p>";
-              trace.appendChild(v);
-            } else if (name === "complete") {
-              run.innerHTML = "<p class='font-medium text-white'>" + esc(data.goal || "") + "</p>" +
-                "<p class='text-xs text-[#8FA89B] mt-1'>" + esc(data.status) + " &middot; " +
-                Number(data.total_latency_ms || 0) + " ms</p>" +
-                (data.final_answer ? "<p class='mt-2 text-sm text-[#D5E0DA]'>" + esc(data.final_answer) + "</p>" : "");
-            } else if (name === "awaiting_input") {
-              run.innerHTML = "<p class='font-medium text-white'>Awaiting your input</p>" +
-                "<p class='mt-2 text-sm text-[#D5E0DA]'>" + esc(data.question || "") + "</p>" +
-                "<div class='mt-3 flex gap-2'>" +
-                "<input id='drawer-input-reply' type='text' placeholder='Enter student ID (e.g. " + esc(activeSid || "stu-b004f667") + ") or reply...' " +
-                "class='flex-1 text-xs rounded-full bg-[#182B22] border border-[#2E7D5B] px-3.5 py-1.5 text-white placeholder-[#6E8A7D] focus:outline-none focus:ring-1 focus:ring-emerald-400' />" +
-                "<button id='drawer-btn-reply' type='button' class='px-3.5 py-1.5 rounded-full bg-[#1D5C42] hover:bg-[#154531] text-white text-xs font-semibold cursor-pointer whitespace-nowrap'>Send</button>" +
-                "</div>";
-              var replyInp = qs("drawer-input-reply"), replyBtn = qs("drawer-btn-reply");
-              function sendReply() {
-                var val = (replyInp.value || "").trim();
-                if (!val || !activeRunId) return;
-                replyBtn.disabled = true;
-                replyBtn.textContent = "Resuming...";
-                fetch("/api/agent/runs/" + encodeURIComponent(activeRunId) + "/reply", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ reply: val })
-                }).then(function (r) {
-                  if (!r.ok) throw new Error("HTTP " + r.status);
-                  return r.json();
-                }).then(function () {
-                  loadAgentBrain();
-                  if (window.toast) window.toast("Clarification delivered. Pipeline resumed.", "success");
-                }).catch(function (err) {
-                  replyBtn.disabled = false;
-                  replyBtn.textContent = "Send";
-                  if (window.toast) window.toast("Could not resume run: " + err.message, "error");
-                });
-              }
-              if (replyBtn) replyBtn.addEventListener("click", sendReply);
-              if (replyInp) replyInp.addEventListener("keydown", function (e) { if (e.key === "Enter") sendReply(); });
-            }
-          }
-          function pump() {
-            return reader.read().then(function (res) {
-              if (res.done) return;
-              buf += decoder.decode(res.value, { stream: true });
-              var chunks = buf.split("\n\n");
-              buf = chunks.pop();
-              chunks.forEach(function (chunk) {
-                if (!chunk.trim()) return;
-                var name = "", payload = "";
-                chunk.split("\n").forEach(function (line) {
-                  if (line.indexOf("event: ") === 0) name = line.slice(7).trim();
-                  if (line.indexOf("data: ") === 0) payload = line.slice(6);
-                });
-                if (name) {
-                  try { handleEvent(name, JSON.parse(payload)); } catch (e) { /* skip bad frame */ }
-                }
-              });
-              return pump();
-            });
-          }
-          return pump();
-        }).catch(function (e) {
-          run.textContent = "Streaming unavailable: " + e.message + " - loading last run.";
-          loadAgentBrain();
-        });
+          body: JSON.stringify({ goal: chosenGoal })
+        }).then(function () { loadAgentBrain(); }).catch(function () { loadAgentBrain(); });
       }
-
-      var runBtn = qs("drawer-run-btn"), goalInpEl = qs("drawer-goal-input");
-      if (runBtn) runBtn.addEventListener("click", function () {
-        if (window.toast) window.toast("Streaming pipeline - watch live steps.", "info");
-        runPipelineStreaming();
-      });
-      if (goalInpEl) goalInpEl.addEventListener("keydown", function (e) {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          runPipelineStreaming(goalInpEl.value);
-        }
-      });
-      document.querySelectorAll(".drawer-preset-btn").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          var preset = btn.getAttribute("data-goal-preset") || "";
-          if (goalInpEl) goalInpEl.value = preset;
-          runPipelineStreaming(preset);
-        });
-      });
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js").catch(function () {});
+      }
     })();
   </script>
 </body>

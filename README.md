@@ -19,10 +19,13 @@ changes.
 | **Adaptive mock interviews** | 8-turn voice-in/voice-out studio (Web Speech API, text fallback) over a **220+ question bank with reference outlines**; difficulty adapts to answer quality; each turn is scored on a **3-axis rubric** (technical accuracy, depth & examples, communication) with matched/missed keywords and an ideal-answer panel; completion writes a `ProgressEvent` + immutable `AuditLog`. |
 | **Autonomous agent** | Iterative ReAct loop (`Goal -> Plan -> Execute -> Observe -> Replan/Repair -> Verify`) over **18 registered tools** (inspect, rank, plan, apply, simulate drive, search SOPs, audit resume, STAR rewrite), with a live interactive reasoning trace in the **Agent Brain** drawer. |
 | **Grounded copilot** | RAG over institutional placement SOPs; every answer cites `[SOP-XX]` clauses with a grounding score; clickable citation pills. |
-| **Human-in-the-loop** | Two-tier Approvals Center (`faculty_mentor` Tier-1 endorsement -> `tpo_admin` Tier-2 final sign-off) enforcing strict separation of duties for nominations, bootcamp launches, and proficiency waivers; every decision is immutably audited. |
-| **Cohort analytics** | KPI strip, skill-gap demand vs coverage, readiness doughnut, top courses, programme recommendations + **Launch Bootcamp (HITL)**, live **Quantitative Evaluation Benchmark** panel, and CSV/JSON export. |
-| **Flagship UI/UX** | App shell with sidebar + command bar (`Ctrl+K`), active-student switcher, 1-click role pill (Student/Faculty/TPO), global toast & confirmation modal system (zero `alert()` / `confirm()`), interactive Agent Brain drawer, printable interview scorecard. |
-| **RBAC + PII** | 3 roles (`student` / `faculty_mentor` / `tpo_admin`) with HMAC-signed session tokens; PII scrubbed + prompt-injection neutralized across resumes, interviews, agent goals, and copilot queries; append-only audit trail with row-level tamper guard. |
+| **Human-in-the-loop** | Two-tier Approvals Center (`faculty_mentor` Tier-1 endorsement -> `tpo_admin` Tier-2 final sign-off) enforcing strict separation of duties for nominations, bootcamp launches, resume re-upload unlocks, and proficiency waivers; every decision is immutably audited. |
+| **Placement Policy Studio** | Dedicated TPO Admin `/admin/policies` console to add (`SOP-19+`), edit, remove, or reset institutional placement SOPs and threshold parameters with live RAG re-indexing. |
+| **Cohort & Student Analytics** | PS-06 TPO Cohort Readiness & Skill-Gap Intelligence Center (`/admin` with 6 KPIs, 4 charts, Student Readiness Matrix, Institutional Skill-Gap Priorities, Drive Eligibility Simulator) and Student Progress Center (`/students/{sid}/progress` with multi-day milestone progression, role-gap matrix, 4-week study load, and inline module completion). |
+| **Campus Drives & Recruiter JNF** | TPO Smart JD parser (`POST /api/campus-drives/parse-jd`) and shareable Recruiter Job Notification Form (`/recruiter/jnf/{token}`) with branch normalization (`CSE`, `AI&DS`, `ECE`, `IT`, `ME`, `EE`, `CE`). |
+| **Per-Student Live Jobs & Favorites** | Students can fetch live market jobs isolated strictly to their own workspace (`owner_student_id`), bookmark favorite opportunities/applications, and protect on-campus drives from dismissal. |
+| **Flagship UI/UX** | App shell with sidebar + command bar (`Ctrl+K`), active-student switcher, persona/PIN authentication (`/login`), global toast & confirmation modal system (zero `alert()` / `confirm()`), interactive Agent Brain drawer, printable interview scorecard. |
+| **RBAC + PII** | 3 roles (`student` / `faculty_mentor` / `tpo_admin`) with HMAC-signed session tokens; PII scrubbed + prompt-injection neutralized across resumes, interviews, agent goals, copilot queries, and opaque `id-<hash>` audit logs. |
 | **Live job intelligence** | Pluggable scraper with `content_hash` idempotency, transparent sandbox fallback tagging (`is_sandbox_fallback`), per-source circuit breaker, and a two-stage ANN pipeline (pre-filter k=10, final top 10) that keeps local + scraped jobs in one ranked pool. |
 | **Drive simulation + ROI** | TPO cohort simulator that evaluates every student against a *hypothetical* drive with the production SOP engine (eligible list, per-SOP bottleneck breakdown, top missing skills with recommended courses) plus a deterministic bootcamp-intervention ROI projection. |
 | **Streaming agents** | ReAct agent (**18 tools**, real-time unbuffered SSE generator, observation-driven replanning, step repair, budget + cycle guards) and grounded copilot stream events over SSE (`POST /api/agent/run/stream`, `POST /api/copilot/ask/stream`) with a live event-timeline UI. |
@@ -72,16 +75,18 @@ changes.
 
     Production shell (Jinja2 + HTMX + Chart.js, no build step):
       /                          student picker + upload (app shell)
-      /students/{sid}            profile + skill chips + resume re-upload
-      /students/{sid}/matches    explainable match cards (evidence)
+      /students/{sid}            profile + skill chips + verification badges + resume lock
+      /students/{sid}/matches    explainable match cards + favorites + isolated live job fetch
       /students/{sid}/plan       prereq-ordered plan + progress bar + verify quiz
-      /students/{sid}/progress   readiness chart + events + interview trend
+      /students/{sid}/progress   PS-06 competency center, milestone curve, role-gap matrix & module tracker
       /students/{sid}/interviews interview hub
       /interviews/{id}           voice studio (rubric bars + speech telemetry + scorecard)
       /copilot                   grounded copilot (cited answers, SSE streaming)
-      /admin                     analytics + scraper + drive simulator + ROI + telemetry
+      /recruiter/jnf/{token}     public recruiter Job Notification Form (JNF)
+      /admin                     PS-06 cohort readiness, skill-gap priorities, drive simulator & eval telemetry
+      /admin/policies            TPO Policy Studio (add, edit, remove, reset SOPs + RAG sync)
       /admin/approvals           HITL approvals center
-      /admin/audit               audit-trail inspector
+      /admin/audit               audit-trail inspector (PII-scrubbed)
       /healthz  /readyz          liveness + readiness probes
 ```
 
@@ -225,7 +230,10 @@ in `.env`:
 - `POST /api/copilot/ask` - grounded SOP answer with citations
 - `POST /api/agent/run` / `GET /api/agent/runs` - autonomous agent runs + traces
 - `POST /api/approvals` / `GET /api/approvals` / `POST .../approve|reject` - HITL queue
-- `GET  /api/admin/analytics` / `GET /api/admin/audit` - cohort aggregates + audit trail
+- `GET  /api/admin/analytics` / `GET /api/admin/audit` - cohort aggregates + scrubbed audit trail
+- `GET  /api/admin/policies` / `POST /api/admin/policies` / `PUT /api/admin/policies/{sop_id}` / `DELETE /api/admin/policies/{sop_id}` / `POST /api/admin/policies/reset` - live SOP policy management
+- `POST /api/students/{sid}/matches/{job_id}/favorite` - toggle favorite job/application
+- `POST /api/campus-drives/parse-jd` / `POST /api/campus-drives` / `POST /api/campus-drives/jnf-links` - Smart JD & Recruiter JNF workflow
 - `POST /api/auth/switch-role` / `GET /api/auth/role` - demo role cookie
 - `POST /auth/login` / `POST /auth/logout` - HMAC-signed session tokens (v3)
 - `POST /api/agent/run/stream` / `POST /api/copilot/ask/stream` - SSE event streams (v3)
@@ -311,3 +319,52 @@ M14-M25 production build), each passed an adversarial Gate C review (see
 - **M23** - observability (`/healthz`, `/readyz`, system-telemetry) + eval benchmark
 - **M24** - containerization (multi-stage Dockerfile, compose with pgvector + Redis) + GitHub Actions CI
 - **M25** - flagship demo cohort v3 (application states + speech telemetry) + docs sync + final audit
+
+
+## Desktop & Mobile Demo (Electron, PWA & Android)
+
+All desktop, mobile, and PWA shells connect to the FastAPI backend (`http://127.0.0.1:8010` or LAN IP) so every fetch stays same-origin. Use demo persona PIN **`2026`** on the login screen to switch between `student`, `faculty_mentor`, and `tpo_admin` personas.
+
+### 1. Progressive Web App (PWA)
+
+- Served directly by FastAPI at `/manifest.webmanifest` and `/sw.js` with icons in `app/static/icons/`.
+- Open `http://127.0.0.1:8010` in Chrome/Edge and click **Install JKLU CareerOS** from the address bar to run in standalone desktop/mobile mode.
+
+### 2. Electron Desktop (`desktop/`)
+
+```powershell
+cd desktop
+npm install
+npm run desktop:dev
+```
+
+- Automatically probes `http://127.0.0.1:8010/healthz`; if unreachable, spawns `uv run uvicorn app.api.__main__:app --port 8010` with a live startup splash screen and polls `/readyz`.
+- Configure a remote server URL anytime via **Settings -> Server Connection**.
+- Package a Windows portable `.exe` and NSIS installer with `npm run desktop:build` (outputs to `desktop/dist/`). Note: on locked-down npm setups, ensure `npm config set ignore-scripts false` (or `npm rebuild electron`) so Electron's binary downloads during install.
+
+### 3. Capacitor Android & LAN Demo (`mobile/`)
+
+**Option A — USB Cable (ADB Reverse, works offline without Wi-Fi):**
+
+```powershell
+adb reverse tcp:8010 tcp:8010
+```
+
+In the Android app's **Server Connection** screen, tap **ADB Reverse (127.0.0.1:8010)**, tap **Test Connection**, and tap **Launch CareerOS**.
+
+**Option B — Campus Wi-Fi / Mobile Hotspot (LAN):**
+
+```powershell
+.\scripts\serve_lan.ps1
+```
+
+The script prints your host LAN IPv4 address, the Windows Firewall rule command (`New-NetFirewallRule ...`), and the mobile/JNF URLs. Enter `http://<LAN-IP>:8010` in the Android app's **Server Connection** screen (or `http://10.0.2.2:8010` on the Android Emulator).
+
+**Building the Android APK (requires JDK 17 + Android SDK):**
+
+```powershell
+cd mobile
+npm install
+npx cap sync android
+npx cap open android
+```

@@ -1,0 +1,408 @@
+<!-- TPO Smart JD Modal & Recruiter JNF Link Drawer -->
+<div id="smart-jd-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-[#122019]/60 backdrop-blur-xs flex items-start sm:items-center justify-center p-3 sm:p-5" role="dialog" aria-modal="true" aria-labelledby="smart-jd-modal-title">
+  <div class="bg-white rounded-[24px] border border-[#E5E3DC] shadow-2xl max-w-4xl w-full p-5 sm:p-7 relative my-4 max-h-[92vh] overflow-y-auto">
+    <!-- Modal Header -->
+    <div class="flex items-start justify-between gap-3 pb-4 border-b border-[#ECEAE2]">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-10 h-10 rounded-xl bg-[#E3F2EA] border border-[#C8E4D5] flex items-center justify-center text-[#1D5C42] shrink-0">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <h3 id="smart-jd-modal-title" class="font-serif-display text-lg sm:text-xl font-semibold text-[#1C1E1B] truncate">Add Campus Drive (Smart JD)</h3>
+          <p id="smart-jd-modal-subtitle" class="text-xs text-[#5C5A52]">Agentic JD parser with deterministic fallback, SOP-01/03 policy grounding, and HITL sign-off</p>
+        </div>
+      </div>
+      <button id="close-smart-jd-modal" type="button" aria-label="Close modal" class="w-9 h-9 rounded-full text-[#7A776E] hover:text-[#1C1E1B] hover:bg-[#F4F3EC] flex items-center justify-center transition-colors cursor-pointer shrink-0">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="mt-5 space-y-5">
+      <!-- Step 1: JD Ingestion & Parser Controls (hidden in Edit mode) -->
+      <div id="jd-ingest-section" class="rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-4">
+        <!-- Input Source Tabs -->
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="inline-flex items-center gap-1 p-1 bg-[#EFECE4] rounded-full border border-[#E2DEC9] text-xs font-semibold">
+            <button id="jd-tab-upload" type="button" data-jd-tab="upload"
+                    class="jd-tab-btn px-3.5 py-1.5 rounded-full bg-white text-[#1C1E1B] shadow-2xs border border-[#D5D2C6] transition-all cursor-pointer">
+              Upload JD (.pdf / .docx / .txt)
+            </button>
+            <button id="jd-tab-paste" type="button" data-jd-tab="paste"
+                    class="jd-tab-btn px-3.5 py-1.5 rounded-full text-[#5C5A52] hover:text-[#1C1E1B] transition-all cursor-pointer">
+              Paste Email / Raw JD
+            </button>
+          </div>
+          <button id="jd-load-sample-btn" type="button" class="text-[11px] font-semibold text-[#1D5C42] hover:underline cursor-pointer">
+            Load Sample Campus JD
+          </button>
+        </div>
+
+        <!-- Panel 1: File Dropzone -->
+        <div id="jd-panel-upload">
+          <label id="jd-dropzone" for="jd-file-input"
+                 class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-[#C7C4B8] hover:border-[#1D5C42] rounded-2xl bg-white p-5 text-center cursor-pointer transition-colors">
+            <svg class="w-7 h-7 text-[#1D5C42]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+            </svg>
+            <p class="text-xs font-semibold text-[#1C1E1B]">Drag and drop JD file here, or click to browse</p>
+            <p class="text-[11px] text-[#7A776E]">Supports .pdf, .docx, .txt (max 2 MB)</p>
+            <span id="jd-selected-file" class="hidden mt-1 inline-flex items-center px-3 py-1 rounded-full text-[11px] font-mono font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]"></span>
+            <input id="jd-file-input" type="file" accept=".pdf,.docx,.txt,.text,.md" class="hidden" />
+          </label>
+        </div>
+
+        <!-- Panel 2: Paste Raw JD -->
+        <div id="jd-panel-paste" class="hidden">
+          <textarea id="jd-raw-text" rows="5"
+                    class="w-full px-3.5 py-2.5 text-xs border border-[#D5D2C6] rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] text-[#1C1E1B] font-mono leading-relaxed"
+                    placeholder="Paste recruiter email, WhatsApp forward, or full job description text here..."></textarea>
+        </div>
+
+        <!-- Parser Mode & Demo Failure Simulator -->
+        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-3 pt-2 border-t border-[#E5E3DC]">
+          <div class="space-y-1.5">
+            <span class="block text-[11px] font-bold uppercase tracking-wider text-[#4A483F] font-mono">Parser Mode</span>
+            <div id="jd-parser-mode-group" class="inline-flex flex-wrap items-center gap-1 p-1 bg-[#EFECE4] rounded-full border border-[#E2DEC9] text-xs font-semibold">
+              <button type="button" data-parser-mode="auto"
+                      class="jd-mode-btn px-3 py-1 rounded-full bg-white text-[#1C1E1B] border border-[#D5D2C6] shadow-2xs cursor-pointer">
+                Auto (LLM + Static Fallback)
+              </button>
+              <button type="button" data-parser-mode="static"
+                      class="jd-mode-btn px-3 py-1 rounded-full text-[#5C5A52] hover:text-[#1C1E1B] cursor-pointer">
+                Force Static
+              </button>
+              <button type="button" data-parser-mode="llm"
+                      class="jd-mode-btn px-3 py-1 rounded-full text-[#5C5A52] hover:text-[#1C1E1B] cursor-pointer">
+                Force LLM
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-end gap-2.5">
+            <div class="space-y-1">
+              <label for="jd-simulate-failure" class="block text-[11px] font-bold uppercase tracking-wider text-[#4A483F] font-mono">Simulate LLM Failure</label>
+              <select id="jd-simulate-failure"
+                      class="px-3 py-2 text-xs border border-[#D5D2C6] rounded-xl bg-white text-[#1C1E1B] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]">
+                <option value="none">None</option>
+                <option value="timeout">Simulate LLM Timeout (&gt;6s)</option>
+                <option value="invalid_json">Simulate Invalid JSON</option>
+              </select>
+            </div>
+            <button id="jd-parse-btn" type="button" class="btn-primary-pill text-xs px-4 py-2.5">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+              </svg>
+              <span>Parse &amp; Auto-Fill</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Agent Explainability Banner -->
+      <div id="jd-explainability-banner" class="hidden rounded-2xl border border-[#C8E4D5] bg-[#F4FAF6] p-4 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-[#1B5E43] font-mono">Agent Parse Trace</span>
+            <span id="jd-engine-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#1D5C42] text-white"></span>
+            <span id="jd-trace-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-white text-[#4A483F] border border-[#D5D2C6]"></span>
+          </div>
+          <div class="flex items-center gap-2 min-w-[10rem]">
+            <span class="text-[11px] font-mono text-[#4A483F]">Confidence:</span>
+            <div class="w-24 h-2 rounded-full bg-[#DCECE3] overflow-hidden">
+              <div id="jd-confidence-bar" class="h-2 rounded-full bg-[#1D5C42] transition-all" style="width: 0%"></div>
+            </div>
+            <span id="jd-confidence-pct" class="text-xs font-mono font-bold text-[#1B5E43]">0%</span>
+          </div>
+        </div>
+
+        <div id="jd-fallback-reason" class="hidden text-xs text-[#9A5B13] bg-[#FEF6E7] border border-[#F3D9A4] rounded-xl px-3 py-2 font-medium"></div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <!-- Attempts Timeline -->
+          <div class="bg-white rounded-xl border border-[#E5E3DC] p-3 space-y-1.5">
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-[#5C5A52] font-mono">Attempts Timeline</span>
+            <div id="jd-attempts-list" class="space-y-1 text-[11px] font-mono text-[#1C1E1B]"></div>
+          </div>
+
+          <!-- Defaults Applied -->
+          <div class="bg-white rounded-xl border border-[#E5E3DC] p-3 space-y-1.5">
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-[#5C5A52] font-mono">Defaults Applied</span>
+            <div id="jd-defaults-list" class="space-y-1 text-[11px] text-[#1C1E1B]"></div>
+          </div>
+
+          <!-- Missing / Conflicts -->
+          <div class="bg-white rounded-xl border border-[#E5E3DC] p-3 space-y-1.5">
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-[#5C5A52] font-mono">Missing / Conflicts Flagged</span>
+            <div id="jd-missing-list" class="flex flex-wrap gap-1.5"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Editable Campus Drive Form -->
+      <form id="campus-drive-form" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs">
+          <!-- Company -->
+          <div class="space-y-1" data-evidence-field="company">
+            <label for="cd-company" class="block font-bold text-[#4A483F] uppercase tracking-wider font-mono text-[11px]">Company *</label>
+            <input id="cd-company" type="text" required
+                   class="w-full px-3 py-2 text-xs border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                   placeholder="e.g. Razorpay" />
+            <p class="hidden text-[10px] font-mono text-[#1B5E43] bg-[#E3F2EA]/60 px-2 py-0.5 rounded truncate" data-evidence-caption="company"></p>
+          </div>
+
+          <!-- Role Title -->
+          <div class="space-y-1" data-evidence-field="role_title">
+            <label for="cd-role-title" class="block font-bold text-[#4A483F] uppercase tracking-wider font-mono text-[11px]">Role Title *</label>
+            <input id="cd-role-title" type="text" required
+                   class="w-full px-3 py-2 text-xs border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                   placeholder="e.g. Backend Engineer" />
+            <p class="hidden text-[10px] font-mono text-[#1B5E43] bg-[#E3F2EA]/60 px-2 py-0.5 rounded truncate" data-evidence-caption="role_title"></p>
+          </div>
+
+          <!-- Location -->
+          <div class="space-y-1" data-evidence-field="location">
+            <label for="cd-location" class="block font-bold text-[#4A483F] uppercase tracking-wider font-mono text-[11px]">Location</label>
+            <input id="cd-location" type="text"
+                   class="w-full px-3 py-2 text-xs border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                   placeholder="e.g. Bengaluru" />
+            <p class="hidden text-[10px] font-mono text-[#1B5E43] bg-[#E3F2EA]/60 px-2 py-0.5 rounded truncate" data-evidence-caption="location"></p>
+          </div>
+
+          <!-- Work Mode -->
+          <div class="space-y-1" data-evidence-field="work_mode">
+            <label for="cd-work-mode" class="block font-bold text-[#4A483F] uppercase tracking-wider font-mono text-[11px]">Work Mode</label>
+            <select id="cd-work-mode"
+                    class="w-full px-3 py-2 text-xs border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]">
+              <option value="On-site">On-site</option>
+              <option value="Remote">Remote</option>
+              <option value="Hybrid">Hybrid</option>
+            </select>
+            <p class="hidden text-[10px] font-mono text-[#1B5E43] bg-[#E3F2EA]/60 px-2 py-0.5 rounded truncate" data-evidence-caption="work_mode"></p>
+          </div>
+
+          <!-- Experience Level -->
+          <div class="space-y-1" data-evidence-field="experience_level">
+            <label for="cd-experience-level" class="block font-bold text-[#4A483F] uppercase tracking-wider font-mono text-[11px]">Experience Level</label>
+            <select id="cd-experience-level"
+                    class="w-full px-3 py-2 text-xs border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]">
+              <option value="Fresher">Fresher</option>
+              <option value="Internship">Internship</option>
+            </select>
+            <p class="hidden text-[10px] font-mono text-[#1B5E43] bg-[#E3F2EA]/60 px-2 py-0.5 rounded truncate" data-evidence-caption="experience_level"></p>
+          </div>
+
+          <!-- Salary Disclosed Toggle -->
+          <div class="space-y-1 flex flex-col justify-end">
+            <span class="block font-bold text-[#4A483F] uppercase tracking-wider font-mono text-[11px]">Compensation Disclosure</span>
+            <label class="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-[#D5D2C6] bg-[#FAF9F5] cursor-pointer">
+              <span id="cd-salary-disclosed-label" class="font-semibold text-[#1C1E1B]">Salary Disclosed</span>
+              <input id="cd-salary-disclosed" type="checkbox" checked class="rounded border-[#C7C4B8] text-[#1D5C42] focus:ring-[#1D5C42]" />
+            </label>
+          </div>
+
+          <!-- CTC Min -->
+          <div class="space-y-1" data-evidence-field="ctc_lpa_min">
+            <label for="cd-ctc-min" class="block font-bold text-[#4A483F] uppercase tracking-wider font-mono text-[11px]">CTC Min (LPA)</label>
+            <input id="cd-ctc-min" type="number" step="0.1" min="0"
+                   class="w-full px-3 py-2 text-xs border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                   placeholder="e.g. 10.0" />
+            <p class="hidden text-[10px] font-mono text-[#1B5E43] bg-[#E3F2EA]/60 px-2 py-0.5 rounded truncate" data-evidence-caption="ctc_lpa_min"></p>
+          </div>
+
+          <!-- CTC Max -->
+          <div class="space-y-1" data-evidence-field="ctc_lpa_max">
+            <label for="cd-ctc-max" class="block font-bold text-[#4A483F] uppercase tracking-wider font-mono text-[11px]">CTC Max (LPA)</label>
+            <input id="cd-ctc-max" type="number" step="0.1" min="0"
+                   class="w-full px-3 py-2 text-xs border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                   placeholder="e.g. 14.0" />
+            <p class="hidden text-[10px] font-mono text-[#1B5E43] bg-[#E3F2EA]/60 px-2 py-0.5 rounded truncate" data-evidence-caption="ctc_lpa_max"></p>
+          </div>
+
+          <!-- Stipend (Internship) -->
+          <div class="space-y-1" data-evidence-field="stipend_inr_per_month">
+            <label for="cd-stipend" class="block font-bold text-[#4A483F] uppercase tracking-wider font-mono text-[11px]">Stipend (INR / month)</label>
+            <input id="cd-stipend" type="number" step="500" min="0"
+                   class="w-full px-3 py-2 text-xs border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                   placeholder="Internship only (e.g. 40000)" />
+            <p class="hidden text-[10px] font-mono text-[#1B5E43] bg-[#E3F2EA]/60 px-2 py-0.5 rounded truncate" data-evidence-caption="stipend_inr_per_month"></p>
+          </div>
+        </div>
+
+        <!-- Live SOP-01 Policy Tier Classification Strip -->
+        <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-xl border border-[#E5E3DC] bg-[#FAF9F5]">
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-[#4A483F] font-mono">SOP-01 Policy Tier:</span>
+            <span id="cd-policy-tier-badge" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#4A483F] border border-[#E2DEC9]">
+              Not classified (SOP-01 applies to disclosed CTC offers)
+            </span>
+          </div>
+          <span class="text-[11px] font-mono text-[#7A776E]">Classified strictly by top of CTC band</span>
+        </div>
+
+        <!-- Eligibility Criteria -->
+        <div class="rounded-2xl border border-[#E5E3DC] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-[#4A483F] font-mono">Eligibility Criteria</span>
+            <span class="text-[11px] text-[#7A776E]">Leave branches empty for Open to All Branches</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div class="space-y-1" data-evidence-field="min_cgpa">
+              <label for="cd-min-cgpa" class="block font-semibold text-[#4A483F]">Min CGPA</label>
+              <input id="cd-min-cgpa" type="number" step="0.1" min="0" max="10"
+                     class="w-full px-3 py-2 text-xs border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                     placeholder="No cutoff (null)" />
+              <p class="hidden text-[10px] font-mono text-[#1B5E43] bg-[#E3F2EA]/60 px-2 py-0.5 rounded truncate" data-evidence-caption="min_cgpa"></p>
+            </div>
+            <div class="space-y-1" data-evidence-field="max_active_backlogs">
+              <label for="cd-max-backlogs" class="block font-semibold text-[#4A483F]">Max Active Backlogs</label>
+              <input id="cd-max-backlogs" type="number" step="1" min="0"
+                     class="w-full px-3 py-2 text-xs border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                     placeholder="SOP-03 default or null" />
+              <p class="hidden text-[10px] font-mono text-[#1B5E43] bg-[#E3F2EA]/60 px-2 py-0.5 rounded truncate" data-evidence-caption="max_active_backlogs"></p>
+            </div>
+            <div class="space-y-1" data-evidence-field="graduation_year">
+              <label for="cd-graduation-year" class="block font-semibold text-[#4A483F]">Graduation Year</label>
+              <input id="cd-graduation-year" type="number" step="1" min="2020" max="2035"
+                     class="w-full px-3 py-2 text-xs border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                     placeholder="e.g. 2027" />
+              <p class="hidden text-[10px] font-mono text-[#1B5E43] bg-[#E3F2EA]/60 px-2 py-0.5 rounded truncate" data-evidence-caption="graduation_year"></p>
+            </div>
+          </div>
+
+          <div class="space-y-1.5" data-evidence-field="allowed_branches">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-[#4A483F]">Allowed Branches</span>
+              <button id="cd-branches-clear" type="button" class="text-[11px] text-[#1D5C42] hover:underline cursor-pointer">Clear (Open to All)</button>
+            </div>
+            <div id="cd-branches" class="flex flex-wrap gap-1.5">
+              {% for br in ["CSE", "IT", "ECE", "EE", "ME", "CE", "AI&DS", "CHE", "BT"] %}
+              <button type="button" data-branch="{{ br }}"
+                      class="cd-branch-chip px-3 py-1 rounded-full text-xs font-semibold border border-[#D5D2C6] bg-white text-[#4A483F] hover:border-[#1D5C42] transition-colors cursor-pointer">
+                {{ br }}
+              </button>
+              {% endfor %}
+            </div>
+            <p class="hidden text-[10px] font-mono text-[#1B5E43] bg-[#E3F2EA]/60 px-2 py-0.5 rounded truncate" data-evidence-caption="allowed_branches"></p>
+          </div>
+        </div>
+
+        <!-- Skills Grounded in Taxonomy -->
+        <div class="rounded-2xl border border-[#E5E3DC] p-4 space-y-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Required Skills -->
+            <div class="space-y-2">
+              <label for="cd-req-skill-input" class="block text-[11px] font-bold uppercase tracking-wider text-[#1B5E43] font-mono">Required Skills (Canonical Taxonomy)</label>
+              <div id="cd-required-skills" class="flex flex-wrap gap-1.5 min-h-[2rem]"></div>
+              <div class="relative">
+                <input id="cd-req-skill-input" type="text" autocomplete="off"
+                       class="w-full px-3 py-1.5 text-xs border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                       placeholder="Add required skill from taxonomy..." />
+                <div id="cd-req-skill-suggest" class="hidden absolute left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-white border border-[#D5D2C6] rounded-xl shadow-lg z-20 text-xs"></div>
+              </div>
+            </div>
+
+            <!-- Preferred Skills -->
+            <div class="space-y-2">
+              <label for="cd-pref-skill-input" class="block text-[11px] font-bold uppercase tracking-wider text-[#4A483F] font-mono">Preferred Skills (Canonical Taxonomy)</label>
+              <div id="cd-preferred-skills" class="flex flex-wrap gap-1.5 min-h-[2rem]"></div>
+              <div class="relative">
+                <input id="cd-pref-skill-input" type="text" autocomplete="off"
+                       class="w-full px-3 py-1.5 text-xs border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"
+                       placeholder="Add preferred skill from taxonomy..." />
+                <div id="cd-pref-skill-suggest" class="hidden absolute left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-white border border-[#D5D2C6] rounded-xl shadow-lg z-20 text-xs"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Unmapped Skill Mentions -->
+          <div id="cd-unmapped-wrap" class="hidden pt-2 border-t border-[#ECEAE2] space-y-1.5">
+            <span class="block text-[11px] font-semibold text-[#7A776E]">Unmapped mentions (not used for matching):</span>
+            <div id="cd-unmapped-skills" class="flex flex-wrap gap-1.5"></div>
+          </div>
+        </div>
+
+        <!-- Cohort Re-match Progress Banner -->
+        <div id="cd-rematch-banner" class="hidden rounded-2xl border border-[#C8E4D5] bg-[#E3F2EA] p-4 space-y-2 text-xs">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 font-semibold text-[#1B5E43]">
+              <span id="cd-rematch-spinner" class="w-3.5 h-3.5 rounded-full border-2 border-[#1D5C42] border-t-transparent animate-spin inline-block"></span>
+              <span id="cd-rematch-title">Running cohort re-matching...</span>
+            </div>
+            <button id="cd-rematch-reload-btn" type="button" class="hidden btn-primary-pill text-[11px] px-3 py-1">Refresh Page</button>
+          </div>
+          <div id="cd-rematch-details" class="text-[#164934] font-mono text-[11px]"></div>
+        </div>
+
+        <!-- Modal Footer Actions -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#ECEAE2]">
+          <button id="cd-cancel-btn" type="button" class="btn-secondary-pill text-xs px-4 py-2">Cancel</button>
+          <div id="cd-create-actions" class="flex flex-wrap items-center gap-2.5">
+            <button id="cd-submit-queue-btn" type="button" class="btn-secondary-pill text-xs px-4 py-2 border-[#1D5C42] text-[#1D5C42] hover:bg-[#E3F2EA]">
+              Submit to Approval Queue
+            </button>
+            <button id="cd-publish-now-btn" type="button" class="btn-primary-pill text-xs px-4 py-2">
+              Approve &amp; Publish Drive Immediately
+            </button>
+          </div>
+          <div id="cd-edit-actions" class="hidden flex items-center gap-2.5">
+            <button id="cd-save-edit-btn" type="button" class="btn-primary-pill text-xs px-5 py-2">
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Share Recruiter JNF Link Modal / Drawer -->
+<div id="jnf-drawer-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-[#122019]/60 backdrop-blur-xs flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="jnf-drawer-title">
+  <div class="bg-white rounded-[24px] border border-[#E5E3DC] shadow-2xl max-w-lg w-full p-6 relative space-y-4">
+    <div class="flex items-start justify-between gap-3 pb-3 border-b border-[#ECEAE2]">
+      <div>
+        <h3 id="jnf-drawer-title" class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Share Recruiter JNF Link</h3>
+        <p class="text-xs text-[#5C5A52]">Generate a signed public intake link for visiting recruiters. Submissions enter TPO Approval Queue.</p>
+      </div>
+      <button id="close-jnf-drawer" type="button" aria-label="Close JNF modal" class="w-8 h-8 rounded-full text-[#7A776E] hover:text-[#1C1E1B] hover:bg-[#F4F3EC] flex items-center justify-center cursor-pointer">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="flex flex-wrap items-end gap-2.5 text-xs">
+      <div class="flex-1 min-w-[9rem] space-y-1">
+        <label for="jnf-expires-hours" class="block font-bold text-[#4A483F] uppercase tracking-wider font-mono text-[11px]">Link Expiry (hours)</label>
+        <input id="jnf-expires-hours" type="number" min="1" max="720" value="72"
+               class="w-full px-3 py-2 text-xs border border-[#D5D2C6] rounded-xl bg-[#FAF9F5] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]" />
+      </div>
+      <button id="jnf-generate-btn" type="button" class="btn-primary-pill text-xs px-4 py-2">
+        Generate JNF Link
+      </button>
+    </div>
+
+    <div id="jnf-result-card" class="hidden rounded-2xl border border-[#C8E4D5] bg-[#FAF9F5] p-4 space-y-3">
+      <div class="space-y-1.5">
+        <span class="block text-[11px] font-bold uppercase tracking-wider text-[#1B5E43] font-mono">Signed Recruiter Intake URL</span>
+        <div class="flex items-center gap-2">
+          <input id="jnf-full-url" type="text" readonly
+                 class="flex-1 px-3 py-2 text-xs font-mono border border-[#D5D2C6] rounded-xl bg-white text-[#1C1E1B]" />
+          <button id="jnf-copy-btn" type="button" class="btn-secondary-pill text-xs px-3.5 py-2 shrink-0">Copy</button>
+          <a id="jnf-open-link" href="#" target="_blank" rel="noopener" class="btn-primary-pill text-xs px-3.5 py-2 shrink-0">Open</a>
+        </div>
+      </div>
+
+      <div id="jnf-qr-container" class="flex flex-col sm:flex-row items-center gap-4 pt-2 border-t border-[#E5E3DC]">
+        <div id="jnf-qr-svg" class="p-2 bg-white rounded-xl border border-[#E5E3DC] shrink-0"></div>
+        <div class="text-[11px] text-[#5C5A52] space-y-1">
+          <p class="font-semibold text-[#1C1E1B]">Offline Mobile / LAN Demo Hint</p>
+          <p id="jnf-lan-hint">Run <code class="font-mono bg-white px-1 py-0.5 rounded border border-[#E5E3DC]">scripts/serve_lan.ps1</code> and replace <code class="font-mono">localhost</code> / <code class="font-mono">127.0.0.1</code> with your LAN IP (e.g. <code class="font-mono">192.168.x.x:8010</code>) to open on a phone over Wi-Fi.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

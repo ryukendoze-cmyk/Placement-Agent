@@ -266,7 +266,7 @@ class TestNormalizer:
         assert salary == [6, 12]  # legit parse, not synthetic default
 
     def test_normalizer_taxonomy_grounding(self):
-        """Strict 124-skill grounding: matched in text -> required/preferred split."""
+        """Strict canonical taxonomy grounding: matched in text -> required/preferred split."""
         from app.scraper.normalizer import normalize_scraped_job
 
         taxonomy = load_taxonomy()
@@ -279,7 +279,7 @@ class TestNormalizer:
         }
         job = normalize_scraped_job(raw, taxonomy)
 
-        # All grounded skills must belong to canonical 124-skill taxonomy
+        # All grounded skills must belong to the canonical skill taxonomy
         all_skills = set(job.required_skills) | set(job.preferred_skills)
         for skill in all_skills:
             assert taxonomy.resolve(skill) is not None, f"{skill} not in taxonomy"
@@ -1338,6 +1338,8 @@ class TestLinkPreservation:
                 preferred_skills=[],
                 job_url="https://www.naukri.com/job/999",
                 source="naukri",
+                is_live=True,
+                owner_student_id=sid,
             )
             db.add(live_job)
             db.commit()
@@ -3124,6 +3126,8 @@ class TestSalaryIntegrityMilestone8:
                 scraper_engine="stealth_harvester",
                 salary_lpa=[0, 0],
                 salary_disclosed=False,
+                is_live=True,
+                owner_student_id=sid,
             )
             job_disclosed = Job(
                 id="job-disclosed-ui",
@@ -3136,6 +3140,8 @@ class TestSalaryIntegrityMilestone8:
                 scraper_engine="stealth_harvester",
                 salary_lpa=[12, 18],
                 salary_disclosed=True,
+                is_live=True,
+                owner_student_id=sid,
             )
             db.add(job_undisclosed)
             db.add(job_disclosed)
@@ -3525,6 +3531,8 @@ class TestDOMFilterDataAttributes:
                 salary_lpa=[8, 14],
                 salary_disclosed=True,
                 remote=False,
+                is_live=True,
+                owner_student_id=sid,
             )
             db.add(job)
             db.commit()
@@ -3633,6 +3641,8 @@ class TestDOMFilterDataAttributes:
                 scraper_engine="stealth_harvester",
                 salary_lpa=[0, 0],
                 salary_disclosed=False,
+                is_live=True,
+                owner_student_id=sid,
             )
             db.add(job)
             db.commit()
@@ -3741,6 +3751,8 @@ class TestEightDimensionFilteringSuite:
                 salary_disclosed=True,
                 source="naukri",
                 scraper_engine="stealth_harvester",
+                is_live=True,
+                owner_student_id=sid,
             )
             db.add(j)
             db.commit()

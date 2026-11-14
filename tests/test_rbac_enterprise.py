@@ -275,17 +275,11 @@ class TestCopilotSelfBinding:
         r = client.post("/api/copilot/ask",
                         json={"question": "What is my GPA?", "student_id": b},
                         headers=h)
-        assert r.status_code == 200, r.text[:300]
-        data = r.json()
-        # The response MUST be bound to the caller (a), not the requested target (b).
-        assert data.get("student_id") == a, (
-            f"copilot must override student_id to the caller; got "
-            f"{data.get('student_id')!r}, expected {a!r} (requested {b!r})"
+        assert r.status_code == 403, (
+            f"copilot must reject cross-student request with 403; got {r.status_code}: {r.text[:300]}"
         )
-        # And the leaked student_context must not be B's.
-        ctx_name = (data.get("student_context") or {}).get("name")
-        assert ctx_name != "Candidate 1", (
-            f"copilot leaked student B's context: {ctx_name!r}"
+        assert "Candidate 1" not in r.text, (
+            "copilot 403 response must not leak student B's context"
         )
 
     def test_copilot_requires_identity_header_for_binding(self, client):

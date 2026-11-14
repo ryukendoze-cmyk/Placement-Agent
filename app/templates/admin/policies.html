@@ -1,0 +1,645 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-6">
+  <!-- Executive Policy Governance Header -->
+  <div class="editorial-card p-6 sm:p-7 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E3F2EA] text-[#164934] text-xs font-semibold mb-2.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
+        <span>Institutional Policy Governance</span>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-[#1A211D] font-serif">
+        Institutional Placement Policies (SOPs)
+      </h1>
+      <p class="text-sm text-[#57605A] mt-1">
+        Configure live placement SOP thresholds, tier brackets, eligibility gates, and custom institutional governance rules synced to Copilot RAG &amp; Agent Brain grounding.
+      </p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2.5">
+      {% if role == 'tpo_admin' %}
+        <button id="open-create-policy-modal" type="button" class="btn-primary-pill text-xs">
+          <span>+ Add New Policy (SOP)</span>
+        </button>
+        <button id="policy-reset-btn" type="button" class="btn-secondary-pill text-xs text-[#9E2A20]">
+          <span>Reset Core Defaults</span>
+        </button>
+      {% else %}
+        <span id="policy-readonly-badge" class="inline-flex items-center px-3.5 py-1.5 rounded-full bg-[#EFECE4] border border-[#D8D4C8] text-xs font-bold uppercase tracking-wider text-[#57605A]">
+          Read-Only (TPO Admin Editable)
+        </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- 4-KPI Summary Strip -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="editorial-card p-5">
+      <p class="text-[11px] uppercase tracking-widest text-[#767F79] font-bold">Active Institutional SOPs</p>
+      <p id="kpi-total-sops" class="text-2xl font-bold mt-1.5 text-[#1A211D] font-serif tabular-nums">{{ policies|length }}</p>
+    </div>
+    <div class="editorial-card p-5">
+      <p class="text-[11px] uppercase tracking-widest text-[#767F79] font-bold">Core Baseline SOPs</p>
+      <p id="kpi-core-sops" class="text-2xl font-bold mt-1.5 text-[#1D5C42] font-serif tabular-nums">18</p>
+    </div>
+    <div class="editorial-card p-5">
+      <p class="text-[11px] uppercase tracking-widest text-[#767F79] font-bold">Custom Added SOPs</p>
+      <p id="kpi-custom-sops" class="text-2xl font-bold mt-1.5 text-[#1A211D] font-serif tabular-nums">0</p>
+    </div>
+    <div class="editorial-card p-5">
+      <p class="text-[11px] uppercase tracking-widest text-[#1D5C42] font-bold">Live Parameter Guardrails</p>
+      <div class="flex items-baseline justify-between gap-2 mt-1.5">
+        <p id="kpi-param-count" class="text-2xl font-bold text-[#1D5C42] font-serif tabular-nums">--</p>
+        <span class="px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#164934] text-[10px] font-bold uppercase tracking-wider">RAG Grounding Synced</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Control Bar -->
+  <div class="editorial-card p-5 space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="relative flex-1 min-w-[240px] max-w-md">
+        <input id="policy-search-input" type="search"
+               placeholder="Search SOP ID, title, clause text, or parameter..."
+               class="w-full text-xs rounded-xl border border-[#D4D1C7] bg-[#FBFBF9] px-3.5 py-2.5 text-[#1A211D] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]">
+      </div>
+      <div id="policy-category-tabs" class="flex flex-wrap items-center gap-1.5">
+        <button type="button" data-cat-filter="all" class="policy-cat-tab px-3 py-1.5 rounded-full text-xs font-semibold bg-[#1D5C42] text-white cursor-pointer">All</button>
+        <button type="button" data-cat-filter="Tiers & Compensation" class="policy-cat-tab px-3 py-1.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#4A4943] cursor-pointer">Tiers &amp; Compensation</button>
+        <button type="button" data-cat-filter="Academic Eligibility" class="policy-cat-tab px-3 py-1.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#4A4943] cursor-pointer">Academic Eligibility</button>
+        <button type="button" data-cat-filter="Preparation & Assessment" class="policy-cat-tab px-3 py-1.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#4A4943] cursor-pointer">Preparation &amp; Assessment</button>
+        <button type="button" data-cat-filter="Applications & Offers" class="policy-cat-tab px-3 py-1.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#4A4943] cursor-pointer">Applications &amp; Offers</button>
+        <button type="button" data-cat-filter="Data & AI Governance" class="policy-cat-tab px-3 py-1.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#4A4943] cursor-pointer">Data &amp; AI Governance</button>
+        <button type="button" data-cat-filter="Custom Rules" class="policy-cat-tab px-3 py-1.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#4A4943] cursor-pointer">Custom Rules</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2-Column Executive Policy Cards Grid -->
+  <div id="policy-list-container" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div>
+</div>
+
+<!-- Edit Policy & Thresholds Modal -->
+<div id="policy-edit-modal" class="hidden fixed inset-0 z-50 bg-[#1A211D]/45 backdrop-blur-xs flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl border border-[#E5E3DA] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div class="px-6 py-5 border-b border-[#E5E3DA] bg-[#F9F8F4] flex items-center justify-between">
+      <div>
+        <span id="edit-modal-sop-id" class="inline-block px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white text-[11px] font-mono font-bold mb-1">SOP-01</span>
+        <h2 class="text-lg font-bold text-[#1A211D] font-serif">Edit Policy &amp; Thresholds</h2>
+      </div>
+      <button id="close-edit-policy-modal" type="button" class="text-xs font-semibold text-[#57605A] px-3 py-1.5 rounded-full bg-[#EFECE4] cursor-pointer">Close</button>
+    </div>
+    <div class="p-6 space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-[#4A4943] mb-1">Policy Title</label>
+          <input id="edit-sop-title" type="text" class="w-full text-xs rounded-xl border border-[#D4D1C7] bg-[#FBFBF9] px-3 py-2 text-[#1A211D]">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#4A4943] mb-1">Category</label>
+          <input id="edit-sop-category" type="text" class="w-full text-xs rounded-xl border border-[#D4D1C7] bg-[#FBFBF9] px-3 py-2 text-[#1A211D]">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-[#4A4943] mb-1">Section Reference</label>
+        <input id="edit-sop-section" type="text" class="w-full text-xs rounded-xl border border-[#D4D1C7] bg-[#FBFBF9] px-3 py-2 text-[#1A211D]">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-[#4A4943] mb-1">Policy Clause Text</label>
+        <textarea id="edit-sop-rule" rows="4" class="w-full text-xs rounded-xl border border-[#D4D1C7] bg-[#FBFBF9] px-3 py-2.5 text-[#1A211D] leading-relaxed"></textarea>
+      </div>
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold uppercase tracking-wider text-[#57605A]">Threshold Parameters</label>
+          <button id="edit-add-param-btn" type="button" class="text-xs font-semibold text-[#1D5C42] hover:underline cursor-pointer">+ Add Threshold Parameter</button>
+        </div>
+        <div id="edit-sop-params" class="space-y-2"></div>
+      </div>
+      <div class="pt-3 border-t border-[#E5E3DA] flex flex-wrap items-center justify-between gap-2.5">
+        <button id="delete-edit-policy-btn" type="button" class="text-xs font-semibold text-[#9E2A20] px-3.5 py-2 rounded-full bg-[#FDF3F2] border border-[#F5D0CC] cursor-pointer">Remove Policy</button>
+        <div class="flex items-center gap-2.5">
+          <button id="cancel-edit-policy-btn" type="button" class="btn-secondary-pill text-xs">Cancel</button>
+          <button id="save-edit-policy-btn" type="button" class="btn-primary-pill text-xs">Save Policy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create New Policy (SOP) Modal -->
+<div id="policy-create-modal" class="hidden fixed inset-0 z-50 bg-[#1A211D]/45 backdrop-blur-xs flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl border border-[#E5E3DA] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div class="px-6 py-5 border-b border-[#E5E3DA] bg-[#F9F8F4] flex items-center justify-between">
+      <div>
+        <span class="inline-block px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#164934] text-[11px] font-mono font-bold mb-1">NEW INSTITUTIONAL RULE</span>
+        <h2 class="text-lg font-bold text-[#1A211D] font-serif">Add New Policy (SOP)</h2>
+      </div>
+      <button id="close-create-policy-modal" type="button" class="text-xs font-semibold text-[#57605A] px-3 py-1.5 rounded-full bg-[#EFECE4] cursor-pointer">Close</button>
+    </div>
+    <div class="p-6 space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-[#4A4943] mb-1">Policy Title</label>
+          <input id="create-sop-title" type="text" placeholder="e.g. Global Internship Stipend Floor"
+                 class="w-full text-xs rounded-xl border border-[#D4D1C7] bg-[#FBFBF9] px-3 py-2 text-[#1A211D]">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#4A4943] mb-1">Category</label>
+          <input id="create-sop-category" type="text" value="Custom Rules"
+                 class="w-full text-xs rounded-xl border border-[#D4D1C7] bg-[#FBFBF9] px-3 py-2 text-[#1A211D]">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-[#4A4943] mb-1">Section Reference</label>
+        <input id="create-sop-section" type="text" value="Section 5.0: Institutional Rule"
+               class="w-full text-xs rounded-xl border border-[#D4D1C7] bg-[#FBFBF9] px-3 py-2 text-[#1A211D]">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-[#4A4943] mb-1">Full Policy Clause Text (min 15 characters)</label>
+        <textarea id="create-sop-rule" rows="4" placeholder="Describe the institutional rule, eligibility condition, and enforcement criteria..."
+                  class="w-full text-xs rounded-xl border border-[#D4D1C7] bg-[#FBFBF9] px-3 py-2.5 text-[#1A211D] leading-relaxed"></textarea>
+      </div>
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold uppercase tracking-wider text-[#57605A]">Threshold Parameters</label>
+          <button id="create-add-param-btn" type="button" class="text-xs font-semibold text-[#1D5C42] hover:underline cursor-pointer">+ Add Threshold Parameter</button>
+        </div>
+        <div id="create-sop-params" class="space-y-2"></div>
+      </div>
+      <div class="pt-3 border-t border-[#E5E3DA] flex items-center justify-end gap-2.5">
+        <button id="cancel-create-policy-btn" type="button" class="btn-secondary-pill text-xs">Cancel</button>
+        <button id="submit-create-policy-btn" type="button" class="btn-primary-pill text-xs">Create Policy</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var INITIAL_POLICIES = {{ policies|tojson }};
+  var EDITABLE = {{ editable|tojson }};
+  var state = {
+    sops: Array.isArray(INITIAL_POLICIES) ? INITIAL_POLICIES : [],
+    search: "",
+    category: "all",
+    editingId: null
+  };
+
+  var container = document.getElementById("policy-list-container");
+  var searchInput = document.getElementById("policy-search-input");
+  var resetBtn = document.getElementById("policy-reset-btn");
+  var editModal = document.getElementById("policy-edit-modal");
+  var createModal = document.getElementById("policy-create-modal");
+
+  var CATEGORY_ALIASES = {
+    "Tiers & Compensation": ["tiers", "compensation", "offer", "salary", "ctc", "ppo", "industry"],
+    "Academic Eligibility": ["academic", "eligibility", "standing", "mobility", "attendance", "backlog", "cgpa"],
+    "Preparation & Assessment": ["technical", "skill", "competency", "readiness", "mock", "interview", "training"],
+    "Applications & Offers": ["offers", "applications", "conduct", "ethics", "approval", "deadline", "no-show"],
+    "Data & AI Governance": ["integrity", "governance", "ai", "grounding", "audit", "privacy", "security"],
+    "Custom Rules": ["custom", "general governance"]
+  };
+
+  function sopNumber(id) {
+    var m = String(id || "").match(/(\d+)/);
+    return m ? parseInt(m[1], 10) : 0;
+  }
+
+  function isCustomSop(sop) {
+    return Boolean(sop && (sop.is_custom || sopNumber(sop.id) > 18));
+  }
+
+  function matchesCategory(sop, filterCat) {
+    if (!filterCat || filterCat === "all") return true;
+    var cat = String(sop.category || "").toLowerCase();
+    if (cat === filterCat.toLowerCase()) return true;
+    if (filterCat === "Custom Rules" && isCustomSop(sop)) return true;
+    var kws = CATEGORY_ALIASES[filterCat] || [];
+    var blob = (cat + " " + String(sop.title || "") + " " + String(sop.section || "")).toLowerCase();
+    return kws.some(function (k) { return blob.indexOf(k) !== -1; });
+  }
+
+  function formatParamLabel(key) {
+    return String(key || "")
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, function (c) { return c.toUpperCase(); })
+      .replace(/\bLpa\b/g, "LPA")
+      .replace(/\bPct\b/g, "%")
+      .replace(/\bCgpa\b/g, "CGPA");
+  }
+
+  function formatParamValue(key, val) {
+    if (typeof val === "boolean") return val ? "Enabled" : "Disabled";
+    if (Array.isArray(val)) return val.join(", ");
+    var k = String(key || "").toLowerCase();
+    if (k.indexOf("lpa") !== -1) return String(val) + " LPA";
+    if (k.indexOf("hours") !== -1) return String(val) + " hrs";
+    if (k.indexOf("days") !== -1) return String(val) + " days";
+    if (k.indexOf("pct") !== -1 || k.indexOf("score") !== -1) return String(val) + "%";
+    return String(val);
+  }
+
+  function updateKPIs() {
+    var totalEl = document.getElementById("kpi-total-sops");
+    var coreEl = document.getElementById("kpi-core-sops");
+    var customEl = document.getElementById("kpi-custom-sops");
+    var paramEl = document.getElementById("kpi-param-count");
+    var customCount = 0;
+    var coreCount = 0;
+    var paramTotal = 0;
+    state.sops.forEach(function (s) {
+      if (isCustomSop(s)) customCount += 1;
+      else coreCount += 1;
+      paramTotal += Object.keys(s.parameters || {}).length;
+    });
+    if (totalEl) totalEl.textContent = String(state.sops.length);
+    if (coreEl) coreEl.textContent = String(coreCount);
+    if (customEl) customEl.textContent = String(customCount);
+    if (paramEl) paramEl.textContent = String(paramTotal);
+  }
+
+  function renderCards() {
+    if (!container) return;
+    updateKPIs();
+    container.innerHTML = "";
+    var q = state.search.trim().toLowerCase();
+    var visible = state.sops.filter(function (sop) {
+      if (!matchesCategory(sop, state.category)) return false;
+      if (!q) return true;
+      var hay = [
+        sop.id, sop.title, sop.category, sop.section, sop.rule_text,
+        JSON.stringify(sop.parameters || {})
+      ].join(" ").toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+
+    if (!visible.length) {
+      var empty = document.createElement("div");
+      empty.className = "lg:col-span-2 editorial-card p-8 text-center text-xs text-[#57605A]";
+      empty.textContent = "No placement policies match the active filter.";
+      container.appendChild(empty);
+      return;
+    }
+
+    visible.forEach(function (sop) {
+      var card = document.createElement("div");
+      card.className = "editorial-card p-5 flex flex-col justify-between gap-4";
+      card.dataset.sopCard = sop.id;
+
+      var topWrap = document.createElement("div");
+      topWrap.className = "space-y-3";
+
+      var header = document.createElement("div");
+      header.className = "flex flex-wrap items-center justify-between gap-2";
+      var badges = document.createElement("div");
+      badges.className = "flex flex-wrap items-center gap-1.5";
+
+      var idBadge = document.createElement("span");
+      idBadge.className = "px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white text-[11px] font-mono font-bold";
+      idBadge.textContent = sop.id;
+      badges.appendChild(idBadge);
+
+      var catBadge = document.createElement("span");
+      catBadge.className = "px-2.5 py-0.5 rounded-full bg-[#EFECE4] text-[#4A4943] text-[11px] font-semibold";
+      catBadge.textContent = sop.category || "Governance";
+      badges.appendChild(catBadge);
+
+      if (isCustomSop(sop)) {
+        var customBadge = document.createElement("span");
+        customBadge.className = "px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#164934] text-[10px] font-bold uppercase";
+        customBadge.textContent = "Custom";
+        badges.appendChild(customBadge);
+      }
+      header.appendChild(badges);
+
+      var secLabel = document.createElement("span");
+      secLabel.className = "text-[11px] font-mono text-[#767F79]";
+      secLabel.textContent = sop.section || "";
+      header.appendChild(secLabel);
+      topWrap.appendChild(header);
+
+      var title = document.createElement("h3");
+      title.className = "text-base font-bold text-[#1A211D] font-serif";
+      title.textContent = sop.title || sop.id;
+      topWrap.appendChild(title);
+
+      var clause = document.createElement("p");
+      clause.className = "text-xs text-[#3B423E] leading-relaxed";
+      clause.textContent = sop.rule_text || "";
+      topWrap.appendChild(clause);
+
+      var params = sop.parameters || {};
+      var pKeys = Object.keys(params);
+      if (pKeys.length) {
+        var pillWrap = document.createElement("div");
+        pillWrap.className = "flex flex-wrap gap-1.5 pt-1";
+        pKeys.forEach(function (k) {
+          var pill = document.createElement("span");
+          pill.className = "inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#F9F8F4] border border-[#E5E3DA] text-[11px] text-[#1A211D]";
+          var kSpan = document.createElement("span");
+          kSpan.className = "text-[#57605A]";
+          kSpan.textContent = formatParamLabel(k) + ":";
+          var vSpan = document.createElement("strong");
+          vSpan.className = "font-mono text-[#1D5C42]";
+          vSpan.textContent = formatParamValue(k, params[k]);
+          pill.appendChild(kSpan);
+          pill.appendChild(vSpan);
+          pillWrap.appendChild(pill);
+        });
+        topWrap.appendChild(pillWrap);
+      }
+
+      card.appendChild(topWrap);
+
+      if (EDITABLE) {
+        var footer = document.createElement("div");
+        footer.className = "pt-3 border-t border-[#EDEBE3] flex flex-wrap items-center justify-between gap-2";
+
+        var editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "btn-secondary-pill text-xs px-3.5 py-1.5 cursor-pointer";
+        editBtn.dataset.editSop = sop.id;
+        editBtn.textContent = "Edit Policy & Thresholds";
+        editBtn.addEventListener("click", function () { openEditModal(sop); });
+        footer.appendChild(editBtn);
+
+        var delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "text-xs font-semibold text-[#9E2A20] px-3 py-1.5 rounded-full bg-[#FDF3F2] border border-[#F5D0CC] cursor-pointer";
+        delBtn.dataset.deleteSop = sop.id;
+        delBtn.textContent = "Remove Policy";
+        delBtn.addEventListener("click", function () { deletePolicy(sop.id); });
+        footer.appendChild(delBtn);
+        card.appendChild(footer);
+      }
+
+      container.appendChild(card);
+    });
+  }
+
+  function addParamRow(targetEl, key, val) {
+    var row = document.createElement("div");
+    row.className = "grid grid-cols-12 gap-2 items-center bg-[#F9F8F4] rounded-xl border border-[#E5E3DA] p-2.5";
+
+    var kInput = document.createElement("input");
+    kInput.type = "text";
+    kInput.placeholder = "parameter_key";
+    kInput.value = key || "";
+    kInput.className = "col-span-5 text-xs font-mono rounded-lg border border-[#D4D1C7] bg-white px-2.5 py-1.5 text-[#1A211D]";
+    kInput.dataset.paramKeyInput = "1";
+
+    var valCell = document.createElement("div");
+    valCell.className = "col-span-6";
+
+    if (typeof val === "boolean") {
+      var lbl = document.createElement("label");
+      lbl.className = "inline-flex items-center gap-2 text-xs text-[#1A211D]";
+      var chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.checked = val;
+      chk.className = "h-4 w-4 accent-[#1D5C42]";
+      chk.dataset.paramValInput = "boolean";
+      var txt = document.createElement("span");
+      txt.textContent = val ? "Enabled" : "Disabled";
+      chk.addEventListener("change", function () { txt.textContent = chk.checked ? "Enabled" : "Disabled"; });
+      lbl.appendChild(chk);
+      lbl.appendChild(txt);
+      valCell.appendChild(lbl);
+    } else if (Array.isArray(val)) {
+      var arrIn = document.createElement("input");
+      arrIn.type = "text";
+      arrIn.value = val.join(", ");
+      arrIn.className = "w-full text-xs font-mono rounded-lg border border-[#D4D1C7] bg-white px-2.5 py-1.5 text-[#1A211D]";
+      arrIn.dataset.paramValInput = "array";
+      valCell.appendChild(arrIn);
+    } else if (typeof val === "number") {
+      var numIn = document.createElement("input");
+      numIn.type = "number";
+      numIn.step = Number.isInteger(val) ? "1" : "0.01";
+      numIn.value = String(val);
+      numIn.className = "w-full text-xs font-mono rounded-lg border border-[#D4D1C7] bg-white px-2.5 py-1.5 text-[#1A211D]";
+      numIn.dataset.paramValInput = Number.isInteger(val) ? "int" : "float";
+      valCell.appendChild(numIn);
+    } else {
+      var strIn = document.createElement("input");
+      strIn.type = "text";
+      strIn.placeholder = "value (number, true/false, or text)";
+      strIn.value = val == null ? "" : String(val);
+      strIn.className = "w-full text-xs font-mono rounded-lg border border-[#D4D1C7] bg-white px-2.5 py-1.5 text-[#1A211D]";
+      strIn.dataset.paramValInput = "auto";
+      valCell.appendChild(strIn);
+    }
+
+    var rmBtn = document.createElement("button");
+    rmBtn.type = "button";
+    rmBtn.className = "col-span-1 text-xs font-bold text-[#9E2A20] cursor-pointer";
+    rmBtn.textContent = "X";
+    rmBtn.addEventListener("click", function () { row.remove(); });
+
+    row.appendChild(kInput);
+    row.appendChild(valCell);
+    row.appendChild(rmBtn);
+    targetEl.appendChild(row);
+  }
+
+  function collectParams(targetEl) {
+    var out = {};
+    targetEl.querySelectorAll("[data-param-key-input]").forEach(function (kIn) {
+      var key = kIn.value.trim();
+      if (!key) return;
+      var row = kIn.parentElement;
+      var vIn = row.querySelector("[data-param-val-input]");
+      if (!vIn) return;
+      var kind = vIn.dataset.paramValInput;
+      if (kind === "boolean") {
+        out[key] = Boolean(vIn.checked);
+      } else if (kind === "array") {
+        out[key] = vIn.value.split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+      } else if (kind === "int") {
+        out[key] = parseInt(vIn.value, 10);
+      } else if (kind === "float") {
+        out[key] = parseFloat(vIn.value);
+      } else {
+        var raw = vIn.value.trim();
+        if (raw === "true") out[key] = true;
+        else if (raw === "false") out[key] = false;
+        else if (raw !== "" && !isNaN(Number(raw))) out[key] = Number(raw);
+        else out[key] = raw;
+      }
+    });
+    return out;
+  }
+
+  function openEditModal(sop) {
+    if (!editModal) return;
+    state.editingId = sop.id;
+    document.getElementById("edit-modal-sop-id").textContent = sop.id;
+    document.getElementById("edit-sop-title").value = sop.title || "";
+    document.getElementById("edit-sop-category").value = sop.category || "";
+    document.getElementById("edit-sop-section").value = sop.section || "";
+    document.getElementById("edit-sop-rule").value = sop.rule_text || "";
+    var paramsBox = document.getElementById("edit-sop-params");
+    paramsBox.innerHTML = "";
+    var params = sop.parameters || {};
+    Object.keys(params).forEach(function (k) { addParamRow(paramsBox, k, params[k]); });
+    editModal.classList.remove("hidden");
+  }
+
+  function refreshPolicies() {
+    fetch("/api/admin/policies")
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (j) {
+        state.sops = j.sops || [];
+        renderCards();
+      })
+      .catch(function (err) {
+        if (window.toast) window.toast("Could not load policies: " + err.message, "error");
+      });
+  }
+
+  function deletePolicy(sopId, closeModalOnDone) {
+    fetch("/api/admin/policies/" + encodeURIComponent(sopId), { method: "DELETE" })
+      .then(function (r) {
+        return r.json().then(function (b) { if (!r.ok) throw new Error(b.detail || ("HTTP " + r.status)); return b; });
+      })
+      .then(function () {
+        if (closeModalOnDone && editModal) editModal.classList.add("hidden");
+        if (window.toast) window.toast("Removed policy " + sopId + ".", "success");
+        refreshPolicies();
+      })
+      .catch(function (err) {
+        if (window.toast) window.toast("Remove failed: " + err.message, "error");
+      });
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener("input", function () {
+      state.search = searchInput.value || "";
+      renderCards();
+    });
+  }
+
+  document.querySelectorAll(".policy-cat-tab").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      state.category = btn.dataset.catFilter || "all";
+      document.querySelectorAll(".policy-cat-tab").forEach(function (b) {
+        b.className = "policy-cat-tab px-3 py-1.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#4A4943] cursor-pointer";
+      });
+      btn.className = "policy-cat-tab px-3 py-1.5 rounded-full text-xs font-semibold bg-[#1D5C42] text-white cursor-pointer";
+      renderCards();
+    });
+  });
+
+  if (resetBtn) {
+    resetBtn.addEventListener("click", function () {
+      resetBtn.disabled = true;
+      fetch("/api/admin/policies/reset", { method: "POST" })
+        .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+        .then(function (j) {
+          resetBtn.disabled = false;
+          state.sops = j.sops || [];
+          renderCards();
+          if (window.toast) window.toast("Core SOP defaults restored.", "success");
+        })
+        .catch(function (err) {
+          resetBtn.disabled = false;
+          if (window.toast) window.toast("Reset failed: " + err.message, "error");
+        });
+    });
+  }
+
+  var editAddBtn = document.getElementById("edit-add-param-btn");
+  if (editAddBtn) editAddBtn.addEventListener("click", function () {
+    addParamRow(document.getElementById("edit-sop-params"), "", "");
+  });
+  ["close-edit-policy-modal", "cancel-edit-policy-btn"].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener("click", function () { editModal.classList.add("hidden"); });
+  });
+  var delEditBtn = document.getElementById("delete-edit-policy-btn");
+  if (delEditBtn) delEditBtn.addEventListener("click", function () {
+    if (!state.editingId) return;
+    deletePolicy(state.editingId, true);
+  });
+
+  var saveEditBtn = document.getElementById("save-edit-policy-btn");
+  if (saveEditBtn) saveEditBtn.addEventListener("click", function () {
+    if (!state.editingId) return;
+    saveEditBtn.disabled = true;
+    var body = {
+      title: document.getElementById("edit-sop-title").value,
+      category: document.getElementById("edit-sop-category").value,
+      section: document.getElementById("edit-sop-section").value,
+      rule_text: document.getElementById("edit-sop-rule").value,
+      parameters: collectParams(document.getElementById("edit-sop-params"))
+    };
+    fetch("/api/admin/policies/" + encodeURIComponent(state.editingId), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    })
+      .then(function (r) {
+        return r.json().then(function (b) { if (!r.ok) throw new Error(b.detail || ("HTTP " + r.status)); return b; });
+      })
+      .then(function () {
+        saveEditBtn.disabled = false;
+        editModal.classList.add("hidden");
+        if (window.toast) window.toast("Updated " + state.editingId + ".", "success");
+        refreshPolicies();
+      })
+      .catch(function (err) {
+        saveEditBtn.disabled = false;
+        if (window.toast) window.toast("Update failed: " + err.message, "error");
+      });
+  });
+
+  var openCreateBtn = document.getElementById("open-create-policy-modal");
+  if (openCreateBtn) openCreateBtn.addEventListener("click", function () {
+    document.getElementById("create-sop-title").value = "";
+    document.getElementById("create-sop-rule").value = "";
+    var cp = document.getElementById("create-sop-params");
+    cp.innerHTML = "";
+    addParamRow(cp, "", "");
+    createModal.classList.remove("hidden");
+  });
+  var createAddBtn = document.getElementById("create-add-param-btn");
+  if (createAddBtn) createAddBtn.addEventListener("click", function () {
+    addParamRow(document.getElementById("create-sop-params"), "", "");
+  });
+  ["close-create-policy-modal", "cancel-create-policy-btn"].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener("click", function () { createModal.classList.add("hidden"); });
+  });
+  var submitCreateBtn = document.getElementById("submit-create-policy-btn");
+  if (submitCreateBtn) submitCreateBtn.addEventListener("click", function () {
+    submitCreateBtn.disabled = true;
+    var body = {
+      title: document.getElementById("create-sop-title").value,
+      category: document.getElementById("create-sop-category").value,
+      section: document.getElementById("create-sop-section").value,
+      text: document.getElementById("create-sop-rule").value,
+      params: collectParams(document.getElementById("create-sop-params"))
+    };
+    fetch("/api/admin/policies", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    })
+      .then(function (r) {
+        return r.json().then(function (b) { if (!r.ok) throw new Error(b.detail || ("HTTP " + r.status)); return b; });
+      })
+      .then(function (j) {
+        submitCreateBtn.disabled = false;
+        createModal.classList.add("hidden");
+        if (window.toast) window.toast("Created " + ((j.policy && j.policy.id) || "new SOP") + ".", "success");
+        refreshPolicies();
+      })
+      .catch(function (err) {
+        submitCreateBtn.disabled = false;
+        if (window.toast) window.toast("Create failed: " + err.message, "error");
+      });
+  });
+
+  renderCards();
+})();
+</script>
+{% endblock %}

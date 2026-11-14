@@ -14,7 +14,17 @@ from sqlalchemy import delete, func
 from sqlmodel import Session, select
 
 from app.api.deps import get_ctx, get_session
-from app.models import AuditLog, Interview, Job, JobApplication, JobMatch, Student
+from app.models import (
+    AuditLog,
+    CampusDrive,
+    Interview,
+    Job,
+    JobApplication,
+    JobMatch,
+    PlanItem,
+    Student,
+    UpskillPlan,
+)
 from app.scraper.pipeline import ingest_scraped_jobs
 from app.scraper.service import CompositeJobScraper
 from app.security.ratelimit import check_rate_limit
@@ -285,6 +295,7 @@ def ingest_output_endpoint(
     req: IngestOutputRequest | None = None,
     session: Session = Depends(get_session),
     ctx: Any = Depends(get_ctx),
+    _role: str = Depends(require_role("tpo_admin")),
 ) -> dict[str, Any]:
     """Ingest normalized scraped jobs from output folder JSON into database and vector store."""
     file_path = req.file_path if req and req.file_path else "output/normalized_jobs.json"
@@ -348,7 +359,7 @@ def list_jobs(session: Session = Depends(get_session)):
          "required_skills": j.required_skills, "preferred_skills": j.preferred_skills,
          "job_url": getattr(j, "job_url", "") or "",
          "source": getattr(j, "source", "local") or "local",
-         "scraper_engine": getattr(j, "scraper_engine", "jobspy") or "jobspy",
+         "scraper_engine": getattr(j, "scraper_engine", "") or "",
          "is_fresher": getattr(j, "is_fresher", True)}
         for j in jobs
     ]
@@ -365,7 +376,7 @@ def get_job(job_id: str, session: Session = Depends(get_session)):
             "required_skills": j.required_skills, "preferred_skills": j.preferred_skills,
             "job_url": getattr(j, "job_url", "") or "",
             "source": getattr(j, "source", "local") or "local",
-            "scraper_engine": getattr(j, "scraper_engine", "jobspy") or "jobspy",
+            "scraper_engine": getattr(j, "scraper_engine", "") or "",
             "is_fresher": getattr(j, "is_fresher", True)}
 
 
@@ -376,11 +387,12 @@ def purge_live_jobs_endpoint(
     keep_output: bool = False,
     session: Session = Depends(get_session),
     ctx: Any = Depends(get_ctx),
-    role: str = Depends(require_role("student", "faculty_mentor", "tpo_admin")),
+    role: str = Depends(require_role("tpo_admin")),
 ) -> dict[str, Any]:
     """Purge all live scraped jobs, related records, and vector embeddings.
 
-    Accessible to all roles (student, faculty_mentor, tpo_admin) regardless of persona.
+    Strictly restricted to ``tpo_admin`` (§17.2.B.3) so students/mentors cannot
+    wipe the shared catalog for the cohort.
     Institutional on-campus jobs (Job.source == "local") remain untouched.
     """
     from app.scraper.pipeline import purge_live_jobs
@@ -410,6 +422,16 @@ def purge_live_jobs_endpoint(
     }
 
 
+def is_on_campus_job(job: Job | None) -> bool:
+    """Return True when ``job`` represents an institutional JKLU on-campus placement drive."""
+    if job is None:
+        return False
+    if str(getattr(job, "id", "") or "").startswith("job-ext-"):
+        return False
+    src = (getattr(job, "source", None) or "local").strip().lower()
+    return src in ("", "local", "campus", "campus_drive", "jnf")
+
+
 @router.delete("/api/jobs/{job_id}")
 def delete_job_endpoint(
     job_id: str,
@@ -418,14 +440,18 @@ def delete_job_endpoint(
     ctx: Any = Depends(get_ctx),
     role: str = Depends(require_role("student", "faculty_mentor", "tpo_admin")),
 ):
-    """Remove or dismiss a job (closed, expired, or unwanted). Accessible to all roles."""
+    """Dismiss a job for an authenticated student, or permanently delete (tpo_admin only)."""
     job = session.get(Job, job_id)
     if job is None:
         raise HTTPException(404, "job not found")
 
+    if role != "tpo_admin" and is_on_campus_job(job):
+        raise HTTPException(403, "On-campus institutional jobs cannot be dismissed by students.")
+
     user = get_current_user_optional(request)
-    # If caller is student, dismiss for that student
-    if role == "student" and user and user.student_id:
+    if role == "student":
+        if not (user and user.student_id and user.student_id != "demo-student"):
+            raise HTTPException(403, "Authenticated student identity required to dismiss a job")
         sid = user.student_id
         m = session.exec(select(JobMatch).where(JobMatch.student_id == sid, JobMatch.job_id == job_id)).first()
         if m:
@@ -449,7 +475,10 @@ def delete_job_endpoint(
         session.commit()
         return {"status": "dismissed", "job_id": job_id, "student_id": sid}
 
-    # Faculty mentor or TPO admin: remove permanently from catalog
+    if role != "tpo_admin":
+        raise HTTPException(403, "Only TPO Admin may permanently delete catalog jobs")
+
+    # TPO admin (or open demo default): remove permanently from catalog cleanly
     if hasattr(ctx, "vector_store") and ctx.vector_store:
         try:
             ctx.vector_store.delete("job", job_id)
@@ -458,6 +487,15 @@ def delete_job_endpoint(
     if hasattr(ctx, "job_vectors") and job_id in ctx.job_vectors:
         ctx.job_vectors.pop(job_id, None)
 
+    plan_ids = [
+        p.id for p in session.exec(select(UpskillPlan).where(UpskillPlan.job_id == job_id)).all()
+    ]
+    if plan_ids:
+        session.execute(delete(PlanItem).where(PlanItem.plan_id.in_(plan_ids)))
+        session.execute(delete(UpskillPlan).where(UpskillPlan.id.in_(plan_ids)))
+    for cd in session.exec(select(CampusDrive).where(CampusDrive.job_id == job_id)).all():
+        cd.job_id = None
+        session.add(cd)
     session.execute(delete(JobApplication).where(JobApplication.job_id == job_id))
     session.execute(delete(JobMatch).where(JobMatch.job_id == job_id))
     session.execute(delete(Interview).where(Interview.job_id == job_id))

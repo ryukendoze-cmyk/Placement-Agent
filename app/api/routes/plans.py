@@ -6,10 +6,10 @@ from sqlmodel import Session, select
 from app.api.deps import get_ctx, get_session
 from app.matching.rank import rank_jobs
 from app.models import Course, Job, JobMatch, PlanItem, Student, StudentSkill, UpskillPlan
-from app.plan.planner import build_plan
+from app.plan.planner import _catalog_metadata, build_plan
 from app.plan.prereq import PREREQUISITE_GRAPH
 from app.security.audit import log_audit
-from app.security.rbac import enforce_student_scope
+from app.security.rbac import current_role, enforce_student_scope
 
 router = APIRouter()
 
@@ -17,6 +17,13 @@ router = APIRouter()
 def _serialize_plan(plan: UpskillPlan, db: Session) -> dict:
     items = db.exec(select(PlanItem).where(PlanItem.plan_id == plan.id).order_by(PlanItem.order)).all()
     courses = {c.id: c for c in db.exec(select(Course)).all()}
+    meta = _catalog_metadata()
+    ss_rows = db.exec(select(StudentSkill).where(StudentSkill.student_id == plan.student_id)).all()
+    v_statuses = {
+        r.skill_id: (getattr(r, "verification_status", "claimed") or "claimed")
+        for r in ss_rows
+    }
+    job = db.get(Job, plan.job_id) if plan.job_id else None
     item_skills = {it.skill_id for it in items}
     total_weeks = max((it.week for it in items), default=1)
     weeks: dict[int, dict] = {}
@@ -24,29 +31,40 @@ def _serialize_plan(plan: UpskillPlan, db: Session) -> dict:
         data = weeks.setdefault(it.week, {"total_hours": 0, "items": []})
         data["total_hours"] += it.hours
         data["items"].append(it.id)
+    serialized_items = []
+    for it in items:
+        c = courses.get(it.course_id)
+        c_meta = meta.get(it.course_id, {})
+        serialized_items.append({
+            "id": it.id,
+            "order": it.order,
+            "week": it.week,
+            "skill_id": it.skill_id,
+            "skill_verification_status": v_statuses.get(it.skill_id, "missing"),
+            "prerequisites": [p for p in PREREQUISITE_GRAPH.get(it.skill_id, []) if p in item_skills],
+            "course_id": it.course_id,
+            "course_title": c.title if c is not None else "",
+            "course_url": c.url if c is not None else "",
+            "course_provider": c.provider if c is not None else "",
+            "course_cost": c.cost if c is not None else "free",
+            "cost_tier": c_meta.get("cost_tier") or (c.cost if c is not None else "free"),
+            "url_verified": bool(c_meta.get("url_verified", True)),
+            "key_topics": list(c_meta.get("key_topics") or []),
+            "syllabus": list(c_meta.get("syllabus") or []),
+            "hours": it.hours,
+            "status": it.status,
+        })
     return {
         "id": plan.id,
         "student_id": plan.student_id,
         "job_id": plan.job_id,
+        "job_title": job.title if job is not None else "",
+        "company": job.company if job is not None else "",
         "total_hours": plan.total_hours,
         "total_weeks": total_weeks,
         "narrative": plan.narrative,
         "created_at": plan.created_at.isoformat(),
-        "items": [
-            {
-                "id": it.id,
-                "order": it.order,
-                "week": it.week,
-                "skill_id": it.skill_id,
-                "prerequisites": [p for p in PREREQUISITE_GRAPH.get(it.skill_id, []) if p in item_skills],
-                "course_id": it.course_id,
-                "course_title": courses.get(it.course_id).title if it.course_id in courses else "",
-                "course_url": courses.get(it.course_id).url if it.course_id in courses else "",
-                "hours": it.hours,
-                "status": it.status,
-            }
-            for it in items
-        ],
+        "items": serialized_items,
         "weekly_schedule": [
             {"week": wk, "total_hours": data["total_hours"], "items": data["items"]}
             for wk, data in sorted(weeks.items())
@@ -65,6 +83,7 @@ def create_plan(sid: str, request: Request, payload: dict | None = None,
         raise HTTPException(503, "LLM not configured")
 
     job_id = (payload or {}).get("job_id")
+    include_upgrades = bool((payload or {}).get("include_upgrades", False))
     if job_id:
         job = session.get(Job, job_id)
         if job is None:
@@ -84,6 +103,10 @@ def create_plan(sid: str, request: Request, payload: dict | None = None,
     ss_rows = session.exec(select(StudentSkill).where(StudentSkill.student_id == sid)).all()
     student_skills = {ss.skill_id: list(ss.evidence) for ss in ss_rows}
     levels = {ss.skill_id: ss.level for ss in ss_rows}
+    v_statuses = {
+        ss.skill_id: (getattr(ss, "verification_status", "claimed") or "claimed")
+        for ss in ss_rows
+    }
     sv = ctx.vector_store.get("student", sid)
     if sv is None:
         raise HTTPException(404, "student vector not found; re-upload the resume")
@@ -91,6 +114,7 @@ def create_plan(sid: str, request: Request, payload: dict | None = None,
         [job], sv, student_skills, ctx.embedder, ctx.taxonomy,
         vector_store=ctx.vector_store, job_vec_cache=ctx.job_vectors, top=1,
         levels=levels, student=student,
+        verification_statuses=v_statuses, session=session,
     )
     if not ranked:
         raise HTTPException(500, "failed to score target job")
@@ -103,10 +127,10 @@ def create_plan(sid: str, request: Request, payload: dict | None = None,
         session.delete(prior)
         session.commit()
 
-    from app.security.rbac import current_role
-
-    plan, _items = build_plan(session, sid, job, job_score, llm=ctx.llm,
-                              levels=levels)
+    plan, _items = build_plan(
+        session, sid, job, job_score, llm=ctx.llm,
+        levels=levels, include_upgrades=include_upgrades,
+    )
     log_audit(session, action="plan.generated", entity_type="plan", entity_id=plan.id,
               actor_role=current_role(request),
               detail={"student_id": sid, "job_id": job.id,
@@ -151,14 +175,20 @@ def get_quiz(plan_id: str, item_id: str, request: Request,
     if item is None or item.plan_id != plan_id:
         raise HTTPException(404, "plan item not found")
     course = session.get(Course, item.course_id)
+    meta = _catalog_metadata().get(item.course_id, {})
     questions = generate_quiz(item.skill_id, QUESTIONS_PER_QUIZ)
     return {
         "item_id": item.id,
         "skill_id": item.skill_id,
         "course_title": (course.title if course else ""),
+        "key_topics": list(meta.get("key_topics") or []),
         "passing_score": PASSING_SCORE,
         "questions": [
-            {"id": q["id"], "prompt": q["question"], "difficulty": q.get("difficulty", 0)}
+            {
+                "id": q["id"],
+                "prompt": q.get("question") or q.get("prompt", ""),
+                "difficulty": q.get("difficulty", 0),
+            }
             for q in questions
         ],
     }
@@ -167,11 +197,11 @@ def get_quiz(plan_id: str, item_id: str, request: Request,
 @router.post("/api/plans/{plan_id}/items/{item_id}/verify")
 def verify_quiz(plan_id: str, item_id: str, request: Request, payload: dict | None = None,
                 session: Session = Depends(get_session), ctx=Depends(get_ctx)):
-    """Grade submitted answers. On pass (>=50%) marks item done and triggers the
-    shared closed-loop completion (skill upsert + JobMatch re-rank + progress
-    event). On fail returns feedback without mutating anything."""
+    """Grade submitted answers. On pass (>= PASSING_SCORE) marks item done,
+    promotes StudentSkill verification_status="verified", and triggers shared
+    closed-loop re-ranking. On fail returns feedback without mutating state."""
     from app.plan.planner import apply_plan_item_completion
-    from app.plan.verification import check_answers, generate_quiz
+    from app.plan.verification import PASSING_SCORE, check_answers, generate_quiz
 
     plan = session.get(UpskillPlan, plan_id)
     if plan is None:
@@ -193,24 +223,29 @@ def verify_quiz(plan_id: str, item_id: str, request: Request, payload: dict | No
     if not passed:
         return {
             "item_id": item.id, "passed": False, "score": score,
+            "passing_score": PASSING_SCORE,
             "correct_count": sum(1 for f in feedback if f["correct"]),
             "total_questions": len(feedback),
             "status": item.status, "feedback": feedback,
         }
 
-    result = apply_plan_item_completion(session, ctx, plan, item)
+    result = apply_plan_item_completion(
+        session, ctx, plan, item, verified_via_quiz=True, quiz_score=score
+    )
     log_audit(session, action="plan.quiz_verified", entity_type="plan_item",
-              entity_id=item.id, actor_role="student",
+              entity_id=item.id, actor_role=current_role(request),
               detail={"plan_id": plan.id, "skill_id": item.skill_id,
                       "score": score, "readiness": result.get("readiness")},
               commit=True)
     return {
         "item_id": item.id, "passed": True, "score": score,
+        "passing_score": PASSING_SCORE,
         "correct_count": sum(1 for f in feedback if f["correct"]),
         "total_questions": len(feedback),
         "status": result["status"], "feedback": feedback,
         "closed_loop": {
             "skill_id": result["skill_id"],
+            "verification_status": result.get("verification_status", "verified"),
             "updated_match_score": result["best_match"],
             "readiness": result["readiness"],
             "plan_pct": result["plan_pct"],

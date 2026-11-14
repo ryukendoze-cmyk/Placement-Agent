@@ -428,18 +428,19 @@ def test_approval_reject_is_recorded_and_audited():
 def test_approval_execute_failure_still_audited_and_no_500():
     client = _make_client()
     with client:
-        # proficiency waiver for a non-existent student -> handler 404 but approve returns 200
+        # proficiency waiver for a non-existent student -> atomic rollback + 404/409/400 (zero 500)
         appr_id = _create_approval(client, "proficiency_waiver", "python",
                                    payload={"student_id": "stu-none", "skill_id": "python",
                                             "level": "advanced"})
         r = client.post(f"/api/approvals/{appr_id}/approve", json={"note": "try"})
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert body["status"] == "approved"
-        assert body.get("error")           # failure surfaced, not swallowed
+        assert r.status_code in (400, 409), r.text
         with Session(client.app.state.ctx.engine) as session:
+            req = session.get(ApprovalRequest, appr_id)
+            assert req is not None and req.status == "pending_review", (
+                f"Atomic rollback failed; approval status became {req.status if req else None}"
+            )
             auds = session.exec(select(AuditLog)).all()
-            assert any(a.action == "approval.approved" and a.entity_id == appr_id
+            assert any(a.action == "approval.approve_failed" and a.entity_id == appr_id
                        and "error" in a.detail for a in auds)
 
 

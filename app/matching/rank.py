@@ -25,6 +25,8 @@ def rank_jobs(
     levels: dict[str, str] | None = None,
     student=None,
     ann_pre_filter_k: int | None = None,
+    verification_statuses: dict[str, str] | None = None,
+    session=None,
 ) -> list[tuple[object, JobScore]]:
     """Score and rank jobs for a student, highest score first.
 
@@ -68,6 +70,33 @@ def rank_jobs(
                     break
         candidates = [job for job in jobs if job.id in candidate_ids]
 
+    if verification_statuses is None and (session is not None or student is not None):
+        sid = getattr(student, "id", None)
+        sess = session
+        if sess is None and student is not None:
+            try:
+                from sqlalchemy.orm import object_session
+                sess = object_session(student)
+            except Exception:
+                sess = None
+        if sess is not None and sid:
+            try:
+                from sqlmodel import select
+
+                from ..models import StudentSkill
+
+                with sess.no_autoflush:
+                    ss_rows = sess.exec(
+                        select(StudentSkill).where(StudentSkill.student_id == sid)
+                    ).all()
+                if ss_rows:
+                    verification_statuses = {
+                        r.skill_id: (getattr(r, "verification_status", "claimed") or "claimed")
+                        for r in ss_rows
+                    }
+            except Exception:
+                verification_statuses = None
+
     results: list[tuple[object, JobScore]] = []
     for job in candidates:
         jv = None
@@ -83,7 +112,8 @@ def rank_jobs(
                 job_vec_cache[job.id] = jv
         sim = cosine(student_vec, jv)
         results.append((job, score_job(student_skills, job, sim, taxonomy,
-                                       levels=levels, student=student)))
+                                       levels=levels, student=student,
+                                       verification_statuses=verification_statuses)))
     results.sort(key=lambda pair: -pair[1].score)
     if top is not None:
         results = results[: max(top, 0)]

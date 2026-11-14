@@ -170,13 +170,14 @@ def test_build_plan_tolerates_non_dict_narrative_json(client_engine):
                 db.delete(prior)
                 db.commit()
             plan, _items = build_plan(db, sid, job, job_score, llm=_StubsLLM(payload))
-            # non-dict JSON and dict-without-"narrative" both fall back to raw text
-            assert plan.narrative == payload
-            assert db.get(UpskillPlan, plan.id).narrative == payload  # persisted, not rolled back
+            # non-dict JSON and empty dict fall back cleanly to a grounded deterministic narrative
+            assert isinstance(plan.narrative, str) and len(plan.narrative.strip()) > 10
+            assert plan.narrative != payload
+            assert db.get(UpskillPlan, plan.id).narrative == plan.narrative  # persisted, not rolled back
 
 
 def test_build_plan_skips_gaps_with_no_covering_course(client_engine):
-    """ansible exists in taxonomy but no course covers it -> item skipped, not fabricated."""
+    """rust exists in taxonomy but no course covers it -> item skipped, not fabricated."""
     from app.llm.mock import MockLLM
     from app.matching.engine import JobScore
     from app.models import Course, Job
@@ -186,16 +187,16 @@ def test_build_plan_skips_gaps_with_no_covering_course(client_engine):
         covered = {sk for c in db.exec(select(Course)).all() for sk in c.skill_ids}
         from app.taxonomy.taxonomy import load_taxonomy
         uncovered = [s.id for s in load_taxonomy().all() if s.id not in covered]
-        assert "ansible" in uncovered  # sanity: chosen gap really has no course
+        assert "rust" in uncovered  # sanity: chosen gap really has no course
 
-        job = db.get(Job, "job-016")  # required: terraform/k8s/ci_cd/linux, preferred: ansible/monitoring
+        job = db.get(Job, "job-016")
         job_score = JobScore(
             job_id=job.id, score=50, band="moderate",
             matched_required=[],
             missing_required=[{"skill": "kubernetes", "name": "Kubernetes", "category": "cloud"}],
             matched_preferred=[],
             missing_preferred=[
-                {"skill": "ansible", "name": "Ansible", "category": "cloud"},   # no course
+                {"skill": "rust", "name": "Rust", "category": "languages"},        # no course
                 {"skill": "monitoring", "name": "Monitoring", "category": "ops"},  # covered
             ],
             semantic_sim=0.5,
@@ -203,7 +204,7 @@ def test_build_plan_skips_gaps_with_no_covering_course(client_engine):
         plan, items = build_plan(db, sid, job, job_score, llm=MockLLM())
 
         skill_ids = [i.skill_id for i in items]
-        assert "ansible" not in skill_ids                     # skipped, not fabricated
+        assert "rust" not in skill_ids                        # skipped, not fabricated
         assert "monitoring" in skill_ids                      # covered gap appears
         assert "kubernetes" in skill_ids                      # required gap appears
         assert plan.total_hours == sum(i.hours for i in items)

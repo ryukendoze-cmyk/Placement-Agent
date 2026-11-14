@@ -6,143 +6,234 @@
     <div>
       <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E3F2EA] text-[#164934] text-xs font-semibold mb-2.5">
         <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
-        TPO Command Center
+        {% if role == 'faculty_mentor' %}Department Command Center{% else %}PS-06 Cohort Readiness &amp; Skill-Gap Intelligence Center{% endif %}
       </div>
-      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-[#1A211D] font-serif">TPO Cohort Analytics</h1>
-      <p class="text-sm text-[#57605A] mt-1">Cohort readiness trajectory, skill gap demand vs coverage, and targeted programme interventions.</p>
+      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-[#1A211D] font-serif">
+        {% if role == 'faculty_mentor' %}Department Analytics{% if user_department %} ({{ user_department }}){% endif %}{% else %}TPO Cohort Analytics{% endif %}
+      </h1>
+      <p class="text-sm text-[#57605A] mt-1">
+        {% if role == 'faculty_mentor' %}Department readiness trajectory, verified skill authenticity, SOP-04 readiness gates, and student intervention priorities.{% else %}Cohort readiness trajectory, verified vs claimed skill authenticity, branch &amp; role-track benchmarks, and institutional training priorities.{% endif %}
+      </p>
     </div>
     <div class="flex flex-wrap items-center gap-2.5">
-      <button id="export-csv" type="button"
-              class="btn-secondary-pill text-xs">
+      <a href="/admin/policies" class="btn-secondary-pill text-xs">
+        <span>Placement Policies</span>
+      </a>
+      <button id="export-csv" type="button" class="btn-secondary-pill text-xs">
         <svg class="w-3.5 h-3.5 text-[#57605A] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.5V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
         <span>Export CSV</span>
       </button>
-      <button id="export-json" type="button"
-              class="btn-secondary-pill text-xs">
+      <button id="export-json" type="button" class="btn-secondary-pill text-xs">
         <svg class="w-3.5 h-3.5 text-[#57605A] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5"/></svg>
         <span>Export JSON</span>
       </button>
     </div>
   </div>
 
-  <!-- KPI Strip -->
+  <!-- 6-Card Executive KPI Strip -->
   <div id="kpi-strip" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
     <div class="editorial-card p-5 relative overflow-hidden">
-      <p class="text-[11px] uppercase tracking-widest text-[#767F79] font-bold">Students</p>
-      <p class="text-2xl font-bold mt-1.5 text-[#1A211D] font-serif tabular-nums">{{ kpis.students }}</p>
+      <p class="text-[11px] uppercase tracking-widest text-[#767F79] font-bold">Total Cohort</p>
+      <p class="text-2xl font-bold mt-1.5 text-[#1A211D] font-serif tabular-nums">{{ executive_kpis.total_students }}</p>
+      <p class="text-[11px] text-[#57605A] mt-0.5">{{ executive_kpis.active_branches }} Active Branches</p>
     </div>
     <div class="editorial-card p-5 relative overflow-hidden">
-      <p class="text-[11px] uppercase tracking-widest text-[#767F79] font-bold">Open jobs</p>
-      <p class="text-2xl font-bold mt-1.5 text-[#1A211D] font-serif tabular-nums">{{ kpis.jobs }}</p>
+      <p class="text-[11px] uppercase tracking-widest text-[#767F79] font-bold">Mean Readiness Index</p>
+      <p class="text-2xl font-bold mt-1.5 text-[#1D5C42] font-serif tabular-nums">{{ executive_kpis.mean_readiness_index }}</p>
+      <p class="text-[11px] text-[#57605A] mt-0.5">Top-3 match avg / 100</p>
     </div>
     <div class="editorial-card p-5 relative overflow-hidden">
-      <p class="text-[11px] uppercase tracking-widest text-[#767F79] font-bold">Courses</p>
-      <p class="text-2xl font-bold mt-1.5 text-[#1A211D] font-serif tabular-nums">{{ kpis.courses }}</p>
+      <p class="text-[11px] uppercase tracking-widest text-[#1D5C42] font-bold">Drive-Eligible</p>
+      <p class="text-2xl font-bold mt-1.5 text-[#1D5C42] font-serif tabular-nums">{{ executive_kpis.drive_eligible_pct }}%</p>
+      <p class="text-[11px] text-[#57605A] mt-0.5">{{ executive_kpis.drive_eligible_count }}/{{ executive_kpis.total_students }} students</p>
     </div>
     <div class="editorial-card p-5 relative overflow-hidden">
-      <p class="text-[11px] uppercase tracking-widest text-[#1D5C42] font-bold">Interviews done</p>
-      <p class="text-2xl font-bold mt-1.5 text-[#1D5C42] font-serif tabular-nums">{{ kpis.interviews_done }}</p>
+      <p class="text-[11px] uppercase tracking-widest text-[#767F79] font-bold">Verified Authenticity</p>
+      <p class="text-2xl font-bold mt-1.5 text-[#1A211D] font-serif tabular-nums">{{ executive_kpis.verified_authenticity_pct }}%</p>
+      <p class="text-[11px] text-[#57605A] mt-0.5">{{ executive_kpis.verified_skills_count }}/{{ executive_kpis.total_skills_count }} skills</p>
     </div>
     <div class="editorial-card p-5 relative overflow-hidden">
-      <p class="text-[11px] uppercase tracking-widest text-[#767F79] font-bold">Mean match</p>
-      <p class="text-2xl font-bold mt-1.5 text-[#1A211D] font-serif tabular-nums">{{ kpis.mean_match }}</p>
+      <p class="text-[11px] uppercase tracking-widest text-[#C88A32] font-bold">SOP-04 Mock Pass</p>
+      <p class="text-2xl font-bold mt-1.5 text-[#1A211D] font-serif tabular-nums">{{ executive_kpis.mock_pass_rate_pct }}%</p>
+      <p class="text-[11px] text-[#57605A] mt-0.5">Cutoff >= {{ executive_kpis.min_mock_score }}</p>
     </div>
     <div class="editorial-card p-5 relative overflow-hidden">
-      <p class="text-[11px] uppercase tracking-widest text-[#9E2A20] font-bold">Open approvals</p>
-      <p class="text-2xl font-bold mt-1.5 text-[#9E2A20] font-serif tabular-nums">{{ kpis.open_approvals }}</p>
+      <p class="text-[11px] uppercase tracking-widest text-[#767F79] font-bold">30-Day Plan Completion</p>
+      <p class="text-2xl font-bold mt-1.5 text-[#1A211D] font-serif tabular-nums">{{ executive_kpis.plan_completion_pct }}%</p>
+      <p class="text-[11px] text-[#57605A] mt-0.5">{{ executive_kpis.plan_done_count }}/{{ executive_kpis.plan_total_count }} tasks</p>
     </div>
   </div>
 
-  <!-- Chart Grid -->
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <!-- 2x2 Analytical Charts Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <div class="editorial-card p-6">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h2 class="text-lg font-bold text-[#1A211D] font-serif">Skill gaps</h2>
-          <p class="text-xs text-[#57605A] mt-0.5">Demand &times; under-coverage ranking across cohort</p>
+          <h2 class="text-lg font-bold text-[#1A211D] font-serif">Cohort Skill Demand vs. Verified &amp; Claimed Coverage (%)</h2>
+          <p class="text-xs text-[#57605A] mt-0.5">Role demand %, verified student mastery %, and unverified/missing gap %</p>
         </div>
-        <span class="px-2.5 py-1 rounded-full bg-[#EFECE4] text-[#4A4943] text-xs font-semibold">Top 15</span>
+        <span class="px-2.5 py-1 rounded-full bg-[#EFECE4] text-[#4A4943] text-xs font-semibold">Top 10</span>
       </div>
       <canvas id="gapChart" width="560" height="300"></canvas>
     </div>
+
     <div class="editorial-card p-6">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h2 class="text-lg font-bold text-[#1A211D] font-serif">Readiness distribution</h2>
-          <p class="text-xs text-[#57605A] mt-0.5">Cohort categorization across career readiness tiers</p>
+          <h2 class="text-lg font-bold text-[#1A211D] font-serif">Cohort Readiness Band Distribution</h2>
+          <p class="text-xs text-[#57605A] mt-0.5">Strong (&gt;=75), Moderate (55-74), Developing (35-54), Early (&lt;35)</p>
         </div>
         <span class="px-2.5 py-1 rounded-full bg-[#EFECE4] text-[#4A4943] text-xs font-semibold">All Students</span>
       </div>
-      <canvas id="bandChart" width="300" height="300"></canvas>
+      <canvas id="bandChart" width="320" height="300"></canvas>
+    </div>
+
+    <div class="editorial-card p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-bold text-[#1A211D] font-serif">Branch-Wise Readiness, Academic Standing &amp; Mock Index</h2>
+          <p class="text-xs text-[#57605A] mt-0.5">Mean readiness, CGPA x10, and mock interview index across JKLU branches</p>
+        </div>
+        <span class="px-2.5 py-1 rounded-full bg-[#EFECE4] text-[#4A4943] text-xs font-semibold">Canonical Branches</span>
+      </div>
+      <canvas id="branchReadinessChart" width="560" height="300"></canvas>
+    </div>
+
+    <div class="editorial-card p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-bold text-[#1A211D] font-serif">Readiness &amp; Eligibility Across Career Role Tracks</h2>
+          <p class="text-xs text-[#57605A] mt-0.5">Mean readiness vs cohort drive eligibility across 5 target engineering tracks</p>
+        </div>
+        <span class="px-2.5 py-1 rounded-full bg-[#EFECE4] text-[#4A4943] text-xs font-semibold">Role Tracks</span>
+      </div>
+      <canvas id="roleReadinessChart" width="560" height="300"></canvas>
     </div>
   </div>
 
-  <!-- Course Demand Table -->
-  <div class="editorial-card overflow-hidden">
-    <div class="px-6 py-5 border-b border-[#E5E3DA] flex items-center justify-between">
+  <!-- Student-by-Student Placement Readiness & Verification Matrix -->
+  <div id="cohort-student-matrix-card" class="editorial-card overflow-hidden">
+    <div class="px-6 py-5 border-b border-[#E5E3DA] flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 class="text-lg font-bold text-[#1A211D] font-serif">Most requested courses</h2>
-        <p class="text-xs text-[#57605A] mt-0.5">Curriculum items frequently assigned in personalized plans</p>
+        <h2 class="text-lg font-bold text-[#1A211D] font-serif">Student-by-Student Placement Readiness &amp; Verification Matrix</h2>
+        <p class="text-xs text-[#57605A] mt-0.5">Per-student readiness score, best matched role &amp; tier, skill verification counts, SOP-04 gate status, and top gaps</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <input id="matrix-student-search" type="search" placeholder="Search student or role..."
+               class="text-xs rounded-xl border border-[#D4D1C7] bg-[#FBFBF9] px-3 py-2 text-[#1A211D]">
+        <select id="matrix-branch-filter" class="text-xs rounded-xl border border-[#D4D1C7] bg-[#FBFBF9] px-3 py-2 text-[#1A211D]">
+          <option value="all">All Branches</option>
+          {% for b in executive_kpis.branches %}
+          <option value="{{ b }}">{{ b }}</option>
+          {% endfor %}
+        </select>
+        <select id="matrix-band-filter" class="text-xs rounded-xl border border-[#D4D1C7] bg-[#FBFBF9] px-3 py-2 text-[#1A211D]">
+          <option value="all">All Bands</option>
+          <option value="strong">Strong</option>
+          <option value="moderate">Moderate</option>
+          <option value="developing">Developing</option>
+          <option value="early">Early</option>
+        </select>
       </div>
     </div>
     <div class="overflow-x-auto">
-      <table class="w-full text-sm text-left">
-        <thead class="bg-[#F9F8F4] text-[#57605A] text-[11px] font-bold uppercase tracking-widest border-b border-[#E5E3DA]">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-[#F9F8F4] text-[#57605A] text-[10px] font-bold uppercase tracking-widest border-b border-[#E5E3DA]">
           <tr>
-            <th class="px-6 py-3.5">Course</th>
-            <th class="px-6 py-3.5">Provider</th>
-            <th class="px-6 py-3.5 text-right">Student Requests</th>
+            <th class="px-4 py-3">Student</th>
+            <th class="px-4 py-3">CGPA / Backlogs</th>
+            <th class="px-4 py-3">Readiness</th>
+            <th class="px-4 py-3">Best Matched Role</th>
+            <th class="px-4 py-3">Skills (V / C / U)</th>
+            <th class="px-4 py-3">SOP-04 Mock</th>
+            <th class="px-4 py-3">Plan %</th>
+            <th class="px-4 py-3">Top Missing Skills</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-[#EDEBE3]">
-          {% for c in top_requested_courses %}
-          <tr class="hover:bg-[#F9F8F4] transition-colors">
-            <td class="px-6 py-3.5 font-semibold text-[#1A211D]">{{ c.title }}</td>
-            <td class="px-6 py-3.5 text-[#57605A]">{{ c.provider }}</td>
-            <td class="px-6 py-3.5 text-right font-mono font-bold text-[#1D5C42] tabular-nums">{{ c.count }}</td>
+        <tbody id="student-matrix-tbody" class="divide-y divide-[#EDEBE3]">
+          {% for st in student_matrix %}
+          <tr class="student-matrix-row hover:bg-[#F9F8F4] transition-colors"
+              data-name="{{ st.name|lower }}"
+              data-role="{{ st.best_role|lower }}"
+              data-branch="{{ st.branch }}"
+              data-band="{{ st.readiness_band }}">
+            <td class="px-4 py-3">
+              <a href="/students/{{ st.student_id }}" class="font-semibold text-[#1D5C42] hover:underline">{{ st.name }}</a>
+              <p class="text-[11px] text-[#767F79]">{{ st.branch }} | Year {{ st.year }}</p>
+            </td>
+            <td class="px-4 py-3 font-mono text-[#1A211D]">
+              {{ "%.2f"|format(st.gpa) }} / {{ st.backlogs }} bl
+            </td>
+            <td class="px-4 py-3">
+              <span class="font-mono font-bold text-[#1A211D]">{{ st.readiness_score }}</span>
+              <span class="ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#EFECE4] text-[#4A4943]">{{ st.readiness_band }}</span>
+            </td>
+            <td class="px-4 py-3">
+              <p class="font-semibold text-[#1A211D]">{{ st.best_role }}</p>
+              <p class="text-[11px] text-[#767F79]">{{ st.best_company }} ({{ st.best_tier }})</p>
+            </td>
+            <td class="px-4 py-3 font-mono">
+              <span class="text-[#1D5C42] font-bold">{{ st.verified_skills }}</span> /
+              <span class="text-[#57605A]">{{ st.claimed_skills }}</span> /
+              <span class="text-[#9E2A20]">{{ st.unverified_skills }}</span>
+            </td>
+            <td class="px-4 py-3">
+              {% if st.mock_score is not none %}
+                <span class="font-mono font-bold">{{ st.mock_score }}</span>
+              {% else %}
+                <span class="text-[#767F79]">--</span>
+              {% endif %}
+              <span class="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase {% if st.sop04_passed %}bg-[#E3F2EA] text-[#164934]{% else %}bg-[#FDF3F2] text-[#9E2A20]{% endif %}">
+                {% if st.sop04_passed %}Pass{% else %}Pending{% endif %}
+              </span>
+            </td>
+            <td class="px-4 py-3 font-mono font-semibold text-[#1A211D]">{{ st.plan_completion_pct }}%</td>
+            <td class="px-4 py-3 text-[#57605A]">
+              {% if st.top_missing_skills %}
+                {{ st.top_missing_skills|join(", ") }}
+              {% else %}
+                None
+              {% endif %}
+            </td>
           </tr>
           {% else %}
-          <tr><td colspan="3" class="px-6 py-8 text-center text-[#767F79] text-xs">No course requests recorded yet.</td></tr>
+          <tr><td colspan="8" class="px-6 py-8 text-center text-[#767F79] text-xs">No student records available yet.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- Programme Recommendations & Bootcamp Intervention -->
-  <div class="editorial-card overflow-hidden">
-    <div class="px-6 py-5 border-b border-[#E5E3DA] flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h2 class="text-lg font-bold text-[#1A211D] font-serif">Programme recommendations</h2>
-        <p class="text-xs text-[#57605A] mt-0.5">Automated high-impact cohort interventions targeting top aggregate skill gaps</p>
-      </div>
-      <button id="launch-bootcamp" type="button"
-              class="btn-primary-pill text-xs">
-        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-        <span>Launch Bootcamp (HITL)</span>
-      </button>
+  <!-- Cohort Skill-Gap & Institutional Training Priorities Matrix -->
+  <div id="cohort-skill-intervention-card" class="editorial-card overflow-hidden">
+    <div class="px-6 py-5 border-b border-[#E5E3DA]">
+      <h2 class="text-lg font-bold text-[#1A211D] font-serif">Cohort Skill-Gap &amp; Institutional Training Priorities Matrix</h2>
+      <p class="text-xs text-[#57605A] mt-0.5">Target role demand %, verified vs claimed student mastery, students blocked, and institutional lab/workshop intervention type</p>
     </div>
     <div class="overflow-x-auto">
-      <table class="w-full text-sm text-left">
-        <thead class="bg-[#F9F8F4] text-[#57605A] text-[11px] font-bold uppercase tracking-widest border-b border-[#E5E3DA]">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-[#F9F8F4] text-[#57605A] text-[10px] font-bold uppercase tracking-widest border-b border-[#E5E3DA]">
           <tr>
-            <th class="px-6 py-3.5">Skill Target</th>
-            <th class="px-6 py-3.5">Recommended Course</th>
-            <th class="px-6 py-3.5">Provider</th>
+            <th class="px-5 py-3">Skill</th>
+            <th class="px-5 py-3">Target Role Demand %</th>
+            <th class="px-5 py-3">Verified %</th>
+            <th class="px-5 py-3">Claimed %</th>
+            <th class="px-5 py-3">Students Blocked</th>
+            <th class="px-5 py-3">Institutional Training Intervention</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-[#EDEBE3]">
-          {% for r in programme_recommendations %}
+          {% for g in enriched_skill_gaps[:12] %}
           <tr class="hover:bg-[#F9F8F4] transition-colors">
-            <td class="px-6 py-3.5 font-semibold text-[#1A211D]">
-              {{ r.name }}
-              <span class="text-xs font-mono text-[#767F79] ml-1.5">(gap {{ r.gap_score }})</span>
-            </td>
-            <td class="px-6 py-3.5 text-[#3B423E]">{{ r.course_title }}</td>
-            <td class="px-6 py-3.5 text-[#57605A]">{{ r.provider }}</td>
+            <td class="px-5 py-3 font-semibold text-[#1A211D]">{{ g.name }}</td>
+            <td class="px-5 py-3 font-mono text-[#1A211D]">{{ g.role_demand_pct }}% ({{ g.roles_demanding_count }})</td>
+            <td class="px-5 py-3 font-mono font-bold text-[#1D5C42]">{{ g.verified_pct }}%</td>
+            <td class="px-5 py-3 font-mono text-[#57605A]">{{ g.claimed_pct }}%</td>
+            <td class="px-5 py-3 font-mono font-bold text-[#9E2A20]">{{ g.students_blocked }}</td>
+            <td class="px-5 py-3 text-[#3B423E]">{{ g.intervention_type }}</td>
           </tr>
           {% else %}
-          <tr><td colspan="3" class="px-6 py-8 text-center text-[#767F79] text-xs">No recommendations recorded yet.</td></tr>
+          <tr><td colspan="6" class="px-6 py-8 text-center text-[#767F79] text-xs">No skill gap data computed yet.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -156,7 +247,6 @@
       <p class="text-xs text-[#57605A] mt-0.5">Model a prospective campus drive, see who is eligible now, the SOP bottlenecks, and the ROI of a targeted bootcamp intervention.</p>
     </div>
     <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Drive parameters -->
       <div class="lg:col-span-1 space-y-3.5">
         <div>
           <label class="block text-xs font-semibold text-[#4A4943] mb-1">Drive title</label>
@@ -185,13 +275,16 @@
           <input id="sim-skills" type="text" value="python, machine_learning"
                  class="w-full text-xs rounded-xl border border-[#D4D1C7] bg-[#FBFBF9] px-3.5 py-2.5 text-[#1A211D] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]">
         </div>
-        <button id="sim-run" type="button"
-                class="btn-primary-pill text-xs w-full sm:w-auto">
+        <div>
+          <label class="block text-xs font-semibold text-[#4A4943] mb-1">Allowed branches (optional)</label>
+          <input id="sim-branches" type="text" value="" placeholder="All branches (or e.g. CSE, AI&DS, ECE)"
+                 class="w-full text-xs rounded-xl border border-[#D4D1C7] bg-[#FBFBF9] px-3.5 py-2.5 text-[#1A211D] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]">
+        </div>
+        <button id="sim-run" type="button" class="btn-primary-pill text-xs w-full sm:w-auto">
           <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
           <span>Run Simulation</span>
         </button>
       </div>
-      <!-- Results -->
       <div class="lg:col-span-2 space-y-4">
         <div id="sim-summary" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
         <div id="sim-bottleneck" class="hidden"></div>
@@ -245,57 +338,158 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="/static/vendor/chart.umd.min.js"></script>
 <script>
 const DATA = {{ analytics|tojson }};
 (function () {
   if (!DATA) return;
-  const gaps = (DATA.skill_gap_report || []).slice(0, 15);
-  if (document.getElementById("gapChart") && gaps.length) {
+  var gaps = (DATA.enriched_skill_gaps || []).slice(0, 10);
+  if (document.getElementById("gapChart") && gaps.length && typeof Chart !== "undefined") {
     new Chart(document.getElementById("gapChart"), {
       type: "bar",
       data: {
         labels: gaps.map(function (r) { return r.name; }),
+        datasets: [
+          {
+            label: "Role Demand %",
+            data: gaps.map(function (r) { return r.role_demand_pct; }),
+            backgroundColor: "#3B423E",
+            borderRadius: 4
+          },
+          {
+            label: "Verified Mastery %",
+            data: gaps.map(function (r) { return r.verified_pct; }),
+            backgroundColor: "#1D5C42",
+            borderRadius: 4
+          },
+          {
+            label: "Unverified / Missing Gap %",
+            data: gaps.map(function (r) { return r.unverified_or_missing_pct; }),
+            backgroundColor: "#C88A32",
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        plugins: { legend: { position: "bottom" } },
+        scales: {
+          x: { beginAtZero: true, max: 100, grid: { color: "#EDEBE3" } },
+          y: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  var dist = DATA.readiness_distribution || {};
+  var keys = ["strong", "moderate", "developing", "early"];
+  var labels = ["Strong (>=75)", "Moderate (55-74)", "Developing (35-54)", "Early (<35)"];
+  if (document.getElementById("bandChart") && typeof Chart !== "undefined") {
+    new Chart(document.getElementById("bandChart"), {
+      type: "doughnut",
+      data: {
+        labels: labels,
         datasets: [{
-          label: "gap score (demand x under-coverage)",
-          data: gaps.map(function (r) { return r.gap_score; }),
-          backgroundColor: "#1D5C42",
-          borderRadius: 6
+          data: keys.map(function (k) { return dist[k] || 0; }),
+          backgroundColor: ["#1D5C42", "#2E7D5B", "#C88A32", "#9E2A20"]
         }]
       },
       options: {
         responsive: true,
-        plugins: {
-          legend: { display: false }
-        },
+        plugins: { legend: { position: "bottom" } }
+      }
+    });
+  }
+
+  var branchRows = DATA.branch_readiness || [];
+  if (document.getElementById("branchReadinessChart") && branchRows.length && typeof Chart !== "undefined") {
+    new Chart(document.getElementById("branchReadinessChart"), {
+      type: "bar",
+      data: {
+        labels: branchRows.map(function (b) { return b.branch; }),
+        datasets: [
+          {
+            label: "Mean Readiness",
+            data: branchRows.map(function (b) { return b.mean_readiness; }),
+            backgroundColor: "#1D5C42",
+            borderRadius: 4
+          },
+          {
+            label: "CGPA x10",
+            data: branchRows.map(function (b) { return b.cgpa_x10; }),
+            backgroundColor: "#57605A",
+            borderRadius: 4
+          },
+          {
+            label: "Mock Interview Index",
+            data: branchRows.map(function (b) { return b.mock_interview_index; }),
+            backgroundColor: "#C88A32",
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: "bottom" } },
         scales: {
-          y: { beginAtZero: true, grid: { color: "#EDEBE3" } },
+          y: { beginAtZero: true, max: 100, grid: { color: "#EDEBE3" } },
           x: { grid: { display: false } }
         }
       }
     });
   }
 
-  const dist = DATA.readiness_distribution || {};
-  const keys = Object.keys(dist);
-  if (document.getElementById("bandChart") && keys.length) {
-    new Chart(document.getElementById("bandChart"), {
-      type: "doughnut",
+  var roleRows = DATA.role_track_readiness || [];
+  if (document.getElementById("roleReadinessChart") && roleRows.length && typeof Chart !== "undefined") {
+    new Chart(document.getElementById("roleReadinessChart"), {
+      type: "bar",
       data: {
-        labels: keys,
-        datasets: [{
-          data: keys.map(function (k) { return dist[k]; }),
-          backgroundColor: ["#1D5C42", "#2E7D5B", "#C88A32", "#9E2A20"]
-        }]
+        labels: roleRows.map(function (r) { return r.track; }),
+        datasets: [
+          {
+            label: "Mean Readiness",
+            data: roleRows.map(function (r) { return r.mean_readiness; }),
+            backgroundColor: "#1D5C42",
+            borderRadius: 4
+          },
+          {
+            label: "Eligible Students %",
+            data: roleRows.map(function (r) { return r.eligible_pct; }),
+            backgroundColor: "#2E7D5B",
+            borderRadius: 4
+          }
+        ]
       },
       options: {
         responsive: true,
-        plugins: {
-          legend: { position: "bottom" }
+        plugins: { legend: { position: "bottom" } },
+        scales: {
+          y: { beginAtZero: true, max: 100, grid: { color: "#EDEBE3" } },
+          x: { grid: { display: false } }
         }
       }
     });
   }
+
+  // Student Readiness Matrix live filtering
+  var mSearch = document.getElementById("matrix-student-search");
+  var mBranch = document.getElementById("matrix-branch-filter");
+  var mBand = document.getElementById("matrix-band-filter");
+  function filterMatrixRows() {
+    var q = ((mSearch && mSearch.value) || "").trim().toLowerCase();
+    var br = (mBranch && mBranch.value) || "all";
+    var bd = (mBand && mBand.value) || "all";
+    document.querySelectorAll(".student-matrix-row").forEach(function (tr) {
+      var okQ = !q || (tr.dataset.name || "").indexOf(q) !== -1 || (tr.dataset.role || "").indexOf(q) !== -1;
+      var okB = br === "all" || tr.dataset.branch === br;
+      var okBd = bd === "all" || tr.dataset.band === bd;
+      tr.classList.toggle("hidden", !(okQ && okB && okBd));
+    });
+  }
+  [mSearch, mBranch, mBand].forEach(function (el) {
+    if (el) el.addEventListener(el.tagName === "INPUT" ? "input" : "change", filterMatrixRows);
+  });
 
   function download(name, mime, text) {
     var blob = new Blob([text], { type: mime });
@@ -309,8 +503,8 @@ const DATA = {{ analytics|tojson }};
 
   var csvBtn = document.getElementById("export-csv");
   if (csvBtn) csvBtn.addEventListener("click", function () {
-    var gaps = (DATA.skill_gap_report || []);
-    var rows = [["skill", "gap_score"]].concat(gaps.map(function (g) { return [g.name, g.gap_score]; }));
+    var list = (DATA.skill_gap_report || []);
+    var rows = [["skill", "gap_score"]].concat(list.map(function (g) { return [g.name, g.gap_score]; }));
     download("skill-gaps.csv", "text/csv",
       rows.map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(","); }).join("\n"));
     if (window.toast) window.toast("Exported skill gaps as CSV.", "success");
@@ -322,31 +516,6 @@ const DATA = {{ analytics|tojson }};
     if (window.toast) window.toast("Exported full analytics as JSON.", "success");
   });
 
-  var boot = document.getElementById("launch-bootcamp");
-  if (boot) boot.addEventListener("click", function () {
-    var rec = (DATA.programme_recommendations || [])[0];
-    if (!rec) { if (window.toast) window.toast("No recommendation to launch yet.", "info"); return; }
-    var skill = rec.skill || rec.skill_id || rec.name;
-    boot.disabled = true;
-    fetch("/api/approvals", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        kind: "cohort_bootcamp_publish",
-        target_id: skill,
-        title: "Cohort bridge bootcamp: " + (rec.name || skill),
-        summary: "Launch a bridge bootcamp for the top cohort skill gap (" + (rec.gap_score || 0) + ").",
-        payload: { skill_id: skill, course_id: rec.course_id || "" }
-      })
-    }).then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      boot.disabled = false;
-      if (window.toast) window.toast("Bootcamp proposal queued for HITL approval.", "success");
-    }).catch(function (e) {
-      boot.disabled = false;
-      if (window.toast) window.toast("Could not queue bootcamp: " + e.message, "error");
-    });
-  });
-
   // ---- M20: Placement Drive Eligibility Simulator ----
   var simRun = document.getElementById("sim-run");
   var simSummary = document.getElementById("sim-summary");
@@ -354,6 +523,13 @@ const DATA = {{ analytics|tojson }};
   var simMissing = document.getElementById("sim-missing");
   var simRoi = document.getElementById("sim-roi");
   var simEmpty = document.getElementById("sim-empty");
+
+  function formatTierLabel(tier) {
+    var key = String(tier || "standard").toLowerCase();
+    var map = { super_dream: "Super Dream", dream: "Dream", standard: "Standard" };
+    if (map[key]) return map[key];
+    return key.replace(/_/g, " ").replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+  }
 
   function simStat(label, value, accent) {
     var box = document.createElement("div");
@@ -366,78 +542,131 @@ const DATA = {{ analytics|tojson }};
     p1.textContent = label;
     box.appendChild(p1);
     var p2 = document.createElement("p");
-    p2.className = "text-2xl font-bold mt-1 text-[#1A211D] font-serif tabular-nums";
+    p2.className = "text-lg sm:text-xl font-bold mt-1 text-[#1A211D] font-serif tabular-nums leading-tight break-words";
     p2.textContent = String(value);
     box.appendChild(p2);
     return box;
   }
 
+  var SOP_BOTTLENECK_META = {
+    gpa_cutoff: { label: "Academic CGPA & Backlogs", sop: "SOP-03" },
+    branch_restriction: { label: "Branch Restriction", sop: "SOP-09" },
+    tier_mock_gate: { label: "Mock Interview Gate", sop: "SOP-04" },
+    skill_readiness: { label: "Required Skill Coverage", sop: "SOP-05" }
+  };
+
   function renderSim(j) {
+    var total = Number(j.total_students || 0);
+    var eligNow = Number(j.eligible_now_count || 0);
+    var nowPct = Number(j.eligible_now_pct != null ? j.eligible_now_pct : (total ? Math.round((1000 * eligNow) / total) / 10 : 0));
+
     simSummary.innerHTML = "";
     simSummary.classList.remove("hidden");
     simSummary.classList.add("grid");
-    simSummary.appendChild(simStat("Tier", j.tier, "bg-[#1D5C42]"));
-    simSummary.appendChild(simStat("Cohort", j.total_students, "bg-[#2E7D5B]"));
-    simSummary.appendChild(simStat("Eligible now", j.eligible_now_count, "bg-[#1D5C42]"));
-    simSummary.appendChild(simStat("Ready %", j.eligible_now_pct, "bg-[#C88A32]"));
+    simSummary.appendChild(simStat("Tier", formatTierLabel(j.tier), "bg-[#1D5C42]"));
+    simSummary.appendChild(simStat("Cohort", total, "bg-[#2E7D5B]"));
+    simSummary.appendChild(simStat("Eligible now", eligNow + " / " + total, "bg-[#1D5C42]"));
+    simSummary.appendChild(simStat("Ready %", nowPct + "%", "bg-[#C88A32]"));
 
     var bb = j.bottleneck_breakdown || {};
     simBottleneck.classList.remove("hidden");
     simBottleneck.innerHTML = "";
     var bh = document.createElement("p");
     bh.className = "text-[11px] font-bold uppercase tracking-widest text-[#57605A] mb-2";
-    bh.textContent = "SOP bottlenecks";
+    bh.textContent = "SOP gate bottleneck breakdown";
     simBottleneck.appendChild(bh);
-    var brow = document.createElement("div");
-    brow.className = "flex flex-wrap gap-2";
+    var bgrid = document.createElement("div");
+    bgrid.className = "grid grid-cols-1 sm:grid-cols-2 gap-2.5";
+    var bbKeys = ["gpa_cutoff", "branch_restriction", "tier_mock_gate", "skill_readiness"];
     Object.keys(bb).forEach(function (k) {
-      var chip = document.createElement("span");
-      chip.className = "px-3 py-1 rounded-full bg-[#EFECE4] text-xs font-mono text-[#3B423E]";
-      chip.textContent = k + ": " + bb[k];
-      brow.appendChild(chip);
+      if (bbKeys.indexOf(k) === -1) bbKeys.push(k);
     });
-    simBottleneck.appendChild(brow);
+    bbKeys.forEach(function (k) {
+      if (!(k in bb)) return;
+      var cnt = Number(bb[k] || 0);
+      var meta = SOP_BOTTLENECK_META[k] || { label: k.replace(/_/g, " "), sop: "SOP" };
+      var card = document.createElement("div");
+      card.className = "rounded-xl border px-3.5 py-2.5 flex items-center justify-between gap-2 " +
+        (cnt > 0 ? "bg-[#FDF6EC] border-[#F0D9B5]" : "bg-[#F9F8F4] border-[#E5E3DA]");
+      var left = document.createElement("div");
+      var title = document.createElement("p");
+      title.className = "text-xs font-semibold text-[#1A211D]";
+      title.textContent = meta.label;
+      var sub = document.createElement("span");
+      sub.className = "inline-block mt-0.5 px-2 py-0.5 rounded-full bg-[#EFECE4] text-[10px] font-mono font-bold text-[#4A4943]";
+      sub.textContent = meta.sop;
+      left.appendChild(title);
+      left.appendChild(sub);
+      var right = document.createElement("span");
+      right.className = "text-xs font-mono font-bold " + (cnt > 0 ? "text-[#9A5B13]" : "text-[#57605A]");
+      right.textContent = cnt + (cnt === 1 ? " student blocked" : " students blocked");
+      card.appendChild(left);
+      card.appendChild(right);
+      bgrid.appendChild(card);
+    });
+    simBottleneck.appendChild(bgrid);
 
     var tms = j.top_missing_skills || [];
-    simMissing.classList.remove("hidden");
     simMissing.innerHTML = "";
     if (tms.length) {
+      simMissing.classList.remove("hidden");
       var mh = document.createElement("p");
       mh.className = "text-[11px] font-bold uppercase tracking-widest text-[#57605A] mb-2";
-      mh.textContent = "Top missing skills";
+      mh.textContent = "Top missing skills & recommended modules";
       simMissing.appendChild(mh);
       var mlist = document.createElement("ul");
-      mlist.className = "space-y-1.5 text-xs text-[#1A211D]";
+      mlist.className = "space-y-2 text-xs text-[#1A211D]";
       tms.forEach(function (s) {
         var li = document.createElement("li");
-        li.className = "flex items-center justify-between bg-[#F9F8F4] rounded-xl px-3.5 py-2.5 border border-[#E5E3DA]";
-        var left = document.createElement("span");
-        left.className = "font-semibold";
-        left.textContent = s.name;
+        li.className = "flex flex-wrap items-center justify-between gap-2 bg-[#F9F8F4] rounded-xl px-3.5 py-2.5 border border-[#E5E3DA]";
+        var leftWrap = document.createElement("div");
+        leftWrap.className = "flex items-center gap-2";
+        var skillPill = document.createElement("span");
+        skillPill.className = "px-2.5 py-0.5 rounded-full bg-[#1A211D] text-white text-[11px] font-semibold";
+        skillPill.textContent = s.name || s.skill_id;
+        var missBadge = document.createElement("span");
+        missBadge.className = "px-2 py-0.5 rounded-full bg-[#FDF3F2] border border-[#F5D0CC] text-[11px] font-mono text-[#9E2A20]";
+        missBadge.textContent = s.students_missing + " students missing";
+        leftWrap.appendChild(skillPill);
+        leftWrap.appendChild(missBadge);
         var right = document.createElement("span");
-        right.className = "font-mono text-[#57605A]";
-        right.textContent = s.students_missing + " missing" +
-          (s.recommended_course ? " | " + s.recommended_course.title : "");
-        li.appendChild(left);
+        right.className = "text-[11px] font-mono text-[#3B423E]";
+        if (s.recommended_course) {
+          right.textContent = s.recommended_course.title + " (" + s.recommended_course.hours + " hrs)";
+        } else {
+          right.textContent = "Targeted cohort workshop";
+        }
+        li.appendChild(leftWrap);
         li.appendChild(right);
         mlist.appendChild(li);
       });
       simMissing.appendChild(mlist);
+    } else {
+      simMissing.classList.add("hidden");
     }
 
     var roi = j.bootcamp_intervention_roi || {};
+    var projCount = Number(roi.projected_eligible_count || 0);
+    var unlocked = Number(roi.unlocked_students_count || 0);
+    var totalHours = Number(roi.total_bootcamp_hours || 0);
+    var projPct = total ? Math.round((1000 * projCount) / total) / 10 : 0;
+
     simRoi.classList.remove("hidden");
     simRoi.innerHTML = "";
     var rh = document.createElement("p");
     rh.className = "text-[11px] font-bold uppercase tracking-widest text-[#1D5C42] mb-2";
     rh.textContent = "Bootcamp intervention ROI";
     simRoi.appendChild(rh);
+
     var rbox = document.createElement("div");
-    rbox.className = "bg-[#EBF4EF] border border-[#CFE4D8] rounded-2xl p-4 flex flex-wrap gap-6 text-sm text-[#1A211D]";
+    rbox.className = "bg-[#EBF4EF] border border-[#CFE4D8] rounded-2xl p-4 space-y-4 text-sm text-[#1A211D]";
+
+    var metricsGrid = document.createElement("div");
+    metricsGrid.className = "grid grid-cols-1 sm:grid-cols-3 gap-4";
     var pairs = [
-      ["Projected eligible", roi.projected_eligible_count],
-      ["Unlocked by bootcamp", roi.unlocked_students_count],
-      ["Bootcamp hours", roi.total_bootcamp_hours]
+      ["Projected Eligible", projCount + " (" + projPct + "%)"],
+      ["Unlocked by Intervention", "+" + unlocked + (unlocked === 1 ? " student" : " students")],
+      ["Training Effort", totalHours + " hrs"]
     ];
     pairs.forEach(function (p) {
       var cell = document.createElement("div");
@@ -445,29 +674,100 @@ const DATA = {{ analytics|tojson }};
       l.className = "text-[11px] uppercase tracking-widest text-[#4E645A] font-bold";
       l.textContent = p[0];
       var v = document.createElement("p");
-      v.className = "text-xl font-bold text-[#1D5C42] font-serif tabular-nums mt-0.5";
+      v.className = "text-lg sm:text-xl font-bold text-[#1D5C42] font-serif tabular-nums mt-0.5";
       v.textContent = String(p[1]);
       cell.appendChild(l);
       cell.appendChild(v);
-      rbox.appendChild(cell);
+      metricsGrid.appendChild(cell);
     });
-    simRoi.appendChild(rbox);
+    rbox.appendChild(metricsGrid);
 
+    // Dual-progress bar comparing Current vs Projected Post-Intervention Readiness %
+    var progWrap = document.createElement("div");
+    progWrap.className = "space-y-2 pt-2 border-t border-[#CFE4D8]";
+    var progRows = [
+      { label: "Current readiness", pct: nowPct, barCls: "bg-[#C88A32]" },
+      { label: "Projected post-intervention", pct: projPct, barCls: "bg-[#1D5C42]" }
+    ];
+    progRows.forEach(function (pr) {
+      var row = document.createElement("div");
+      row.className = "space-y-1";
+      var head = document.createElement("div");
+      head.className = "flex items-center justify-between text-[11px] font-semibold text-[#3B423E]";
+      var lbl = document.createElement("span");
+      lbl.textContent = pr.label;
+      var pctLbl = document.createElement("span");
+      pctLbl.className = "font-mono";
+      pctLbl.textContent = pr.pct + "%";
+      head.appendChild(lbl);
+      head.appendChild(pctLbl);
+      var track = document.createElement("div");
+      track.className = "w-full h-2 rounded-full bg-white/80 overflow-hidden border border-[#D4E6DC]";
+      var fill = document.createElement("div");
+      fill.className = "h-full rounded-full " + pr.barCls;
+      fill.style.width = Math.min(100, Math.max(0, pr.pct)) + "%";
+      track.appendChild(fill);
+      row.appendChild(head);
+      row.appendChild(track);
+      progWrap.appendChild(row);
+    });
+    rbox.appendChild(progWrap);
+
+    // Eligible candidates summary or actionable guidance
+    var eligList = Array.isArray(j.eligible_students) ? j.eligible_students : [];
+    var candWrap = document.createElement("div");
+    candWrap.className = "pt-2 border-t border-[#CFE4D8]";
+    if (eligList.length) {
+      var ch = document.createElement("p");
+      ch.className = "text-[11px] font-bold uppercase tracking-widest text-[#4E645A] mb-1.5";
+      ch.textContent = "Eligible candidates (" + eligList.length + ")";
+      candWrap.appendChild(ch);
+      var pills = document.createElement("div");
+      pills.className = "flex flex-wrap gap-1.5";
+      eligList.slice(0, 6).forEach(function (st) {
+        var chip = document.createElement("span");
+        chip.className = "px-2.5 py-1 rounded-full bg-white border border-[#CFE4D8] text-[11px] font-medium text-[#1A211D]";
+        chip.textContent = (st.name || st.id) + " (" + (st.branch || "") + ", " + (st.gpa != null ? st.gpa : "-") + ")";
+        pills.appendChild(chip);
+      });
+      if (eligList.length > 6) {
+        var more = document.createElement("span");
+        more.className = "px-2.5 py-1 rounded-full bg-[#1D5C42] text-white text-[11px] font-mono font-semibold";
+        more.textContent = "+" + (eligList.length - 6) + " more";
+        pills.appendChild(more);
+      }
+      candWrap.appendChild(pills);
+    } else {
+      var note = document.createElement("p");
+      note.className = "text-xs text-[#4E645A]";
+      if (unlocked > 0) {
+        note.textContent = "Zero candidates pass all gates today; a " + totalHours + "-hour targeted bootcamp unlocks " + unlocked + " additional candidates for this drive.";
+      } else {
+        note.textContent = "No candidates currently qualify and hard SOP gates (CGPA/backlogs or allowed branches) prevent immediate bootcamp unlock. Consider widening GPA, branch filter, or salary tier.";
+      }
+      candWrap.appendChild(note);
+    }
+    rbox.appendChild(candWrap);
+
+    simRoi.appendChild(rbox);
     simEmpty.classList.add("hidden");
   }
 
-  if (simRun) simRun.addEventListener("click", function () {
-    simRun.disabled = true;
+  function runSim(silent) {
+    if (simRun) simRun.disabled = true;
     var skills = (document.getElementById("sim-skills").value || "")
       .split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+    var brEl = document.getElementById("sim-branches");
+    var branches = brEl ? (brEl.value || "").split(",").map(function (s) { return s.trim(); }).filter(Boolean) : [];
+    var salMin = parseInt(document.getElementById("sim-sal-min").value, 10);
+    var salMax = parseInt(document.getElementById("sim-sal-max").value, 10);
+    var minGpa = parseFloat(document.getElementById("sim-gpa").value);
     var body = {
       title: document.getElementById("sim-title").value || "Prospective Campus Drive",
-      salary_lpa: [
-        parseInt(document.getElementById("sim-sal-min").value, 10) || 12,
-        parseInt(document.getElementById("sim-sal-max").value, 10) || 16
-      ],
-      min_gpa: parseFloat(document.getElementById("sim-gpa").value) || 7.0,
-      required_skills: skills
+      salary_lpa: [isNaN(salMin) ? 12 : salMin, isNaN(salMax) ? 16 : salMax],
+      min_gpa: isNaN(minGpa) ? 7.0 : minGpa,
+      required_skills: skills,
+      allowed_branches: branches
     };
     fetch("/api/admin/simulate-drive", {
       method: "POST",
@@ -477,54 +777,93 @@ const DATA = {{ analytics|tojson }};
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function (j) {
-      simRun.disabled = false;
+      if (simRun) simRun.disabled = false;
       renderSim(j);
-      if (window.toast) window.toast("Simulation complete: " + j.eligible_now_count + "/" + j.total_students + " eligible now.", "success");
+      if (!silent && window.toast) window.toast("Simulation complete: " + j.eligible_now_count + "/" + j.total_students + " eligible now.", "success");
     }).catch(function (e) {
-      simRun.disabled = false;
-      if (window.toast) window.toast("Simulation failed: " + e.message, "error");
+      if (simRun) simRun.disabled = false;
+      if (!silent && window.toast) window.toast("Simulation failed: " + e.message, "error");
     });
-  });
+  }
+
+  if (simRun) simRun.addEventListener("click", function () { runSim(false); });
+  if (simRun) runSim(true);
 
   function loadEvalAndTelemetry() {
     var btn = document.getElementById("run-eval-benchmark-btn");
+    var userRole = "{{ role }}";
     if (btn) btn.disabled = true;
     fetch("/api/admin/eval-benchmark")
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (b) {
         if (btn) btn.disabled = false;
         if (!b) return;
-        var rag = b.rag_policy_retrieval || {};
-        var dag = b.prerequisite_dag_planning || {};
-        var grd = b.citation_grounding_verifier || {};
-        var agt = b.agent_orchestrator_telemetry || {};
+        var rag = b.sop_rag || {};
+        var dag = b.planner_dag || {};
+        var grd = b.agent_grounding || {};
+        var agm = b.agent_metrics || {};
         var setTxt = function (id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
+        var dagPassRate = dag.profiles
+          ? Math.max(0, Math.round(((dag.profiles - (dag.violations || 0)) / dag.profiles) * 100))
+          : (dag.valid ? 100 : 0);
+        var grdRate = grd.interception_rate != null ? Math.round(grd.interception_rate * 100) + "%" : "--";
+        if (grd.numeric_and_url_interception != null) {
+          grdRate = Math.round(((grd.interception_rate + grd.numeric_and_url_interception) / 2) * 100) + "%";
+        }
+        var agSuccess = "--";
+        if (agm.total_runs && agm.success_rate != null) {
+          agSuccess = Math.round(agm.success_rate * 100) + "% (" + agm.completed_runs + "/" + agm.total_runs + ")";
+        } else if (agm.total_runs === 0) {
+          agSuccess = "0 runs";
+        }
         setTxt("metric-rag-recall", rag.recall_at_3 != null ? (Math.round(rag.recall_at_3 * 100) + "%") : "--");
-        setTxt("metric-rag-mrr", rag.mrr != null ? Number(rag.mrr).toFixed(2) : "--");
-        setTxt("metric-dag-pass", dag.invariant_pass_rate != null ? (Math.round(dag.invariant_pass_rate * 100) + "%") : "--");
-        setTxt("metric-grounding", grd.pass_rate != null ? (Math.round(grd.pass_rate * 100) + "%") : "--");
-        setTxt("metric-agent-success", agt.success_rate != null ? (Math.round(agt.success_rate * 100) + "%") : "100%");
-        setTxt("metric-agent-p95", agt.p95_latency_ms != null ? (agt.p95_latency_ms + " ms") : "--");
+        setTxt("metric-rag-mrr", rag.mean_reciprocal_rank != null ? Number(rag.mean_reciprocal_rank).toFixed(2) : "--");
+        setTxt("metric-dag-pass", dagPassRate + "%");
+        setTxt("metric-grounding", grdRate);
+        setTxt("metric-agent-success", agSuccess);
+        setTxt("metric-agent-p95", agm.p95_latency_ms != null ? (agm.p95_latency_ms + " ms") : "--");
       })
       .catch(function () { if (btn) btn.disabled = false; });
+
+    var bar = document.getElementById("system-telemetry-bar");
+    if (userRole !== "tpo_admin") {
+      if (bar) {
+        bar.classList.remove("hidden");
+        bar.textContent = "Scope: Faculty Mentor (Department Analytics). Full system LLM/DB telemetry restricted to TPO Admin.";
+      }
+      return;
+    }
 
     fetch("/api/admin/system-telemetry")
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (t) {
-        if (!t) return;
-        var bar = document.getElementById("system-telemetry-bar");
-        if (!bar) return;
+        if (!t || !bar) return;
         var llm = t.llm || {};
         var totals = llm.totals || {};
         var db = t.database_counts || t.entities || {};
         var agm = t.agent_metrics || {};
         var callsTotal = llm.calls_total != null ? llm.calls_total : (totals.total_calls || 0);
+        var tokensTotal = llm.tokens_total != null ? llm.tokens_total : (totals.total_tokens || 0);
+        var costUsd = llm.estimated_cost_usd != null ? Number(llm.estimated_cost_usd) : Number(totals.estimated_cost_usd || 0);
         var fallbacksTotal = llm.fallbacks_triggered != null ? llm.fallbacks_triggered : (totals.total_fallbacks || 0);
         var agentRuns = db.agent_runs != null ? db.agent_runs : (agm.total_runs || 0);
         bar.classList.remove("hidden");
-        bar.innerHTML =
-          "<span>Provider: <strong>" + (llm.provider || "mock") + "</strong> (Calls: " + callsTotal + ", Fallbacks: " + fallbacksTotal + ")</span>" +
-          "<span>DB Rows &mdash; Students: " + (db.students || 0) + " &middot; Jobs: " + (db.jobs || 0) + " &middot; Agent Runs: " + agentRuns + " &middot; Audit Logs: " + (db.audit_logs || 0) + "</span>";
+        bar.innerHTML = "";
+        var leftSpan = document.createElement("span");
+        leftSpan.textContent =
+          "Provider: " + (llm.provider || "mock") +
+          " | Calls: " + callsTotal +
+          " | Tokens: " + tokensTotal +
+          " | Est. Cost: $" + costUsd.toFixed(4) +
+          " | Fallbacks: " + fallbacksTotal;
+        var rightSpan = document.createElement("span");
+        rightSpan.textContent =
+          "DB Rows - Students: " + (db.students || 0) +
+          " | Jobs: " + (db.jobs || 0) +
+          " | Agent Runs: " + agentRuns +
+          " | Audit Logs: " + (db.audit_logs || 0);
+        bar.appendChild(leftSpan);
+        bar.appendChild(rightSpan);
       })
       .catch(function () {});
   }

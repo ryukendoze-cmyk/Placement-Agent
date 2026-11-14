@@ -1,27 +1,26 @@
-"""Unit and integration tests for the 'remove all live jobs' option across all roles.
+"""Unit and integration tests for the 'remove all live jobs' RBAC and per-student dismissal flow.
 
 Tests verify that:
 1. DELETE /api/jobs/live & POST /api/jobs/purge-live:
+   - Restricted strictly to tpo_admin (403 for student & faculty_mentor)
    - Successfully purge all live scraped jobs (source != 'local' or id starts with 'job-ext-')
    - Preserve institutional on-campus jobs (source == 'local')
    - Cascade foreign-key deletions safely (JobApplication, JobMatch, PlanItem, UpskillPlan, Interview)
-   - Clean up vector store entries
-   - Record an AuditLog row
-   - Work regardless of whether caller is student, faculty_mentor, or tpo_admin (or open demo)
+   - Clean up vector store entries and record an AuditLog row
 2. DELETE /api/students/{sid}/matches/live & POST /api/students/{sid}/matches/purge-live:
-   - Work for students, faculty mentors, and TPO admins
-   - Refresh remaining matches for the student
+   - POST .../purge-live is tpo_admin-only (403 for student & faculty_mentor)
+   - DELETE .../matches/live performs global purge for tpo_admin, per-student dismissal ONLY for student
+     (leaving shared Job catalog intact), and returns 403 for faculty_mentor
 3. purge_live_market_jobs tool in agent tools:
    - Successfully executes and returns the purged count
 4. matches.html UI:
-   - Contains the 'Remove All Live Jobs' option in the header, portals toolbar, and modal
-   - Exposes purgeAllLiveJobs JavaScript function
+   - Exposes 'Remove All Live Jobs' & purge controls strictly for tpo_admin, and hides them completely
+     from students (no greyed-out admin buttons)
 """
 from __future__ import annotations
 
 from uuid import uuid4
 
-import pytest
 from sqlmodel import Session, select
 
 from app.agent.tools import call_tool
@@ -104,45 +103,42 @@ def _setup_live_and_local_jobs(eng):
     return sid, jid_local, [jid_live1, jid_live2]
 
 
-@pytest.mark.parametrize("role", ["student", "faculty_mentor", "tpo_admin"])
-def test_delete_jobs_live_allowed_for_all_roles(client_engine, role):
+def test_delete_jobs_live_restricted_to_tpo_admin(client_engine):
     c, eng = client_engine
     sid, jid_local, live_jids = _setup_live_and_local_jobs(eng)
 
-    headers = {"X-Demo-Role": role}
-    if role == "student":
-        headers["X-Demo-Student-ID"] = sid
+    assert c.delete("/api/jobs/live", headers={"X-Demo-Role": "student", "X-Demo-Student-ID": sid}).status_code == 403
+    assert c.delete("/api/jobs/live", headers={"X-Demo-Role": "faculty_mentor"}).status_code == 403
 
-    resp = c.delete("/api/jobs/live", headers=headers)
+    resp = c.delete("/api/jobs/live", headers={"X-Demo-Role": "tpo_admin"})
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert data["status"] == "success"
     assert data["purged"] >= len(live_jids)
 
     with Session(eng) as s:
-        # Local job must be intact
         assert s.get(Job, jid_local) is not None
-        # Live jobs must be purged
         for jid in live_jids:
             assert s.get(Job, jid) is None
-            # Cascaded rows must be deleted
             assert s.exec(select(JobMatch).where(JobMatch.job_id == jid)).all() == []
             assert s.exec(select(JobApplication).where(JobApplication.job_id == jid)).all() == []
             assert s.exec(select(Interview).where(Interview.job_id == jid)).all() == []
             assert s.exec(select(UpskillPlan).where(UpskillPlan.job_id == jid)).all() == []
 
-        # AuditLog record created
         audit = s.exec(
-            select(AuditLog).where(AuditLog.action == "jobs.live.purged", AuditLog.actor_role == role)
+            select(AuditLog).where(AuditLog.action == "jobs.live.purged", AuditLog.actor_role == "tpo_admin")
         ).first()
         assert audit is not None
 
 
-def test_post_jobs_purge_live_endpoint(client_engine):
+def test_post_jobs_purge_live_endpoint_rbac(client_engine):
     c, eng = client_engine
     sid, jid_local, live_jids = _setup_live_and_local_jobs(eng)
 
-    resp = c.post("/api/jobs/purge-live", headers={"X-Demo-Role": "student", "X-Demo-Student-ID": sid})
+    assert c.post("/api/jobs/purge-live", headers={"X-Demo-Role": "student", "X-Demo-Student-ID": sid}).status_code == 403
+    assert c.post("/api/jobs/purge-live", headers={"X-Demo-Role": "faculty_mentor"}).status_code == 403
+
+    resp = c.post("/api/jobs/purge-live", headers={"X-Demo-Role": "tpo_admin"})
     assert resp.status_code == 200, resp.text
     assert resp.json()["status"] == "success"
 
@@ -152,46 +148,115 @@ def test_post_jobs_purge_live_endpoint(client_engine):
             assert s.get(Job, jid) is None
 
 
-@pytest.mark.parametrize("role", ["student", "faculty_mentor", "tpo_admin"])
-def test_student_matches_purge_live_endpoint(client_engine, role):
+def test_student_matches_dismiss_vs_tpo_purge_live(client_engine):
     c, eng = client_engine
     sid, jid_local, live_jids = _setup_live_and_local_jobs(eng)
 
-    headers = {"X-Demo-Role": role}
-    if role == "student":
-        headers["X-Demo-Student-ID"] = sid
+    # Faculty mentor cannot purge/dismiss another student's live feed globally
+    assert c.delete(f"/api/students/{sid}/matches/live", headers={"X-Demo-Role": "faculty_mentor"}).status_code == 403
+    assert c.post(f"/api/students/{sid}/matches/purge-live", headers={"X-Demo-Role": "student", "X-Demo-Student-ID": sid}).status_code == 403
 
-    resp = c.delete(f"/api/students/{sid}/matches/live", headers=headers)
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["status"] == "success"
+    # Student calling DELETE /matches/live or /live-jobs purges ONLY their owned live jobs + live matches
+    # without deleting unowned global jobs, peer students' live jobs, or on-campus institutional jobs.
+    stu_b_id = f"stu-{uuid4().hex[:8]}"
+    owned_live_a = f"job-ext-own-a-{uuid4().hex[:6]}"
+    owned_live_b = f"job-ext-own-b-{uuid4().hex[:6]}"
+    with Session(eng) as s:
+        s.add(Student(id=stu_b_id, name="Peer Student B", branch="CSE", gpa=8.2, resume_text="Python SQL"))
+        s.add(
+            Job(
+                id=owned_live_a,
+                title="A Owned Live Role",
+                company="Alpha Live",
+                description="Live job scraped by A",
+                required_skills=["python"],
+                salary_lpa=[10, 14],
+                source="naukri",
+                is_live=True,
+                owner_student_id=sid,
+            )
+        )
+        s.add(
+            Job(
+                id=owned_live_b,
+                title="B Owned Live Role",
+                company="Beta Live",
+                description="Live job scraped by B",
+                required_skills=["sql"],
+                salary_lpa=[9, 12],
+                source="linkedin",
+                is_live=True,
+                owner_student_id=stu_b_id,
+            )
+        )
+        s.add(JobMatch(id=f"m-{uuid4().hex[:8]}", student_id=sid, job_id=owned_live_a, score=85, band="strong"))
+        s.commit()
 
+    stu_resp = c.delete(
+        f"/api/students/{sid}/live-jobs",
+        headers={"X-Demo-Role": "student", "X-Demo-Student-ID": sid},
+    )
+    assert stu_resp.status_code == 200, stu_resp.text
+    sdata = stu_resp.json()
+    assert sdata["status"] == "success"
+    assert sdata["purged"] == 1
+    assert sdata["deleted_matches"] >= 2
+    with Session(eng) as s:
+        assert s.get(Job, jid_local) is not None
+        assert s.get(Job, owned_live_a) is None
+        assert s.get(Job, owned_live_b) is not None
+        for jid in live_jids:
+            assert s.get(Job, jid) is not None
+            assert s.exec(select(JobMatch).where(JobMatch.student_id == sid, JobMatch.job_id == jid)).first() is None
+        # On-campus JobMatch stays untouched
+        local_jm = s.exec(select(JobMatch).where(JobMatch.student_id == sid, JobMatch.job_id == jid_local)).first()
+        assert local_jm is not None and local_jm.band != "dismissed"
+
+    # TPO Admin calling DELETE /matches/live performs global purge
+    tpo_resp = c.delete(f"/api/students/{sid}/matches/live", headers={"X-Demo-Role": "tpo_admin"})
+    assert tpo_resp.status_code == 200, tpo_resp.text
+    assert tpo_resp.json()["status"] == "success"
     with Session(eng) as s:
         assert s.get(Job, jid_local) is not None
         for jid in live_jids:
             assert s.get(Job, jid) is None
 
 
-def test_matches_page_ui_contains_purge_live_options(client_engine):
+def test_matches_page_ui_student_sees_live_controls_hides_campus_admin(client_engine):
     c, eng = client_engine
     sid, _, _ = _setup_live_and_local_jobs(eng)
 
-    resp = c.get(f"/students/{sid}/matches", headers={"X-Demo-Role": "student", "X-Demo-Student-ID": sid})
-    assert resp.status_code == 200
-    html = resp.text
+    # Student sees personal Live Job controls, but MUST NOT see TPO Campus Drive / JNF controls
+    stu_resp = c.get(f"/students/{sid}/matches", headers={"X-Demo-Role": "student", "X-Demo-Student-ID": sid})
+    assert stu_resp.status_code == 200
+    stu_html = stu_resp.text
+    for visible_id in (
+        "open-scrape-modal",
+        "purge-live-jobs-header-btn",
+        "btn-purge-live-portal",
+        "modal-purge-live-btn",
+        "scrape-modal",
+    ):
+        assert visible_id in stu_html, f"Student matches page must expose {visible_id}"
+    for hidden_id in (
+        "open-smart-jd-modal",
+        "open-jnf-drawer-btn",
+        "campus_drive.js",
+    ):
+        assert hidden_id not in stu_html, f"Student matches page must hide {hidden_id}"
 
-    # Header button
-    assert "purge-live-jobs-header-btn" in html
-    assert "Remove All Live Jobs" in html
-
-    # Portals bar button
-    assert "btn-purge-live-portal" in html
-    assert "Clear Live Jobs" in html
-
-    # Scrape modal button
-    assert "modal-purge-live-btn" in html
-
-    # JS function
-    assert "purgeAllLiveJobs" in html
+    # TPO Admin keeps all live-job + campus-drive management controls
+    tpo_resp = c.get(f"/students/{sid}/matches", headers={"X-Demo-Role": "tpo_admin"})
+    assert tpo_resp.status_code == 200
+    tpo_html = tpo_resp.text
+    assert "open-smart-jd-modal" in tpo_html
+    assert "open-jnf-drawer-btn" in tpo_html
+    assert "purge-live-jobs-header-btn" in tpo_html
+    assert "Remove All Live Jobs" in tpo_html
+    assert "btn-purge-live-portal" in tpo_html
+    assert "Clear Live Jobs" in tpo_html
+    assert "modal-purge-live-btn" in tpo_html
+    assert "purgeAllLiveJobs" in tpo_html
 
 
 def test_purge_live_market_jobs_tool(client_engine):

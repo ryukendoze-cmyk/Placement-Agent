@@ -1,18 +1,35 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="space-y-6">
+{% set computed_weeks = (plan_items | map(attribute='week') | max) if plan_items else 1 %}
+<div class="space-y-6" id="plan-workspace" data-sid="{{ sid }}" data-plan-id="{{ plan.id if plan is not none else '' }}">
   <!-- Header -->
   <div class="flex flex-wrap items-end justify-between gap-4 pb-3 border-b border-[#E5E3DC]">
     <div>
       <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[#1B5E43] text-xs font-semibold mb-2">
         <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
-        Targeted Curriculum Optimization
+        Prerequisite-Sequenced Curriculum
       </div>
       <h1 class="font-serif-display text-2xl sm:text-3xl font-semibold tracking-tight text-[#1C1E1B]">Personalized Upskilling Roadmap</h1>
-      <p class="text-sm text-[#5C5A52] mt-1">Structured 30-day curriculum sequenced by role requirements, priority gaps, and course ROI.</p>
+      <p class="text-sm text-[#5C5A52] mt-1">
+        {% if plan is not none %}
+        Sequenced for your target role in {{ computed_weeks }} week{% if computed_weeks != 1 %}s{% endif %} ({{ total_hours }}h total, &le;10h/week cap) using verified official courses and skill-verification quizzes.
+        {% else %}
+        Sequenced by prerequisite dependencies, priority role gaps, and verified official courses (&le;10h/week cap).
+        {% endif %}
+      </p>
     </div>
     {% if plan is not none %}
-    <div>
+    <div class="flex flex-wrap items-center gap-2.5">
+      <div id="plan-switcher-wrap" class="hidden items-center gap-2">
+        <label for="plan-switcher" class="text-xs font-mono text-[#5C5A52]">Roadmap:</label>
+        <select id="plan-switcher" onchange="switchActivePlan(this.value)"
+                class="rounded-full border border-[#D8D4C7] bg-white px-3 py-1.5 text-xs font-medium text-[#1C1E1B] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]">
+        </select>
+      </div>
+      <label class="inline-flex items-center gap-1.5 text-xs text-[#5C5A52] px-2.5 py-1.5 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] cursor-pointer">
+        <input type="checkbox" id="include-upgrades-toggle" class="rounded border-[#C8C3B4] text-[#1D5C42] focus:ring-[#1D5C42]">
+        <span>Include depth upgrades</span>
+      </label>
       <button id="regen-btn" type="button" onclick="genPlanTop('{{ sid }}', this)"
               class="btn-secondary-pill px-4 py-2 text-xs">
         <svg class="w-3.5 h-3.5 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
@@ -29,7 +46,7 @@
       <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg>
     </div>
     <h2 class="font-serif-display text-xl font-semibold text-[#1C1E1B] mb-1.5">No upskilling plan generated yet</h2>
-    <p class="text-xs text-[#5C5A52] leading-relaxed mb-6">Create a personalized 30-day curriculum tailored to close the skill gaps identified in your highest-probability placement matches.</p>
+    <p class="text-xs text-[#5C5A52] leading-relaxed mb-6">Create a prerequisite-ordered curriculum tailored to close the verified skill gaps identified in your highest-probability placement matches.</p>
     <button id="regen-btn" type="button" onclick="genPlanTop('{{ sid }}', this)"
             class="btn-primary-pill px-5 py-2.5 text-xs">
       <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/></svg>
@@ -44,12 +61,15 @@
       <div>
         <p class="text-xs uppercase tracking-wider text-[#6E6C64] font-semibold font-mono">Curriculum Completion</p>
         <div class="flex items-baseline gap-2 mt-0.5">
-          <span class="font-serif-display text-3xl font-semibold text-[#1C1E1B] tabular-nums">{{ pct }}%</span>
-          <span class="text-xs text-[#5C5A52] font-mono tabular-nums">({{ done_hours }} / {{ total_hours }} hrs completed)</span>
+          <span id="plan-pct-label" class="font-serif-display text-3xl font-semibold text-[#1C1E1B] tabular-nums">{{ pct }}%</span>
+          <span id="plan-hours-label" class="text-xs text-[#5C5A52] font-mono tabular-nums">({{ done_hours }} / {{ total_hours }} hrs completed)</span>
         </div>
       </div>
-      <div class="text-right">
-        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">
+      <div class="flex flex-wrap items-center gap-2 text-right">
+        <span id="plan-weeks-pill" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#FAF9F5] text-[#4A483F] border border-[#E2DEC9] font-mono">
+          {{ computed_weeks }} week{% if computed_weeks != 1 %}s{% endif %} (&le;10h/wk)
+        </span>
+        <span id="plan-modules-pill" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">
           <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
           {{ plan_items|length }} Learning Modules
         </span>
@@ -61,64 +81,93 @@
   </div>
 
   <!-- AI Advisor Narrative Callout -->
-  {% if plan.narrative %}
-  <div class="rounded-2xl border border-[#DCE8E1] bg-[#F2F7F4] p-5 border-l-4 border-l-[#1D5C42]">
+  <div id="plan-narrative-card" class="rounded-2xl border border-[#DCE8E1] bg-[#F2F7F4] p-5 border-l-4 border-l-[#1D5C42] {% if not plan.narrative %}hidden{% endif %}">
     <div class="flex items-start gap-3.5">
       <div class="w-9 h-9 rounded-xl bg-[#E3F2EA] text-[#1D5C42] flex items-center justify-center shrink-0 mt-0.5 border border-[#C8E4D5]">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.516 0c.85.493 1.508 1.333 1.508 2.316V18"/></svg>
       </div>
       <div>
-        <h2 class="text-xs font-bold uppercase tracking-wider text-[#1B5E43] font-mono mb-1">AI Placement Advisor Narrative</h2>
-        <p class="text-sm text-[#1C1E1B] leading-relaxed font-sans">{{ plan.narrative }}</p>
+        <div class="flex flex-wrap items-center gap-2 mb-1">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-[#1B5E43] font-mono">AI Placement Advisor Narrative</h2>
+          <span id="plan-job-label" class="text-[11px] font-mono text-[#5C5A52]"></span>
+        </div>
+        <p id="plan-narrative-text" class="text-sm text-[#1C1E1B] leading-relaxed font-sans">{{ plan.narrative }}</p>
       </div>
     </div>
   </div>
-  {% endif %}
 
   <!-- Curriculum Roadmap Table -->
   <div class="editorial-card overflow-hidden">
-    <div class="px-6 py-4 border-b border-[#ECEAE2] flex items-center justify-between">
+    <div class="px-6 py-4 border-b border-[#ECEAE2] flex flex-wrap items-center justify-between gap-2">
       <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Curriculum Roadmap</h2>
-      <span class="text-xs font-mono text-[#7A776E]">Order &middot; Skill &middot; Provider &middot; Hours</span>
+      <span class="text-xs font-mono text-[#7A776E]">Week &middot; Prerequisites &middot; Verified Source &middot; Offline Guide &middot; Skill Quiz</span>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-left text-sm">
         <thead class="bg-[#FAF9F5] text-[#5C5A52] text-xs font-semibold uppercase tracking-wider border-b border-[#ECEAE2]">
           <tr>
-            <th class="px-6 py-3.5">Target Skill</th>
-            <th class="px-6 py-3.5">Recommended Course</th>
-            <th class="px-6 py-3.5">Provider</th>
-            <th class="px-6 py-3.5">Effort</th>
-            <th class="px-6 py-3.5">Status</th>
-            <th class="px-6 py-3.5 text-right">Action</th>
+            <th class="px-5 py-3.5">Week / Skill</th>
+            <th class="px-5 py-3.5">Recommended Course &amp; Offline Guide</th>
+            <th class="px-5 py-3.5">Provider</th>
+            <th class="px-5 py-3.5">Effort</th>
+            <th class="px-5 py-3.5">Status</th>
+            <th class="px-5 py-3.5 text-right">Verification Action</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-[#ECEAE2]">
+        <tbody id="plan-items-tbody" class="divide-y divide-[#ECEAE2]">
+          {% set ns = namespace(prev_week=0) %}
           {% for it in plan_items %}
-          <tr id="row-{{ it.id }}" class="hover:bg-[#FAF9F5] transition-colors">
-            <td class="px-6 py-4">
-              <span class="font-mono font-semibold text-[#1C1E1B] text-xs px-3 py-1 rounded-full bg-[#EFECE4] border border-[#E2DEC9] whitespace-nowrap">{{ it.skill_id }}</span>
+          {% if it.week != ns.prev_week %}
+          {% set ns.prev_week = it.week %}
+          <tr class="bg-[#FAF9F5]">
+            <td colspan="6" class="px-5 py-2 text-[11px] font-mono font-semibold uppercase tracking-wider text-[#1B5E43]">
+              Week {{ it.week }} Schedule
             </td>
-            <td class="px-6 py-4">
-              {% if it.course_url %}
-              <a href="{{ it.course_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-[#1C1E1B] hover:text-[#1D5C42] transition-colors inline-flex items-center gap-1.5">
-                <span>{{ it.course_title or 'Course Module' }}</span>
-                <svg class="w-3 h-3 text-[#7A776E] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
-              </a>
-              {% else %}
-              <span class="font-medium text-[#1C1E1B]">{{ it.course_title or 'Self-guided practice' }}</span>
-              {% endif %}
-              {% if it.course_cost %}
-              <span class="text-xs text-[#7A776E] ml-2 font-mono">({{ it.course_cost }})</span>
-              {% endif %}
+          </tr>
+          {% endif %}
+          <tr id="row-{{ it.id }}" class="hover:bg-[#FAF9F5] transition-colors align-top">
+            <td class="px-5 py-4">
+              <div class="flex flex-col gap-1.5">
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span class="text-[11px] font-mono text-[#6E6C64]">W{{ it.week }} &middot; #{{ it.order }}</span>
+                  <span class="font-mono font-semibold text-[#1C1E1B] text-xs px-2.5 py-0.5 rounded-full bg-[#EFECE4] border border-[#E2DEC9] whitespace-nowrap">{{ it.skill_id }}</span>
+                </div>
+                <div id="skill-meta-{{ it.id }}" class="flex flex-wrap gap-1 text-[11px] font-mono"></div>
+              </div>
             </td>
-            <td class="px-6 py-4 text-xs text-[#5C5A52] font-mono">{{ it.course_provider or 'Institutional' }}</td>
-            <td class="px-6 py-4 font-mono text-xs text-[#1C1E1B] tabular-nums whitespace-nowrap">{{ it.hours }} hrs</td>
-            <td class="px-6 py-4">
+            <td class="px-5 py-4">
+              <div class="space-y-1.5">
+                <div class="flex flex-wrap items-center gap-2">
+                  {% if it.course_url %}
+                  <a href="{{ it.course_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-[#1C1E1B] hover:text-[#1D5C42] transition-colors inline-flex items-center gap-1.5">
+                    <span>{{ it.course_title or 'Course Module' }}</span>
+                    <svg class="w-3 h-3 text-[#7A776E] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+                  </a>
+                  {% else %}
+                  <span class="font-medium text-[#1C1E1B]">{{ it.course_title or 'Self-guided practice' }}</span>
+                  {% endif %}
+                  {% if it.course_cost %}
+                  <span class="text-[11px] text-[#5C5A52] px-2 py-0.5 rounded-full bg-[#F5F3EC] border border-[#E5E3DC] font-mono">{{ it.course_cost }}</span>
+                  {% endif %}
+                  <span id="url-badge-{{ it.id }}" class="hidden"></span>
+                </div>
+                <details id="guide-{{ it.id }}" class="hidden text-xs text-[#5C5A52] rounded-xl bg-[#FAF9F5] border border-[#ECEAE2] px-3 py-2">
+                  <summary class="cursor-pointer font-medium text-[#1B5E43] select-none">Offline Study Guide (Key Topics &amp; Syllabus)</summary>
+                  <div id="guide-body-{{ it.id }}" class="mt-2 space-y-1.5"></div>
+                </details>
+              </div>
+            </td>
+            <td class="px-5 py-4 text-xs text-[#5C5A52] font-mono">{{ it.course_provider or 'Official Docs' }}</td>
+            <td class="px-5 py-4 font-mono text-xs text-[#1C1E1B] tabular-nums whitespace-nowrap">{{ it.hours }} hrs</td>
+            <td class="px-5 py-4">
               {% if it.status == 'done' %}
               <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5] font-mono uppercase tracking-wider whitespace-nowrap">
                 <svg class="w-3 h-3 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
                 <span>done</span>
+              </span>
+              {% elif it.status == 'published' %}
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#E6F0FA] text-[#1E4B7A] border border-[#C2DAF2] font-mono uppercase tracking-wider whitespace-nowrap">
+                published
               </span>
               {% else %}
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#4A483F] border border-[#E2DEC9] font-mono uppercase tracking-wider whitespace-nowrap">
@@ -126,12 +175,20 @@
               </span>
               {% endif %}
             </td>
-            <td class="px-6 py-4 text-right">
+            <td class="px-5 py-4 text-right">
+              {% if it.status == 'done' %}
               <button type="button"
-                      hx-post="/api/plans/{{ plan.id }}/items/{{ it.id }}/complete" hx-swap="none" hx-on::after-request="location.reload()"
-                      class="inline-flex items-center justify-center px-4 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap cursor-pointer {% if it.status == 'done' %}bg-[#EFECE4] text-[#5C5A52] hover:bg-[#E2DEC9]{% else %}bg-[#1D5C42] text-white hover:bg-[#154531]{% endif %}">
-                {{ 'Completed' if it.status == 'done' else 'Mark done' }}
+                      onclick="openPlanQuiz('{{ plan.id }}', '{{ it.id }}', '{{ it.skill_id }}', '{{ (it.course_title or it.skill_id)|e }}')"
+                      class="inline-flex items-center justify-center px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#5C5A52] hover:bg-[#E2DEC9] transition-colors whitespace-nowrap cursor-pointer">
+                Completed &middot; Retake Quiz
               </button>
+              {% else %}
+              <button type="button"
+                      onclick="openPlanQuiz('{{ plan.id }}', '{{ it.id }}', '{{ it.skill_id }}', '{{ (it.course_title or it.skill_id)|e }}')"
+                      class="inline-flex items-center justify-center px-4 py-1.5 rounded-full text-xs font-semibold bg-[#1D5C42] text-white hover:bg-[#154531] transition-colors whitespace-nowrap cursor-pointer">
+                Verify &amp; Complete
+              </button>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}
@@ -142,43 +199,386 @@
   {% endif %}
 </div>
 
+<!-- Skill Verification Micro-Quiz Modal -->
+<div id="plan-quiz-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="quiz-modal-title">
+  <div class="bg-white rounded-2xl border border-[#E5E3DC] shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-4">
+    <div class="flex items-start justify-between gap-3 border-b border-[#ECEAE2] pb-3">
+      <div>
+        <p class="text-[11px] font-mono uppercase tracking-wider text-[#1B5E43] font-semibold">Skill Verification Micro-Quiz</p>
+        <h3 id="quiz-modal-title" class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Verify Competency</h3>
+        <p id="quiz-modal-subtitle" class="text-xs text-[#5C5A52] mt-0.5"></p>
+      </div>
+      <button type="button" onclick="closePlanQuiz()" class="px-2.5 py-1 rounded-full text-xs font-mono text-[#5C5A52] hover:bg-[#EFECE4] cursor-pointer">Close</button>
+    </div>
+
+    <div id="quiz-topics-box" class="hidden rounded-xl bg-[#FAF9F5] border border-[#ECEAE2] p-3 text-xs text-[#4A483F]"></div>
+    <div id="quiz-questions-box" class="space-y-4"></div>
+    <div id="quiz-feedback-box" class="hidden rounded-xl border p-3 text-xs space-y-2"></div>
+
+    <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-[#ECEAE2]">
+      <button type="button" onclick="closePlanQuiz()" class="btn-secondary-pill px-4 py-2 text-xs">Cancel</button>
+      <button id="quiz-submit-btn" type="button" onclick="submitPlanQuiz()" class="btn-primary-pill px-5 py-2 text-xs">Submit Answers &amp; Verify</button>
+    </div>
+  </div>
+</div>
+
 <script>
-function genPlanTop(sid, btn) {
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "Generating plan with AI...";
-    btn.classList.add("opacity-60", "cursor-wait");
+(function () {
+  var quizState = { planId: "", itemId: "", skillId: "", questions: [] };
+
+  function makeEl(tag, cls, text) {
+    var el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (text !== undefined && text !== null) el.textContent = String(text);
+    return el;
   }
-  fetch("/api/students/" + sid + "/plans", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: "{}"
-  })
-    .then(function (r) { return r.json().then(function (j) { return {ok: r.ok, j: j}; }); })
-    .then(function (x) {
-      if (x.ok) {
-        location.href = "/students/" + sid + "/plan";
+
+  function renderItemDetails(plan) {
+    if (!plan || !Array.isArray(plan.items)) return;
+    var jobLbl = document.getElementById("plan-job-label");
+    if (jobLbl && plan.job_title) {
+      jobLbl.textContent = "Target: " + plan.job_title + (plan.company ? " at " + plan.company : "");
+    }
+    plan.items.forEach(function (it) {
+      var metaBox = document.getElementById("skill-meta-" + it.id);
+      if (metaBox) {
+        metaBox.textContent = "";
+        if (it.skill_verification_status === "unverified" || it.skill_verification_status === "needs_reverification") {
+          metaBox.appendChild(makeEl("span", "px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#92400E] border border-[#F59E0B]/40", it.skill_verification_status.replace("_", " ")));
+        } else if (it.skill_verification_status === "verified") {
+          metaBox.appendChild(makeEl("span", "px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]", "verified"));
+        }
+        if (Array.isArray(it.prerequisites) && it.prerequisites.length) {
+          metaBox.appendChild(makeEl("span", "px-2 py-0.5 rounded-full bg-[#FAF9F5] text-[#5C5A52] border border-[#E5E3DC]", "requires: " + it.prerequisites.join(", ")));
+        }
+      }
+      var urlBadge = document.getElementById("url-badge-" + it.id);
+      if (urlBadge) {
+        urlBadge.className = it.url_verified
+          ? "text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]"
+          : "text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#92400E] border border-[#F59E0B]/40";
+        urlBadge.textContent = it.url_verified ? "verified source" : "check source";
+      }
+      var guide = document.getElementById("guide-" + it.id);
+      var guideBody = document.getElementById("guide-body-" + it.id);
+      var hasTopics = Array.isArray(it.key_topics) && it.key_topics.length;
+      var hasSyllabus = Array.isArray(it.syllabus) && it.syllabus.length;
+      if (guide && guideBody && (hasTopics || hasSyllabus)) {
+        guideBody.textContent = "";
+        if (hasTopics) {
+          guideBody.appendChild(makeEl("div", "font-semibold text-[#1C1E1B]", "Key Topics: " + it.key_topics.join(" | ")));
+        }
+        if (hasSyllabus) {
+          var ul = makeEl("ul", "list-disc list-inside space-y-0.5 text-[#5C5A52]");
+          it.syllabus.forEach(function (mod) {
+            ul.appendChild(makeEl("li", "", mod));
+          });
+          guideBody.appendChild(ul);
+        }
+        guide.classList.remove("hidden");
+      }
+    });
+  }
+
+  function hydratePlanWorkspace() {
+    var root = document.getElementById("plan-workspace");
+    if (!root) return;
+    var sid = root.getAttribute("data-sid");
+    var planId = root.getAttribute("data-plan-id");
+    if (planId) {
+      fetch("/api/plans/" + encodeURIComponent(planId))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (plan) { if (plan) renderItemDetails(plan); })
+        .catch(function () {});
+    }
+    if (sid) {
+      fetch("/api/students/" + encodeURIComponent(sid) + "/plans")
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .then(function (plans) {
+          if (!Array.isArray(plans) || plans.length <= 1) return;
+          var wrap = document.getElementById("plan-switcher-wrap");
+          var sel = document.getElementById("plan-switcher");
+          if (!wrap || !sel) return;
+          sel.textContent = "";
+          plans.forEach(function (p) {
+            var opt = document.createElement("option");
+            opt.value = p.id;
+            opt.textContent = (p.job_title || p.job_id) + " (" + p.total_hours + "h)";
+            if (p.id === planId) opt.selected = true;
+            sel.appendChild(opt);
+          });
+          wrap.classList.remove("hidden");
+          wrap.classList.add("flex");
+          window.__STUDENT_PLANS_CACHE__ = plans;
+        })
+        .catch(function () {});
+    }
+  }
+
+  window.switchActivePlan = function (selectedId) {
+    var plans = window.__STUDENT_PLANS_CACHE__ || [];
+    var plan = plans.find(function (p) { return p.id === selectedId; });
+    if (!plan) return;
+    var root = document.getElementById("plan-workspace");
+    if (root) root.setAttribute("data-plan-id", plan.id);
+    var totalHours = plan.total_hours || 0;
+    var doneHours = (plan.items || []).filter(function (i) { return i.status === "done"; }).reduce(function (a, b) { return a + (b.hours || 0); }, 0);
+    var pct = totalHours ? Math.round((1000 * doneHours) / totalHours) / 10 : 0;
+    var pctEl = document.getElementById("plan-pct-label");
+    var hrsEl = document.getElementById("plan-hours-label");
+    var barEl = document.getElementById("plan-bar");
+    var wksEl = document.getElementById("plan-weeks-pill");
+    var modEl = document.getElementById("plan-modules-pill");
+    var narEl = document.getElementById("plan-narrative-text");
+    if (pctEl) pctEl.textContent = pct + "%";
+    if (hrsEl) hrsEl.textContent = "(" + doneHours + " / " + totalHours + " hrs completed)";
+    if (barEl) barEl.style.width = pct + "%";
+    if (wksEl) wksEl.textContent = (plan.total_weeks || 1) + " week" + ((plan.total_weeks || 1) === 1 ? "" : "s") + " (<=10h/wk)";
+    if (modEl) modEl.textContent = (plan.items || []).length + " Learning Modules";
+    if (narEl) narEl.textContent = plan.narrative || "";
+    var tbody = document.getElementById("plan-items-tbody");
+    if (!tbody) return;
+    tbody.textContent = "";
+    var prevWk = 0;
+    (plan.items || []).forEach(function (it) {
+      if (it.week !== prevWk) {
+        prevWk = it.week;
+        var wkTr = makeEl("tr", "bg-[#FAF9F5]");
+        var wkTd = makeEl("td", "px-5 py-2 text-[11px] font-mono font-semibold uppercase tracking-wider text-[#1B5E43]", "Week " + it.week + " Schedule");
+        wkTd.colSpan = 6;
+        wkTr.appendChild(wkTd);
+        tbody.appendChild(wkTr);
+      }
+      var tr = makeEl("tr", "hover:bg-[#FAF9F5] transition-colors align-top");
+      tr.id = "row-" + it.id;
+      var td1 = makeEl("td", "px-5 py-4");
+      var d1 = makeEl("div", "flex flex-col gap-1.5");
+      var top1 = makeEl("div", "flex flex-wrap items-center gap-1.5");
+      top1.appendChild(makeEl("span", "text-[11px] font-mono text-[#6E6C64]", "W" + it.week + " \u00B7 #" + it.order));
+      top1.appendChild(makeEl("span", "font-mono font-semibold text-[#1C1E1B] text-xs px-2.5 py-0.5 rounded-full bg-[#EFECE4] border border-[#E2DEC9] whitespace-nowrap", it.skill_id));
+      d1.appendChild(top1);
+      var metaDiv = makeEl("div", "flex flex-wrap gap-1 text-[11px] font-mono");
+      metaDiv.id = "skill-meta-" + it.id;
+      d1.appendChild(metaDiv);
+      td1.appendChild(d1);
+      tr.appendChild(td1);
+
+      var td2 = makeEl("td", "px-5 py-4");
+      var d2 = makeEl("div", "space-y-1.5");
+      var row2 = makeEl("div", "flex flex-wrap items-center gap-2");
+      if (it.course_url) {
+        var a = makeEl("a", "font-medium text-[#1C1E1B] hover:text-[#1D5C42] transition-colors inline-flex items-center gap-1.5", it.course_title || "Course Module");
+        a.href = it.course_url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        row2.appendChild(a);
       } else {
+        row2.appendChild(makeEl("span", "font-medium text-[#1C1E1B]", it.course_title || "Self-guided practice"));
+      }
+      if (it.cost_tier || it.course_cost) {
+        row2.appendChild(makeEl("span", "text-[11px] text-[#5C5A52] px-2 py-0.5 rounded-full bg-[#F5F3EC] border border-[#E5E3DC] font-mono", it.cost_tier || it.course_cost));
+      }
+      var ub = makeEl("span", "hidden");
+      ub.id = "url-badge-" + it.id;
+      row2.appendChild(ub);
+      d2.appendChild(row2);
+      var det = makeEl("details", "hidden text-xs text-[#5C5A52] rounded-xl bg-[#FAF9F5] border border-[#ECEAE2] px-3 py-2");
+      det.id = "guide-" + it.id;
+      det.appendChild(makeEl("summary", "cursor-pointer font-medium text-[#1B5E43] select-none", "Offline Study Guide (Key Topics & Syllabus)"));
+      var gb = makeEl("div", "mt-2 space-y-1.5");
+      gb.id = "guide-body-" + it.id;
+      det.appendChild(gb);
+      d2.appendChild(det);
+      td2.appendChild(d2);
+      tr.appendChild(td2);
+
+      tr.appendChild(makeEl("td", "px-5 py-4 text-xs text-[#5C5A52] font-mono", it.course_provider || "Official Docs"));
+      tr.appendChild(makeEl("td", "px-5 py-4 font-mono text-xs text-[#1C1E1B] tabular-nums whitespace-nowrap", it.hours + " hrs"));
+
+      var td5 = makeEl("td", "px-5 py-4");
+      var stCls = it.status === "done"
+        ? "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5] font-mono uppercase"
+        : it.status === "published"
+          ? "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#E6F0FA] text-[#1E4B7A] border border-[#C2DAF2] font-mono uppercase"
+          : "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#4A483F] border border-[#E2DEC9] font-mono uppercase";
+      td5.appendChild(makeEl("span", stCls, it.status));
+      tr.appendChild(td5);
+
+      var td6 = makeEl("td", "px-5 py-4 text-right");
+      var btn = makeEl(
+        "button",
+        it.status === "done"
+          ? "inline-flex items-center justify-center px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#5C5A52] hover:bg-[#E2DEC9] cursor-pointer"
+          : "inline-flex items-center justify-center px-4 py-1.5 rounded-full text-xs font-semibold bg-[#1D5C42] text-white hover:bg-[#154531] cursor-pointer",
+        it.status === "done" ? "Completed & Retake Quiz" : "Verify & Complete"
+      );
+      btn.type = "button";
+      btn.onclick = function () { openPlanQuiz(plan.id, it.id, it.skill_id, it.course_title || it.skill_id); };
+      td6.appendChild(btn);
+      tr.appendChild(td6);
+      tbody.appendChild(tr);
+    });
+    renderItemDetails(plan);
+  };
+
+  window.openPlanQuiz = function (planId, itemId, skillId, courseTitle) {
+    quizState = { planId: planId, itemId: itemId, skillId: skillId, questions: [] };
+    var modal = document.getElementById("plan-quiz-modal");
+    var titleEl = document.getElementById("quiz-modal-title");
+    var subEl = document.getElementById("quiz-modal-subtitle");
+    var topicsEl = document.getElementById("quiz-topics-box");
+    var qBox = document.getElementById("quiz-questions-box");
+    var fbEl = document.getElementById("quiz-feedback-box");
+    if (titleEl) titleEl.textContent = "Verify Skill: " + skillId;
+    if (subEl) subEl.textContent = (courseTitle || "") + " — loading micro-quiz...";
+    if (topicsEl) { topicsEl.textContent = ""; topicsEl.classList.add("hidden"); }
+    if (fbEl) { fbEl.textContent = ""; fbEl.classList.add("hidden"); }
+    if (qBox) { qBox.textContent = "Loading verification questions..."; }
+    if (modal) { modal.classList.remove("hidden"); modal.classList.add("flex"); }
+
+    fetch("/api/plans/" + encodeURIComponent(planId) + "/items/" + encodeURIComponent(itemId) + "/quiz")
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          if (qBox) qBox.textContent = "Failed to load quiz: " + ((res.j && res.j.detail) || "error");
+          return;
+        }
+        var data = res.j;
+        quizState.questions = data.questions || [];
+        if (subEl) {
+          subEl.textContent = (data.course_title || courseTitle || "") + " | Pass threshold: >= " + (data.passing_score || 70) + "%";
+        }
+        if (topicsEl && Array.isArray(data.key_topics) && data.key_topics.length) {
+          topicsEl.textContent = "Study focus: " + data.key_topics.join(" | ");
+          topicsEl.classList.remove("hidden");
+        }
+        if (qBox) {
+          qBox.textContent = "";
+          quizState.questions.forEach(function (q, idx) {
+            var card = makeEl("div", "space-y-1.5");
+            var lbl = makeEl("label", "block text-xs font-semibold text-[#1C1E1B]", "Q" + (idx + 1) + ". " + (q.prompt || ""));
+            lbl.setAttribute("for", "quiz-ans-" + q.id);
+            var ta = document.createElement("textarea");
+            ta.id = "quiz-ans-" + q.id;
+            ta.rows = 3;
+            ta.placeholder = "Write a concise technical explanation referencing core concepts...";
+            ta.className = "w-full rounded-xl border border-[#D8D4C7] px-3 py-2 text-xs text-[#1C1E1B] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]";
+            card.appendChild(lbl);
+            card.appendChild(ta);
+            qBox.appendChild(card);
+          });
+        }
+      })
+      .catch(function (err) {
+        if (qBox) qBox.textContent = "Network error loading quiz: " + err;
+      });
+  };
+
+  window.closePlanQuiz = function () {
+    var modal = document.getElementById("plan-quiz-modal");
+    if (modal) { modal.classList.add("hidden"); modal.classList.remove("flex"); }
+  };
+
+  window.submitPlanQuiz = function () {
+    var btn = document.getElementById("quiz-submit-btn");
+    var fbEl = document.getElementById("quiz-feedback-box");
+    var answers = {};
+    quizState.questions.forEach(function (q) {
+      var ta = document.getElementById("quiz-ans-" + q.id);
+      answers[q.id] = ta ? ta.value.trim() : "";
+    });
+    if (btn) { btn.disabled = true; btn.textContent = "Grading..."; }
+    fetch("/api/plans/" + encodeURIComponent(quizState.planId) + "/items/" + encodeURIComponent(quizState.itemId) + "/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ answers: answers })
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (btn) { btn.disabled = false; btn.textContent = "Submit Answers & Verify"; }
+        var d = res.j || {};
+        if (!res.ok) {
+          if (fbEl) {
+            fbEl.className = "rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800";
+            fbEl.textContent = d.detail || "Quiz submission failed.";
+            fbEl.classList.remove("hidden");
+          }
+          return;
+        }
+        if (!d.passed) {
+          if (fbEl) {
+            fbEl.className = "rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 space-y-1.5";
+            fbEl.textContent = "";
+            fbEl.appendChild(makeEl("div", "font-semibold", "Score: " + d.score + "% (requires >= " + (d.passing_score || 70) + "%). Review and revise your answers below."));
+            (d.feedback || []).forEach(function (row, idx) {
+              var line = "Q" + (idx + 1) + ": " + (row.correct ? "Passed" : "Needs more detail") + (row.explanation ? " — " + row.explanation : "");
+              fbEl.appendChild(makeEl("div", "", line));
+            });
+            fbEl.classList.remove("hidden");
+          }
+          return;
+        }
+        if (window.toast) {
+          var cl = d.closed_loop || {};
+          window.toast("Skill verified (" + d.score + "%)! Readiness: " + (cl.readiness || 0) + "%", "success");
+        }
+        closePlanQuiz();
+        location.reload();
+      })
+      .catch(function (err) {
+        if (btn) { btn.disabled = false; btn.textContent = "Submit Answers & Verify"; }
+        if (fbEl) {
+          fbEl.className = "rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800";
+          fbEl.textContent = "Error: " + err;
+          fbEl.classList.remove("hidden");
+        }
+      });
+  };
+
+  window.genPlanTop = function (sid, btn) {
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Generating plan with AI...";
+      btn.classList.add("opacity-60", "cursor-wait");
+    }
+    var incEl = document.getElementById("include-upgrades-toggle");
+    var bodyPayload = { include_upgrades: Boolean(incEl && incEl.checked) };
+    fetch("/api/students/" + encodeURIComponent(sid) + "/plans", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bodyPayload)
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (x) {
+        if (x.ok) {
+          location.href = "/students/" + encodeURIComponent(sid) + "/plan";
+        } else {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Generate a plan";
+            btn.classList.remove("opacity-60", "cursor-wait");
+          }
+          if (window.toast) {
+            window.toast("Could not generate plan: " + (x.j && (x.j.detail || JSON.stringify(x.j)) || "Unknown error"), "error");
+          }
+        }
+      })
+      .catch(function (err) {
         if (btn) {
           btn.disabled = false;
           btn.textContent = "Generate a plan";
           btn.classList.remove("opacity-60", "cursor-wait");
         }
         if (window.toast) {
-          window.toast("Could not generate plan: " + (x.j && (x.j.detail || JSON.stringify(x.j)) || "Unknown error"), "error");
+          window.toast("Error: " + err, "error");
         }
-      }
-    })
-    .catch(function (err) {
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = "Generate a plan";
-        btn.classList.remove("opacity-60", "cursor-wait");
-      }
-      if (window.toast) {
-        window.toast("Error: " + err, "error");
-      }
-    });
-}
+      });
+  };
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closePlanQuiz();
+  });
+  document.addEventListener("DOMContentLoaded", hydratePlanWorkspace);
+})();
 </script>
 {% endblock %}

@@ -4,10 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sign in &middot; JKLU CareerOS</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#1D5C42" />
+  <link rel="stylesheet" href="/static/vendor/fonts.css" />
+  <script src="/static/vendor/tailwindcss.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     :root { font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
@@ -27,28 +27,75 @@
       </span>
       <div>
         <p class="font-serif-display font-semibold text-2xl leading-tight text-[#1C1E1B]">JKLU CareerOS</p>
-        <p class="text-xs text-[#5C5A52] leading-snug">Autonomous Placement &middot; Institutional Portal</p>
+        <p class="text-xs text-[#5C5A52] leading-snug">JKLU CareerOS Offline SSO &middot; Autonomous Placement Portal</p>
       </div>
     </div>
 
     <div class="bg-white border border-[#E5E3DC] rounded-[24px] shadow-[0_4px_20px_rgba(28,30,27,0.04)] p-6 md:p-8">
-      <h1 class="font-serif-display text-xl font-semibold text-[#1C1E1B]">Sign in with JKLU Institutional Account</h1>
-      <p class="text-sm text-[#5C5A52] mt-1">Use your official <span class="mono font-medium text-[#1D5C42]">@jklu.edu.in</span> address to access the placement portal.</p>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h1 class="font-serif-display text-xl font-semibold text-[#1C1E1B]">Sign in with JKLU Institutional Account</h1>
+        <span class="mono text-[10px] px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5] font-semibold">Offline SSO</span>
+      </div>
+      <p class="text-sm text-[#5C5A52] mt-1">Use your official <span class="mono font-medium text-[#1D5C42]">@jklu.edu.in</span> address and institutional PIN to access the placement portal.</p>
 
       {% if error %}<div class="err mt-4">{{ error }}</div>{% endif %}
+      <div id="login-error" class="err mt-4 hidden" role="alert"></div>
 
       <form id="jklu-login" method="POST" action="/auth/login" class="mt-5 space-y-4">
         <div>
           <label for="email" class="block text-[11px] uppercase tracking-wider text-[#6E6C64] font-semibold mb-1.5">Institutional email</label>
           <input id="email" name="email" type="email" required autocomplete="username"
-                 placeholder="2022btech01@jklu.edu.in"
+                 placeholder="rohit.shetty@jklu.edu.in"
+                 class="w-full text-sm rounded-xl border border-[#D5D2C6] bg-[#FAF9F5] focus:bg-white px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]" />
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="pin" class="block text-[11px] uppercase tracking-wider text-[#6E6C64] font-semibold">Institutional PIN</label>
+            {% if show_demo_controls %}
+            <span class="mono text-[11px] text-[#5C5A52]">Demo PIN: <strong class="text-[#1D5C42]">{{ demo_pin|default('2026') }}</strong></span>
+            {% endif %}
+          </div>
+          <input id="pin" name="pin" type="password" autocomplete="current-password"
+                 value="{% if show_demo_controls %}{{ demo_pin|default('2026') }}{% endif %}"
+                 placeholder="{% if show_demo_controls %}{{ demo_pin|default('2026') }}{% else %}Enter institutional PIN{% endif %}"
+                 {% if not show_demo_controls %}required{% endif %}
                  class="w-full text-sm rounded-xl border border-[#D5D2C6] bg-[#FAF9F5] focus:bg-white px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]" />
         </div>
         <button type="submit"
-                class="w-full inline-flex items-center justify-center text-sm font-semibold px-5 py-2.5 rounded-full bg-[#1D5C42] hover:bg-[#154531] text-white transition-colors cursor-pointer whitespace-nowrap">
+                class="w-full min-h-[44px] inline-flex items-center justify-center text-sm font-semibold px-5 py-2.5 rounded-full bg-[#1D5C42] hover:bg-[#154531] text-white transition-colors cursor-pointer whitespace-nowrap">
           Sign in with JKLU Institutional Account
         </button>
       </form>
+
+      {% if show_demo_controls %}
+      <div class="mt-6 pt-5 border-t border-[#ECEAE2]">
+        <div class="flex items-center justify-between mb-2.5">
+          <p class="text-[11px] uppercase tracking-wider text-[#6E6C64] font-bold">1-Click Judge Demo Personas</p>
+          <span class="mono text-[10px] px-2.5 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">PIN {{ demo_pin|default('2026') }}</span>
+        </div>
+        <div id="judge-personas" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          {% set judge_list = personas if personas else [
+            {"email": "rohit.shetty@jklu.edu.in", "role": "student", "name": "Rohit Shetty", "department": "CSE"},
+            {"email": "faculty.mentor@jklu.edu.in", "role": "faculty_mentor", "name": "Dr. Faculty Mentor", "department": "CSE"},
+            {"email": "tpo.admin@jklu.edu.in", "role": "tpo_admin", "name": "TPO Administrator", "department": "Placement Cell"}
+          ] %}
+          {% for p in judge_list %}
+          <button type="button"
+                  class="judge-persona-btn min-h-[44px] text-left p-3 rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] hover:bg-[#E3F2EA]/50 hover:border-[#1D5C42] transition-colors cursor-pointer flex flex-col justify-between gap-1"
+                  data-email="{{ p.email }}"
+                  data-role="{{ p.role }}"
+                  data-name="{{ p.name }}"
+                  data-department="{{ p.department|default('') }}">
+            <div class="flex items-center justify-between gap-1.5 w-full">
+              <span class="text-xs font-bold text-[#1C1E1B] truncate">{{ p.name }}</span>
+              <span class="mono text-[9px] px-1.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5] shrink-0">{{ p.role }}</span>
+            </div>
+            <span class="mono text-[10px] text-[#5C5A52] truncate w-full">{{ p.email }}</span>
+            <span class="text-[10px] text-[#7A776E]">{{ p.department|default('JKLU') }} &middot; Sign in</span>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
 
       {% if students and students|length > 0 %}
       <div class="mt-6 pt-5 border-t border-[#ECEAE2]">
@@ -68,7 +115,7 @@
               </div>
               <p class="mono text-[11px] text-[#5C5A52] mt-0.5">ID: <span class="text-[#1C1E1B]">{{ s.id }}</span> &middot; {{ s.id }}@jklu.edu.in</p>
             </div>
-            <button type="button" class="student-fast-btn text-xs px-4 py-1.5 rounded-full bg-[#1D5C42] hover:bg-[#154531] text-white font-semibold transition-colors cursor-pointer shrink-0 inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
+            <button type="button" class="student-fast-btn min-h-[44px] text-xs px-4 py-1.5 rounded-full bg-[#1D5C42] hover:bg-[#154531] text-white font-semibold transition-colors cursor-pointer shrink-0 inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
                     data-role="student"
                     data-student-id="{{ s.id }}"
                     data-name="{{ s.name }}"
@@ -85,17 +132,18 @@
 
       <div class="mt-6 pt-5 border-t border-[#ECEAE2]">
         <p class="text-[11px] uppercase tracking-wider text-[#6E6C64] mb-2.5 font-bold">Institutional role fast login</p>
-        <div id="fast-login" class="grid grid-cols-3 gap-2">
-          <button type="button" class="fast-role-btn inline-flex items-center justify-center text-xs px-3 py-2 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] font-semibold cursor-pointer whitespace-nowrap"
-                  data-role="student" data-email="{% if students and students|length > 0 %}{{ students[0].id }}@jklu.edu.in{% else %}2022btech01@jklu.edu.in{% endif %}"
+        <div id="fast-login" class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <button type="button" class="fast-role-btn min-h-[44px] inline-flex items-center justify-center text-xs px-3 py-2 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] font-semibold cursor-pointer whitespace-nowrap"
+                  data-role="student" data-email="{% if students and students|length > 0 %}{{ students[0].id }}@jklu.edu.in{% else %}rohit.shetty@jklu.edu.in{% endif %}"
                   {% if students and students|length > 0 %}data-student-id="{{ students[0].id }}" data-name="{{ students[0].name }}" data-department="{{ students[0].branch }}"{% endif %}>student</button>
-          <button type="button" class="fast-role-btn inline-flex items-center justify-center text-xs px-3 py-2 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] font-semibold cursor-pointer whitespace-nowrap"
-                  data-role="faculty_mentor" data-email="faculty@jklu.edu.in">faculty_mentor</button>
-          <button type="button" class="fast-role-btn inline-flex items-center justify-center text-xs px-3 py-2 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] font-semibold cursor-pointer whitespace-nowrap"
-                  data-role="tpo_admin" data-email="tpo@jklu.edu.in">tpo_admin</button>
+          <button type="button" class="fast-role-btn min-h-[44px] inline-flex items-center justify-center text-xs px-3 py-2 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] font-semibold cursor-pointer whitespace-nowrap"
+                  data-role="faculty_mentor" data-email="faculty.mentor@jklu.edu.in">faculty_mentor</button>
+          <button type="button" class="fast-role-btn min-h-[44px] inline-flex items-center justify-center text-xs px-3 py-2 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] font-semibold cursor-pointer whitespace-nowrap"
+                  data-role="tpo_admin" data-email="tpo.admin@jklu.edu.in">tpo_admin</button>
         </div>
         <p class="text-[11px] text-[#7A776E] mt-2">One-click demo selector for evaluation and development.</p>
       </div>
+      {% endif %}
     </div>
 
     <p class="text-center text-[11px] text-[#7A776E] mt-4">JKLU CareerOS &middot; PS-06 Placement Agent</p>
@@ -103,20 +151,35 @@
 
   <script>
     (function () {
-      function postLogin(email, role, studentId, name, department) {
-        var payload = { email: email, role: role };
-        if (studentId) payload.student_id = studentId;
-        if (name) payload.name = name;
-        if (department) payload.department = department;
+      var errBox = document.getElementById("login-error");
+      function showErr(msg) {
+        if (!errBox) return;
+        errBox.textContent = msg;
+        errBox.classList.remove("hidden");
+      }
+
+      function postLogin(opts) {
+        if (errBox) errBox.classList.add("hidden");
+        var payload = { email: opts.email };
+        if (opts.role) payload.role = opts.role;
+        if (opts.pin !== undefined && opts.pin !== null) payload.pin = opts.pin;
+        if (opts.fast_login) payload.fast_login = true;
+        if (opts.studentId) payload.student_id = opts.studentId;
+        if (opts.name) payload.name = opts.name;
+        if (opts.department) payload.department = opts.department;
         fetch("/auth/login", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
           body: JSON.stringify(payload)
         }).then(function (r) {
-          if (!r.ok) throw new Error("HTTP " + r.status);
+          if (!r.ok) {
+            return r.json().catch(function () { return {}; }).then(function (body) {
+              throw new Error(body.detail || ("Sign-in failed (HTTP " + r.status + ")"));
+            });
+          }
           window.location.href = "/";
-        }).catch(function () {
-          window.location.href = "/login";
+        }).catch(function (err) {
+          showErr(err && err.message ? err.message : "Sign-in failed.");
         });
       }
 
@@ -124,30 +187,46 @@
       if (form) form.addEventListener("submit", function (e) {
         e.preventDefault();
         var email = (document.getElementById("email").value || "").trim();
-        if (email) postLogin(email, null, null, null, null);
+        var pinEl = document.getElementById("pin");
+        var pin = pinEl ? pinEl.value.trim() : "";
+        if (email) postLogin({ email: email, pin: pin });
+      });
+
+      document.querySelectorAll(".judge-persona-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          postLogin({
+            email: btn.getAttribute("data-email"),
+            role: btn.getAttribute("data-role"),
+            name: btn.getAttribute("data-name"),
+            department: btn.getAttribute("data-department"),
+            fast_login: true
+          });
+        });
       });
 
       document.querySelectorAll("#fast-login .fast-role-btn").forEach(function (btn) {
         btn.addEventListener("click", function () {
-          postLogin(
-            btn.getAttribute("data-email"),
-            btn.getAttribute("data-role"),
-            btn.getAttribute("data-student-id"),
-            btn.getAttribute("data-name"),
-            btn.getAttribute("data-department")
-          );
+          postLogin({
+            email: btn.getAttribute("data-email"),
+            role: btn.getAttribute("data-role"),
+            studentId: btn.getAttribute("data-student-id"),
+            name: btn.getAttribute("data-name"),
+            department: btn.getAttribute("data-department"),
+            fast_login: true
+          });
         });
       });
 
       document.querySelectorAll(".student-fast-btn").forEach(function (btn) {
         btn.addEventListener("click", function () {
-          postLogin(
-            btn.getAttribute("data-email"),
-            btn.getAttribute("data-role") || "student",
-            btn.getAttribute("data-student-id"),
-            btn.getAttribute("data-name"),
-            btn.getAttribute("data-department")
-          );
+          postLogin({
+            email: btn.getAttribute("data-email"),
+            role: btn.getAttribute("data-role") || "student",
+            studentId: btn.getAttribute("data-student-id"),
+            name: btn.getAttribute("data-name"),
+            department: btn.getAttribute("data-department"),
+            fast_login: true
+          });
         });
       });
     })();

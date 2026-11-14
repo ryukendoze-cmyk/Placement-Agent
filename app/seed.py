@@ -17,13 +17,16 @@ from .models import (
     Job,
     JobApplication,
     JobMatch,
+    PlanItem,
     ProgressEvent,
     Skill,
     Student,
     StudentSkill,
+    UpskillPlan,
 )
 from .plan.planner import build_plan
 from .skills.extract import extract_skills, level_for
+from .taxonomy.branches import normalize_branch
 from .taxonomy.taxonomy import DATA_DIR, Taxonomy
 
 
@@ -66,7 +69,7 @@ _DEMO_COHORT = [
     ("Diya Nair", "CSE", 4, 8.0,
      "Skills: terraform, kubernetes, ci_cd, linux, aws, monitoring, nginx, python, git, docker, ansible, bash\n"
      "DevOps/SRE: infrastructure with Terraform, clusters with Kubernetes, pipelines with CI/CD, Nginx, monitoring, on-call rotations."),
-    ("Karan Mehta", "CSE", 3, 7.9, "Skills: Python, FastAPI, Docker, Git\nFull-stack app."),
+    ("Rohit Shetty", "CSE", 3, 7.9, "Skills: Python, FastAPI, Docker, Git\nFull-stack app."),
     ("Ananya Rao", "ECE", 3, 8.1, "Skills: HTML, CSS, JavaScript, React\nResponsive web dev."),
     ("Vikram Shah", "AI&DS", 4, 7.7, "Skills: Python, SQL, deep_learning, pandas\nML capstone."),
     ("Sneha Kulkarni", "CSE", 4, 8.3, "Skills: Python, Git, AWS, Docker\nCloud projects."),
@@ -81,14 +84,53 @@ def _now(offset_minutes: int = 0) -> datetime:
 
 
 def _seed_progress(db: Session, sid: str) -> None:
-    """Multi-point readiness history so the progress chart is alive at startup."""
-    ladder = [20, 34, 45, 58, 67, 75]
-    kinds = ["resume_parsed", "matches_computed", "plan_created",
-             "plan_item_done", "plan_item_done", "interview_completed"]
-    for i, (ready, kind) in enumerate(zip(ladder, kinds)):
-        db.add(ProgressEvent(id=f"pe-{uuid4().hex[:8]}", student_id=sid, kind=kind,
-                             ref_id="", readiness=ready,
-                             at=_now(offset_minutes=30 * (len(ladder) - i))))
+    """Seed multi-day evidence-backed readiness milestones calibrated to actual student state."""
+    from .analytics.student_progress import compute_student_readiness
+
+    best_match = max(
+        (int(m.score) for m in db.exec(select(JobMatch).where(JobMatch.student_id == sid)).all()),
+        default=0,
+    )
+    plans = list(
+        db.exec(
+            select(UpskillPlan).where(UpskillPlan.student_id == sid).order_by(UpskillPlan.created_at.desc())
+        ).all()
+    )
+    items: list[PlanItem] = []
+    if plans:
+        items = list(db.exec(select(PlanItem).where(PlanItem.plan_id == plans[0].id)).all())
+    done_items = sum(1 for it in items if str(it.status or "").lower() == "done")
+    target = max(15, min(98, compute_student_readiness(best_match, done_items, len(items))))
+    baseline = max(12, min(target - 6 if target > 18 else target, round(target * 0.58)))
+
+    offsets_days = [14, 10, 7, 3, 1]
+    kinds = [
+        "resume_parsed",
+        "matches_computed",
+        "plan_created",
+        "plan_item_done",
+        "readiness_checkpoint",
+    ]
+    n = len(offsets_days)
+    now = datetime.now(timezone.utc)
+    prev_val = baseline
+    for idx, (days_ago, kind) in enumerate(zip(offsets_days, kinds)):
+        if idx == n - 1:
+            ready = target
+        else:
+            ready = max(prev_val, round(baseline + (target - baseline) * idx / (n - 1)))
+        prev_val = ready
+        ref_id = items[0].id if (kind == "plan_item_done" and items) else ""
+        db.add(
+            ProgressEvent(
+                id=f"pe-{uuid4().hex[:8]}",
+                student_id=sid,
+                kind=kind,
+                ref_id=ref_id,
+                readiness=int(ready),
+                at=now - timedelta(days=days_ago),
+            )
+        )
 
 
 def _seed_interview(db: Session, sid: str, job_id: str, llm) -> None:
@@ -310,7 +352,7 @@ def seed_demo_cohort(db, *, taxonomy, embedder, vector_store=None, llm=None) -> 
             continue
         sid = f"stu-{uuid4().hex[:8]}"
         sids[name] = sid
-        db.add(Student(id=sid, name=name, branch=branch, year=year, gpa=gpa, resume_text=text))
+        db.add(Student(id=sid, name=name, branch=normalize_branch(branch), year=year, gpa=gpa, resume_text=text))
         found = extract_skills(text, taxonomy)
         for skill_id, lines in found.items():
             db.add(StudentSkill(student_id=sid, skill_id=skill_id, mentions=len(lines),

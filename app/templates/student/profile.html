@@ -61,14 +61,19 @@
     <div class="lg:col-span-8 editorial-card p-6 md:p-8">
       <div class="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-[#ECEAE2]">
         <div>
-          <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Verified Technical Competencies</h2>
-          <p class="text-xs text-[#5C5A52] mt-0.5">Contextually graded proficiency based on project depth and work evidence</p>
+          <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Technical Competencies</h2>
+          <p class="text-xs text-[#5C5A52] mt-0.5">Resume-extracted proficiency and live mock-interview verification status</p>
         </div>
-        <!-- Proficiency Legend -->
-        <div class="flex items-center gap-2 text-[11px] font-mono">
+        <!-- Proficiency & Verification Legend -->
+        <div class="flex flex-wrap items-center gap-2 text-[11px] font-mono">
           <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white font-medium">Advanced</span>
           <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[#1B5E43] font-medium">Intermediate</span>
           <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#EFECE4] border border-[#E2DEC9] text-[#4A483F] font-medium">Basic</span>
+          <span class="text-[#C7C4B8]">|</span>
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[#1B5E43] font-medium">Verified</span>
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FAF9F5] border border-[#D5D2C6] text-[#5C5A52] font-medium">Claimed</span>
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FEF6E6] border border-[#F2D59B] text-[#8F5B00] font-medium">Needs Re-verify</span>
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FDF0ED] border border-[#F5D0C8] text-[#9E2A20] font-medium">Unverified</span>
         </div>
       </div>
 
@@ -78,40 +83,96 @@
     </div>
 
     <!-- Resume Re-Upload Card (4 cols) -->
+    {% set _role = role|default('tpo_admin') %}
+    {% set _has_resume = has_resume if has_resume is defined else ((student.resume_text or '')|trim|length > 0) %}
+    {% set _reupload_unlocked = reupload_unlocked if reupload_unlocked is defined else (student.resume_reupload_unlocked|default(false)) %}
+    {% set _pending_req = pending_reupload_req|default(none) %}
+    {% set _can_upload = (_role != 'student') or (not _has_resume) or _reupload_unlocked %}
     <div class="lg:col-span-4 editorial-card p-6">
       <div class="flex items-center gap-2 mb-3">
         <svg class="w-4 h-4 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
         <h2 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Resume Refresh</h2>
       </div>
-      <p class="text-xs text-[#5C5A52] leading-relaxed mb-4">
-        Re-upload your technical resume to re-trigger autonomous AI parsing, update skill proficiency levels, and refresh match rankings in real time.
-      </p>
 
-      <form hx-post="/students/{{ sid }}/resume" hx-target="#skill-chips" hx-swap="innerHTML"
-            enctype="multipart/form-data" class="space-y-4">
-        <div>
-          <label class="block text-xs font-medium text-[#4A483F] mb-1.5">Upload File</label>
-          <input type="file" name="file" required accept=".pdf,.docx,.txt,.text,.md,.png,.jpg,.jpeg"
-                 class="block w-full text-xs text-[#4A483F] file:mr-3 file:py-1.5 file:px-3.5 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#E3F2EA] file:text-[#1B5E43] hover:file:bg-[#D1EAD9] border border-[#D5D2C6] bg-[#FAF9F5] rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] transition-all cursor-pointer" />
+      {% if _can_upload %}
+        {% if _reupload_unlocked and _role == 'student' %}
+        <div class="mb-3 rounded-xl bg-[#E3F2EA] border border-[#C8E4D5] px-3 py-2 text-[11px] text-[#1B5E43]">
+          <span class="font-semibold">Re-upload Unlocked by TPO:</span> You are approved for a one-time resume refresh. The upload lock will re-enable automatically after submission.
         </div>
+        {% endif %}
+        <p class="text-xs text-[#5C5A52] leading-relaxed mb-4">
+          {% if not _has_resume and _role == 'student' %}
+          Upload your technical resume for initial AI skill parsing, proficiency calibration, and job match ranking.
+          {% else %}
+          Re-upload your technical resume to re-trigger autonomous AI parsing, update skill proficiency levels, and refresh match rankings in real time.
+          {% endif %}
+        </p>
 
-        <div class="flex items-center gap-1.5 flex-wrap text-[10px] font-mono text-[#5C5A52]">
-          <span class="px-2 py-0.5 rounded-full bg-[#EFECE4]">PDF</span>
-          <span class="px-2 py-0.5 rounded-full bg-[#EFECE4]">DOCX</span>
-          <span class="px-2 py-0.5 rounded-full bg-[#EFECE4]">TXT</span>
-          <span class="px-2 py-0.5 rounded-full bg-[#EFECE4]">MD</span>
-          <span class="px-2 py-0.5 rounded-full bg-[#EFECE4]">PNG</span>
-          <span class="px-2 py-0.5 rounded-full bg-[#EFECE4]">JPG</span>
+        <form hx-post="/students/{{ sid }}/resume" hx-target="#skill-chips" hx-swap="innerHTML"
+              enctype="multipart/form-data" class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-[#4A483F] mb-1.5">Upload File</label>
+            <input type="file" name="file" required accept=".pdf,.docx,.txt,.text,.md,.png,.jpg,.jpeg"
+                   class="block w-full text-xs text-[#4A483F] file:mr-3 file:py-1.5 file:px-3.5 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#E3F2EA] file:text-[#1B5E43] hover:file:bg-[#D1EAD9] border border-[#D5D2C6] bg-[#FAF9F5] rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42] transition-all cursor-pointer" />
+          </div>
+
+          <div class="flex items-center gap-1.5 flex-wrap text-[10px] font-mono text-[#5C5A52]">
+            <span class="px-2 py-0.5 rounded-full bg-[#EFECE4]">PDF</span>
+            <span class="px-2 py-0.5 rounded-full bg-[#EFECE4]">DOCX</span>
+            <span class="px-2 py-0.5 rounded-full bg-[#EFECE4]">TXT</span>
+            <span class="px-2 py-0.5 rounded-full bg-[#EFECE4]">MD</span>
+            <span class="px-2 py-0.5 rounded-full bg-[#EFECE4]">PNG</span>
+            <span class="px-2 py-0.5 rounded-full bg-[#EFECE4]">JPG</span>
+          </div>
+
+          <button type="submit" id="reupload-btn"
+                  class="w-full btn-primary-pill py-2.5 text-xs">
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+            <span>{% if not _has_resume and _role == 'student' %}Upload &amp; Extract Resume{% else %}Re-upload &amp; Re-extract{% endif %}</span>
+          </button>
+        </form>
+      {% else %}
+        <div id="resume-locked-card" class="space-y-3">
+          <div class="rounded-xl bg-[#FEF6E6] border border-[#F2D59B] p-3.5">
+            <div class="flex items-center gap-2 mb-1">
+              <svg class="w-4 h-4 text-[#8F5B00] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/></svg>
+              <span class="text-xs font-semibold text-[#8F5B00]">Resume Locked After Initial Verification</span>
+            </div>
+            <p class="text-[11px] text-[#6B4A10] leading-relaxed">
+              Your initial resume has been processed and locked to preserve audit integrity. To submit an updated resume, request a one-time unlock from the TPO cell.
+            </p>
+          </div>
+
+          {% if _pending_req %}
+          <div id="reupload-pending-banner" class="rounded-xl bg-[#FAF9F5] border border-[#D5D2C6] p-3 space-y-1.5">
+            <div class="flex items-center justify-between gap-2">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FEF6E6] border border-[#F2D59B] text-[#8F5B00]">Pending TPO Approval</span>
+              <span class="text-[11px] font-mono text-[#5C5A52]">Request #{{ _pending_req.id }}</span>
+            </div>
+            <p class="text-[11px] text-[#5C5A52]">
+              An administrator will review your request shortly. Re-upload will unlock automatically once approved.
+            </p>
+          </div>
+          {% else %}
+          <form id="reupload-request-form" class="space-y-3">
+            <div>
+              <label for="reupload-request-reason" class="block text-xs font-medium text-[#4A483F] mb-1">Reason for Resume Update (optional)</label>
+              <textarea id="reupload-request-reason" name="reason" rows="2" maxlength="400"
+                        placeholder="e.g., Added summer internship project and updated semester CGPA"
+                        class="w-full text-xs text-[#1C1E1B] bg-[#FAF9F5] border border-[#D5D2C6] rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/20 focus:border-[#1D5C42]"></textarea>
+            </div>
+            <button type="submit" id="request-reupload-btn"
+                    class="w-full px-4 py-2.5 rounded-full bg-[#1D5C42] hover:bg-[#174A35] text-white text-xs font-semibold transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer">
+              <span>Request TPO Permission</span>
+            </button>
+            <div id="reupload-request-status" class="hidden text-xs rounded-xl px-3 py-2"></div>
+          </form>
+          {% endif %}
         </div>
+      {% endif %}
 
-        <button type="submit" id="reupload-btn"
-                class="w-full btn-primary-pill py-2.5 text-xs">
-          <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
-          <span>Re-upload &amp; Re-extract</span>
-        </button>
-      </form>
-
-      <!-- Delete Candidate Profile -->
+      {% if _role != 'student' %}
+      <!-- Delete Candidate Profile (Staff Only) -->
       <div class="mt-6 pt-5 border-t border-[#ECEAE2]">
         <form id="delete-profile-form" method="post" action="/students/{{ sid }}/delete">
           <button type="button" id="delete-profile-btn"
@@ -121,11 +182,13 @@
           </button>
         </form>
       </div>
+      {% endif %}
     </div>
   </div>
 </div>
 
 <script>
+{% if role|default('tpo_admin') != 'student' %}
 (function() {
   var delBtn = document.getElementById("delete-profile-btn");
   var delForm = document.getElementById("delete-profile-form");
@@ -140,6 +203,7 @@
     });
   }
 })();
+{% endif %}
 document.body.addEventListener('htmx:beforeRequest', function(evt) {
   const btn = document.getElementById('reupload-btn');
   if (btn && evt.detail.elt.contains(btn)) {
@@ -156,5 +220,56 @@ document.body.addEventListener('htmx:afterRequest', function(evt) {
     btn.innerHTML = '<svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg> <span>Re-upload &amp; Re-extract</span>';
   }
 });
+(function() {
+  var reqForm = document.getElementById('reupload-request-form');
+  if (!reqForm) return;
+  reqForm.addEventListener('submit', async function(evt) {
+    evt.preventDefault();
+    var btn = document.getElementById('request-reupload-btn');
+    var reasonEl = document.getElementById('reupload-request-reason');
+    var statusEl = document.getElementById('reupload-request-status');
+    var reason = reasonEl ? reasonEl.value.trim() : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add('opacity-75', 'cursor-not-allowed');
+    }
+    try {
+      var res = await fetch('/api/students/{{ sid }}/resume-reupload-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason })
+      });
+      var data = {};
+      try { data = await res.json(); } catch (_err) {}
+      if (statusEl) {
+        statusEl.classList.remove('hidden', 'bg-[#E3F2EA]', 'text-[#1B5E43]', 'border', 'border-[#C8E4D5]', 'bg-[#FDF0ED]', 'text-[#9E2A20]', 'border-[#F5D0C8]');
+        if (res.ok) {
+          var reqId = (data && data.id) ? ('#' + data.id + ' ') : '';
+          statusEl.classList.add('bg-[#E3F2EA]', 'text-[#1B5E43]', 'border', 'border-[#C8E4D5]');
+          statusEl.textContent = 'Request ' + reqId + 'submitted for TPO review. Reloading...';
+          setTimeout(function() { window.location.reload(); }, 900);
+        } else {
+          var errMsg = (data && (data.detail || data.error)) || 'Could not submit request. Please try again.';
+          statusEl.classList.add('bg-[#FDF0ED]', 'text-[#9E2A20]', 'border', 'border-[#F5D0C8]');
+          statusEl.textContent = errMsg;
+          if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-75', 'cursor-not-allowed');
+          }
+        }
+      }
+    } catch (_err) {
+      if (statusEl) {
+        statusEl.classList.remove('hidden', 'bg-[#E3F2EA]', 'text-[#1B5E43]');
+        statusEl.classList.add('bg-[#FDF0ED]', 'text-[#9E2A20]', 'border', 'border-[#F5D0C8]');
+        statusEl.textContent = 'Network error while submitting request. Please retry.';
+      }
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-75', 'cursor-not-allowed');
+      }
+    }
+  });
+})();
 </script>
 {% endblock %}

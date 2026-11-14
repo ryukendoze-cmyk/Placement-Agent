@@ -1,0 +1,16 @@
+Company: QuantumGrid Labs
+Role: Emerging Tech Engineer
+Location: Bengaluru
+Work Mode: Hybrid
+CTC: 16 LPA
+Eligibility: minimum 7.5 GPA, no active backlogs, B.Tech CSE/AI/ECE
+
+Required Skills:
+- Python
+- FastAPI
+- PostgreSQL
+- Blockchain-Quantum-Rust++
+
+Preferred:
+- Docker
+- Kotlin Multiplatform

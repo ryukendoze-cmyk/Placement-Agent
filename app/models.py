@@ -12,6 +12,7 @@ class Student(SQLModel, table=True):
     gpa: float = 0.0
     backlogs: int = 0
     pii_redacted_count: int = 0
+    resume_reupload_unlocked: bool = Field(default=False)
     resume_text: str = Field(default="", sa_column=Column(Text))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -22,6 +23,11 @@ class StudentSkill(SQLModel, table=True):
     mentions: int = 0
     level: str = "basic"
     evidence: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    verification_status: str = Field(default="claimed", index=True)
+    confidence: float = Field(default=0.5)
+    source: str = Field(default="resume")
+    last_verified_score: int | None = Field(default=None)
+    last_verified_at: datetime | None = Field(default=None)
 
 
 class Skill(SQLModel, table=True):
@@ -45,9 +51,12 @@ class Job(SQLModel, table=True):
     salary_disclosed: bool = Field(default=False)
     min_gpa: float = 0.0
     allowed_branches: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    max_backlogs: int | None = Field(default=None)
     job_url: str = Field(default="")
     source: str = Field(default="local")
-    scraper_engine: str = Field(default="jobspy")
+    scraper_engine: str = Field(default="")
+    is_live: bool = Field(default=False, index=True)
+    owner_student_id: str | None = Field(default=None, index=True)
 
     @property
     def is_fresher(self) -> bool:
@@ -63,6 +72,7 @@ class JobMatch(SQLModel, table=True):
     score: int
     band: str
     breakdown: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    is_favorite: bool = Field(default=False, index=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -86,6 +96,7 @@ class JobApplication(SQLModel, table=True):
     endorsed_by: str = ""
     approved_by: str = ""
     notes: str = ""
+    is_favorite: bool = Field(default=False, index=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -138,6 +149,7 @@ class Interview(SQLModel, table=True):
     score: int | None = None
     feedback: dict = Field(default_factory=dict, sa_column=Column(JSON))
     finished: bool = False
+    role: str | None = Field(default=None)
     #: M18.2: serve resume-grounded project deep-dive probes first.
     include_resume_probes: bool = False
     #: M18.1: enable adaptive follow-up probing for this interview.
@@ -180,7 +192,7 @@ class ApprovalRequest(SQLModel, table=True):
     """Human-in-the-loop approval for a state-changing action (Phase 4).
     Nothing mutates until status flips pending_review -> approved."""
     id: str = Field(primary_key=True)                        # appr-<hex8>
-    kind: str                                                # nomination | cohort_bootcamp_publish | proficiency_waiver | job_application_nomination
+    kind: str                                                # nomination | cohort_bootcamp_publish | proficiency_waiver | job_application_nomination | resume_reupload_request
     target_id: str = ""
     title: str = ""
     summary: str = ""
@@ -207,3 +219,37 @@ class AuditLog(SQLModel, table=True):
     detail: dict = Field(default_factory=dict, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc),
                                  index=True)
+
+
+class CampusDrive(SQLModel, table=True):
+    """Campus placement drive intake, AI extraction provenance, and HITL lifecycle."""
+    id: str = Field(primary_key=True)                        # cd-<hex8>
+    trace_id: str = Field(default="", index=True)            # tr-<hex8>
+    company: str = ""
+    role_title: str = ""
+    location: str = ""
+    work_mode: str = "On-site"                               # On-site | Remote | Hybrid
+    ctc_lpa_min: float | None = None
+    ctc_lpa_max: float | None = None
+    salary_disclosed: bool = False
+    stipend_inr_per_month: int | None = None
+    policy_tier: str | None = None                           # super_dream | dream | standard | None
+    policy_tier_source: str | None = None                    # SOP-01 | None
+    experience_level: str = "Fresher"                        # Fresher | Internship
+    source_portal: str = "On-Campus (Local)"
+    source_badge: str = "On-Campus · JKLU"
+    origin: str = "tpo_smart_jd"                             # tpo_smart_jd | recruiter_jnf
+    eligibility: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    required_skills: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    preferred_skills: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    unmapped_skill_mentions: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    raw_jd_text: str = Field(default="", sa_column=Column(Text))
+    parser_metadata: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    cohort_summary: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    approval_status: str = Field(default="DRAFT", index=True)  # DRAFT | PENDING_TPO_APPROVAL | PUBLISHED | REJECTED
+    approval_id: str | None = Field(default=None, index=True)
+    job_id: str | None = Field(default=None, index=True)
+    created_by: str = ""
+    reviewed_by: str | None = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

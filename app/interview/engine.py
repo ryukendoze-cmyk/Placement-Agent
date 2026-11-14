@@ -4,10 +4,14 @@ All evolving state lives in the `transcript` list (see plan section 0.1), so a
 session is fully reconstructed from an Interview row on each request.
 """
 import json
+import logging
+import re
 from dataclasses import dataclass, field
 
 from app.interview.bank import Question, get_question, select
 from app.security.guardrails import sanitize_untrusted_text
+
+logger = logging.getLogger(__name__)
 
 MAX_TURNS = 8
 
@@ -40,6 +44,13 @@ def _safe_json(raw: str):
     try:
         return json.loads(cleaned or raw)
     except (ValueError, TypeError):
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        if start != -1 and end > start:
+            try:
+                return json.loads(cleaned[start : end + 1])
+            except (ValueError, TypeError):
+                return None
         return None
 
 
@@ -56,13 +67,92 @@ def _coerce_score(val) -> int:
     return 0
 
 
+_DEVOPS_RE = re.compile(r"\b(devops|site reliability|cloud|sre|infrastructure|platform)\b")
+_DATA_RE = re.compile(r"\b(data|analytics?|machine learning|ml|ai|vision|scientist|bi)\b")
+_FRONTEND_RE = re.compile(
+    r"\b(frontend|front-end|react|vue|angular|next\.?js|web developer|full[- ]?stack|mern|ui/ux|ui|ux|ios|android|mobile)\b"
+)
+_NON_ANSWER_RE = re.compile(
+    r"^\s*(?:i\s*(?:do\s*not|don'?t)\s*know|idk|no\s*idea|not\s*sure|skip|pass|none|n/?a)\W*$",
+    re.IGNORECASE,
+)
+
+
+def _is_non_answer(text: str) -> bool:
+    s = (text or "").strip()
+    if not s:
+        return True
+    if _NON_ANSWER_RE.match(s):
+        return True
+    low = s.lower()
+    return len(low.split()) <= 6 and any(
+        p in low for p in ("don't know", "dont know", "do not know", "no idea", "skip")
+    )
+
+
+def _deterministic_evaluate(q: Question, answer_text: str) -> dict:
+    """Offline fallback evaluator when the configured LLM fails or emits invalid JSON."""
+    text = (answer_text or "").strip()
+    keywords = [str(k).strip() for k in (q.keywords or ()) if str(k).strip()]
+    low = text.lower()
+    matched = [k for k in keywords if re.search(rf"\b{re.escape(k.lower())}", low)]
+    missed = [k for k in keywords if k not in matched]
+
+    if _is_non_answer(text):
+        return {
+            "score": 15,
+            "feedback": "No technical explanation provided. Review core fundamentals and outline a concrete example.",
+            "rubric": {
+                "technical_accuracy": 10,
+                "depth_and_examples": 10,
+                "communication_clarity": 25,
+            },
+            "matched_keywords": matched,
+            "missed_keywords": missed,
+            "ideal_answer_hint": "; ".join(q.outline[:2]) if q.outline else "",
+        }
+
+    words = re.findall(r"\b\w+\b", low)
+    kw_ratio = len(matched) / max(1, len(keywords)) if keywords else 0.5
+    depth_signals = sum(
+        1
+        for tok in ("because", "example", "for instance", "trade-off", "tradeoff", "latency", "throughput", "index", "cache", "test", "scale")
+        if tok in low
+    )
+    tech = min(92, max(20, round(25 + 65 * kw_ratio)))
+    depth = min(90, max(20, round(20 + 35 * kw_ratio + min(30, len(words) // 2) + min(15, depth_signals * 5))))
+    clarity = min(92, max(30, round(35 + min(35, len(words)) + (15 if len(words) >= 12 else 0))))
+    score = round((tech * 0.45) + (depth * 0.35) + (clarity * 0.20))
+    hint = "; ".join(q.outline[:2]) if q.outline else (
+        f"Cover {', '.join(missed[:3])} with a concrete implementation example." if missed else ""
+    )
+    if matched and missed:
+        fb = f"Covered {', '.join(matched[:3])}. Deepen your answer on {', '.join(missed[:3])}."
+    elif matched:
+        fb = f"Solid coverage of {', '.join(matched[:3])} with clear reasoning."
+    else:
+        fb = f"Answer lacked key concepts ({', '.join(missed[:3])}). Focus on concrete mechanisms and trade-offs."
+    return {
+        "score": max(0, min(100, score)),
+        "feedback": fb,
+        "rubric": {
+            "technical_accuracy": tech,
+            "depth_and_examples": depth,
+            "communication_clarity": clarity,
+        },
+        "matched_keywords": matched,
+        "missed_keywords": missed,
+        "ideal_answer_hint": hint,
+    }
+
+
 def role_for_job(job) -> str:
     t = (getattr(job, "title", "") or "").lower()
-    if any(k in t for k in ("devops", "site reliability", "cloud", "sre")):
+    if _DEVOPS_RE.search(t):
         return "devops"
-    if any(k in t for k in ("data", "analytic", "machine learning", "vision", "scientist", "bi ", "analytics")):
+    if _DATA_RE.search(t):
         return "data"
-    if any(k in t for k in ("frontend", "front-end", "react", "vue", "angular", "next.js", "web developer", "full-stack", "mern", "ui", "ios", "android", "mobile")):
+    if _FRONTEND_RE.search(t):
         return "frontend"
     return "backend"
 
@@ -86,6 +176,8 @@ class TurnResult:
     injection_flags: list = field(default_factory=list)
     #: M18: contextual follow-up probe generated for this turn ("" when none).
     followup_probe: str = ""
+    #: Non-empty when LLM failure/malformed JSON recovered via deterministic fallback.
+    error_recovered: str = ""
 
 
 #: Deterministic follow-up probe task for the offline MockLLM.
@@ -208,11 +300,11 @@ class InterviewSession:
         # rehydrate the probe (the bank never contains q-resume-*).
         for rq in self.resume_questions:
             if rq.id not in self.used_ids:
-                d = self.current_difficulty
+                d = rq.difficulty if rq.difficulty is not None else self.current_difficulty
                 self.transcript.append({"q_id": rq.id, "q": rq.question,
                                         "skill_id": rq.skill_id,
                                         "a": "", "difficulty": d, "score": None,
-                                        "next_difficulty": d,
+                                        "next_difficulty": self.current_difficulty,
                                         "keywords": list(rq.keywords),
                                         "outline": list(rq.outline),
                                         "is_resume_probe": True})
@@ -232,18 +324,14 @@ class InterviewSession:
             pend = self.pending
             if pend is None:
                 raise ValueError("no question to answer")
-        q = get_question(self.bank, pend["q_id"])
+        q = self._dynamic_question_from_pending(pend)
+        if q is None:
+            q = get_question(self.bank, pend["q_id"])
         if q is None and self.resume_questions:
             # M18.2: resume probes are session-scoped (regenerated), not in the bank.
             q = get_question(self.resume_questions, pend["q_id"])
         if q is None:
-            # M18.1/18.2: dynamic follow-up and resume ids are not in the static
-            # bank - rebuild from the pending turn metadata. Unknown ghost ids
-            # still raise.
-            dyn = self._dynamic_question_from_pending(pend)
-            if dyn is None:
-                raise ValueError(f"question '{pend['q_id']}' not found in question bank")
-            q = dyn
+            raise ValueError(f"question '{pend['q_id']}' not found in question bank")
         # M15 indirect prompt-injection gate: neutralize adversarial phrasing
         # BEFORE it reaches the evaluator LLM; the transcript stores the
         # sanitized text so downstream prompts never see the raw payload.
@@ -251,20 +339,43 @@ class InterviewSession:
         payload = json.dumps({"question": q.question, "answer": text,
                               "keywords": list(q.keywords),
                               "outline": list(q.outline)})
-        raw_complete = self.llm.complete(system=EVALUATE_ANSWER_SYSTEM, user=payload, json_mode=True)
-        parsed = _safe_json(raw_complete)
-        if isinstance(parsed, dict):
-            score = _coerce_score(parsed.get("score"))
-            feedback = str(parsed.get("feedback") or "")
-            raw_rub = parsed.get("rubric") if isinstance(parsed.get("rubric"), dict) else {}
-            rubric = {k: max(0, min(100, _coerce_score(raw_rub.get(k, score)))) for k in RUBRIC_KEYS}
-            matched = [str(x) for x in (parsed.get("matched_keywords") or [])]
-            missed = [str(x) for x in (parsed.get("missed_keywords") or [])]
-            ideal = str(parsed.get("ideal_answer_hint") or "")
-        else:
-            score, feedback = 0, ""
-            rubric = {k: 0 for k in RUBRIC_KEYS}
-            matched, missed, ideal = [], [], ""
+        parsed = None
+        error_recovered = ""
+        try:
+            raw_complete = self.llm.complete(system=EVALUATE_ANSWER_SYSTEM, user=payload, json_mode=True)
+            parsed = _safe_json(raw_complete)
+        except Exception as exc:
+            logger.warning("Interview answer evaluation failed (%s); trying recovery", exc)
+            error_recovered = f"llm_error:{type(exc).__name__}"
+
+        if not isinstance(parsed, dict) and not error_recovered:
+            # 1 concise JSON-repair retry on malformed string output
+            try:
+                repair_prompt = (
+                    "Your previous output was not valid JSON. Return ONLY valid JSON with keys: "
+                    "score, feedback, rubric, matched_keywords, missed_keywords, ideal_answer_hint.\n"
+                    + payload
+                )
+                raw_retry = self.llm.complete(system=EVALUATE_ANSWER_SYSTEM, user=repair_prompt, json_mode=True)
+                parsed = _safe_json(raw_retry)
+                if not isinstance(parsed, dict):
+                    error_recovered = "invalid_json_fallback"
+            except Exception as exc:
+                logger.warning("Interview answer JSON-repair retry failed (%s)", exc)
+                error_recovered = f"llm_retry_error:{type(exc).__name__}"
+
+        if not isinstance(parsed, dict):
+            parsed = _deterministic_evaluate(q, text)
+            if not error_recovered:
+                error_recovered = "deterministic_rubric_fallback"
+
+        score = _coerce_score(parsed.get("score"))
+        feedback = str(parsed.get("feedback") or "")
+        raw_rub = parsed.get("rubric") if isinstance(parsed.get("rubric"), dict) else {}
+        rubric = {k: max(0, min(100, _coerce_score(raw_rub.get(k, score)))) for k in RUBRIC_KEYS}
+        matched = [str(x) for x in (parsed.get("matched_keywords") or [])]
+        missed = [str(x) for x in (parsed.get("missed_keywords") or [])]
+        ideal = str(parsed.get("ideal_answer_hint") or "")
         score = max(0, min(100, score))
         d = pend["difficulty"]
         if score >= 70:
@@ -280,6 +391,8 @@ class InterviewSession:
         pend["matched_keywords"] = matched
         pend["missed_keywords"] = missed
         pend["ideal_answer_hint"] = ideal
+        if error_recovered:
+            pend["error_recovered"] = error_recovered
 
         # --- M18.1: adaptive follow-up probing (opt-in) ----------------------
         followup_probe = ""
@@ -287,20 +400,23 @@ class InterviewSession:
                 and not pend.get("is_followup")
                 and self.turn < MAX_TURNS
                 and missed
+                and not _is_non_answer(text)
+                and score >= 25
                 and ((35 <= score < 75)
                      or rubric.get("depth_and_examples", 100) < 60)):
             followup_probe = generate_followup_probe(
-                question=q.question, answer=text, missed_keywords=missed,
+                question=q.question, answer=text, missed_keywords=missed[:2],
                 skill_id=q.skill_id, llm=self.llm)
             if followup_probe:
                 pend["followup_probe"] = followup_probe
                 probe_id = f"{q.id}-followup"
+                targeted_kws = [k for k in missed if k.lower() in followup_probe.lower()] or missed[:1]
                 self.transcript.append({
                     "q_id": probe_id, "q": followup_probe, "skill_id": q.skill_id,
                     "a": "", "difficulty": nd, "score": None, "next_difficulty": nd,
-                    "keywords": missed,
+                    "keywords": targeted_kws,
                     "outline": [f"Explain {k} and the trade-offs involved"
-                                for k in missed[:4]],
+                                for k in targeted_kws[:4]],
                     "is_followup": True,
                 })
 
@@ -308,7 +424,7 @@ class InterviewSession:
                           question_id=q.id, question=q.question, finished=self.finished,
                           rubric=rubric, matched_keywords=matched, missed_keywords=missed,
                           ideal_answer_hint=ideal, injection_flags=inj_flags,
-                          followup_probe=followup_probe)
+                          followup_probe=followup_probe, error_recovered=error_recovered)
 
     def finish(self) -> InterviewSummary:
         a = self.answered
@@ -323,10 +439,23 @@ class InterviewSession:
             for k in RUBRIC_KEYS:
                 vals = [max(0, min(100, _coerce_score(t["rubric"].get(k, 0)))) for t in scored]
                 rubric_overall[k] = round(sum(vals) / len(vals))
-        raw_complete = self.llm.complete(
-            system=INTERVIEW_FEEDBACK_SYSTEM,
-            user=json.dumps({"score": overall, "per_skill": per_skill}), json_mode=True)
-        parsed = _safe_json(raw_complete)
-        feedback = str(parsed.get("feedback") or "") if isinstance(parsed, dict) else ""
+        parsed = None
+        try:
+            raw_complete = self.llm.complete(
+                system=INTERVIEW_FEEDBACK_SYSTEM,
+                user=json.dumps({"score": overall, "per_skill": per_skill}), json_mode=True)
+            parsed = _safe_json(raw_complete)
+        except Exception as exc:
+            logger.warning("Interview finish summary generation failed (%s); using fallback", exc)
+        feedback = str(parsed.get("feedback") or "").strip() if isinstance(parsed, dict) else ""
+        if not feedback:
+            strengths = [k for k, v in per_skill.items() if v >= 70]
+            gaps = [k for k, v in per_skill.items() if v < 55]
+            parts = [f"Completed {len(a)} interview turns with an overall score of {overall}/100."]
+            if strengths:
+                parts.append(f"Demonstrated strength in {', '.join(strengths)}.")
+            if gaps:
+                parts.append(f"Revisit and re-verify {', '.join(gaps)}.")
+            feedback = " ".join(parts)
         return InterviewSummary(score=overall, per_skill=per_skill, feedback=feedback,
                                 transcript=self.transcript, rubric_overall=rubric_overall)

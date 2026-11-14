@@ -11,16 +11,40 @@ from app.security.rbac import enforce_student_scope, get_current_user_optional
 router = APIRouter()
 
 
+def _infer_workflow_kind(run: AgentRun) -> str:
+    citations = run.citations if isinstance(run.citations, dict) else {}
+    if citations.get("workflow_kind"):
+        return str(citations["workflow_kind"])
+    prov = str(run.provider_used or "")
+    if prov.startswith("copilot:"):
+        return "copilot"
+    if prov.startswith("campus_jd:"):
+        return "smart_jd"
+    return "agent_orchestrator"
+
+
 def _run_payload(run: AgentRun, steps: list[AgentStep] | None = None) -> dict:
+    citations = run.citations if isinstance(run.citations, dict) else {}
+    telemetry = citations.get("telemetry") if isinstance(citations.get("telemetry"), dict) else {}
+    trace_id = citations.get("trace_id")
+    audit_query = f"trace_id={trace_id}" if trace_id else f"entity_id={run.id}"
     return {
         "id": run.id,
         "student_id": run.student_id,
         "actor_role": run.actor_role,
         "goal": run.goal,
         "status": run.status,
+        "workflow_kind": _infer_workflow_kind(run),
         "plan": run.plan_json,
         "final_answer": run.final_answer,
-        "citations": run.citations or {},
+        "citations": citations,
+        "telemetry": {
+            "provider": telemetry.get("provider") or run.provider_used,
+            "calls": telemetry.get("calls"),
+            "tokens": telemetry.get("tokens"),
+            "cost_usd": telemetry.get("cost_usd"),
+        },
+        "audit_trace_url": f"/admin/audit?{audit_query}",
         "total_latency_ms": run.total_latency_ms,
         "provider_used": run.provider_used,
         "fallback_triggered": run.fallback_triggered,
@@ -42,14 +66,11 @@ def _run_payload(run: AgentRun, steps: list[AgentStep] | None = None) -> dict:
     }
 
 
-@router.post("/api/agent/run", status_code=201)
-def start_run(payload: dict, request: Request,
-              session: Session = Depends(get_session), ctx=Depends(get_ctx),
-              _rl: None = Depends(check_rate_limit("agent_run"))):
+def _resolve_run_params(payload: dict, request: Request) -> tuple[str, str | None, str, bool]:
     goal = (payload or {}).get("goal") or ""
     if not goal.strip():
         raise HTTPException(400, "goal is required")
-    student_id = (payload or {}).get("student_id")
+    student_id = (payload or {}).get("student_id") or None
     actor_role = (payload or {}).get("actor_role", "student")
     user = get_current_user_optional(request)
     if user is not None:
@@ -58,7 +79,28 @@ def start_run(payload: dict, request: Request,
             if student_id and student_id != user.student_id:
                 enforce_student_scope(request, student_id)
             student_id = user.student_id
-    run = run_agent(ctx, session, goal=goal, student_id=student_id, actor_role=actor_role)
+    from app.config import settings
+    req_sim = bool((payload or {}).get("simulate_failure", False))
+    sim_allowed = (
+        str(getattr(settings, "auth_mode", "demo")).lower() == "demo"
+        or actor_role in ("tpo_admin", "faculty_mentor")
+    )
+    return goal, student_id, actor_role, bool(req_sim and sim_allowed)
+
+
+@router.post("/api/agent/run", status_code=201)
+def start_run(payload: dict, request: Request,
+              session: Session = Depends(get_session), ctx=Depends(get_ctx),
+              _rl: None = Depends(check_rate_limit("agent_run"))):
+    goal, student_id, actor_role, simulate_failure = _resolve_run_params(payload, request)
+    run = run_agent(
+        ctx,
+        session,
+        goal=goal,
+        student_id=student_id,
+        actor_role=actor_role,
+        simulate_failure=simulate_failure,
+    )
     steps = session.exec(select(AgentStep).where(AgentStep.run_id == run.id)
                          .order_by(AgentStep.step_order)).all()
     return JSONResponse(status_code=201, content=_run_payload(run, steps))
@@ -78,24 +120,14 @@ def start_run_stream(payload: dict, request: Request,
     """
     from app.api.routes.jobs import SSE_HEADERS, _sse_chunk
 
-    goal = (payload or {}).get("goal") or ""
-    if not goal.strip():
-        raise HTTPException(400, "goal is required")
-    student_id = (payload or {}).get("student_id")
-    actor_role = (payload or {}).get("actor_role", "student")
-    user = get_current_user_optional(request)
-    if user is not None:
-        actor_role = user.role
-        if user.role == "student":
-            if student_id and student_id != user.student_id:
-                enforce_student_scope(request, student_id)
-            student_id = user.student_id
+    goal, student_id, actor_role, simulate_failure = _resolve_run_params(payload, request)
 
     def event_stream():
         try:
             for name, data in run_agent_stream(ctx, session, goal=goal,
                                                student_id=student_id,
-                                               actor_role=actor_role):
+                                               actor_role=actor_role,
+                                               simulate_failure=simulate_failure):
                 yield _sse_chunk(name, data)
         except Exception as e:  # pragma: no cover - never break the SSE frame
             yield _sse_chunk("error", {"message": str(e)})
@@ -106,15 +138,53 @@ def start_run_stream(payload: dict, request: Request,
                              headers=SSE_HEADERS)
 
 
-@router.get("/api/agent/runs")
-def list_runs(request: Request, session: Session = Depends(get_session)):
+@router.get("/api/agent/telemetry")
+def agent_telemetry(request: Request, session: Session = Depends(get_session), ctx=Depends(get_ctx)):
+    """Lightweight Agent Brain drawer summary scoped cleanly by caller role."""
     stmt = select(AgentRun)
     user = get_current_user_optional(request)
     if user is not None and user.role == "student":
         stmt = stmt.where(AgentRun.student_id == user.student_id)
-    runs = session.exec(stmt.order_by(AgentRun.created_at.desc())).all()
-    # the Agent Brain drawer renders from this list, so each run needs its steps
-    all_steps = session.exec(select(AgentStep).order_by(AgentStep.step_order)).all()
+    runs = session.exec(stmt.order_by(AgentRun.created_at.desc()).limit(50)).all()
+    groundings = [
+        float(r.citations.get("grounding_score"))
+        for r in runs
+        if isinstance(r.citations, dict) and r.citations.get("grounding_score") is not None
+    ]
+    tracker = getattr(ctx, "llm_telemetry", None)
+    totals = (tracker.stats().get("totals") if tracker is not None else {}) or {}
+    llm = getattr(ctx, "llm", None)
+    provider = str(getattr(llm, "provider", None) or (type(llm).__name__ if llm else "mock"))
+    return {
+        "total_runs": len(runs),
+        "avg_grounding_score": round(sum(groundings) / len(groundings), 1) if groundings else 100.0,
+        "fallback_count": sum(1 for r in runs if r.fallback_triggered),
+        "avg_latency_ms": round(sum(int(r.total_latency_ms or 0) for r in runs) / len(runs), 1) if runs else 0.0,
+        "llm": {
+            "provider": provider,
+            "calls": int(totals.get("total_calls", 0) or 0),
+            "tokens": int(totals.get("total_tokens", 0) or 0),
+            "cost_usd": round(float(totals.get("estimated_cost_usd", 0.0) or 0.0), 6),
+        },
+    }
+
+
+@router.get("/api/agent/runs")
+def list_runs(request: Request, limit: int = 30, session: Session = Depends(get_session)):
+    stmt = select(AgentRun)
+    user = get_current_user_optional(request)
+    if user is not None and user.role == "student":
+        stmt = stmt.where(AgentRun.student_id == user.student_id)
+    capped = max(1, min(int(limit or 30), 100))
+    runs = session.exec(stmt.order_by(AgentRun.created_at.desc()).limit(capped)).all()
+    if not runs:
+        return []
+    run_ids = [r.id for r in runs]
+    all_steps = session.exec(
+        select(AgentStep)
+        .where(AgentStep.run_id.in_(run_ids))
+        .order_by(AgentStep.step_order)
+    ).all()
     steps_by_run: dict[str, list[AgentStep]] = {}
     for s in all_steps:
         steps_by_run.setdefault(s.run_id, []).append(s)

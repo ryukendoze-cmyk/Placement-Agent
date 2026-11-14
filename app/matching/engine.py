@@ -21,13 +21,30 @@ class JobScore:
     proficiency_gaps: list[dict] = None  # type: ignore[assignment]
     #: -25 when a campus fresher is scored against a senior role (else 0).
     seniority_penalty: int = 0
+    #: Matched required/preferred skills flagged unverified or needing reverification.
+    unverified_skills: list[str] = None  # type: ignore[assignment]
+    needs_reverification_skills: list[str] = None  # type: ignore[assignment]
+    verification_statuses: dict[str, str] = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:
         if self.proficiency_gaps is None:
             self.proficiency_gaps = []
+        if self.unverified_skills is None:
+            self.unverified_skills = []
+        if self.needs_reverification_skills is None:
+            self.needs_reverification_skills = []
+        if self.verification_statuses is None:
+            self.verification_statuses = {}
 
 
 WEIGHTS = {"coverage": 0.6, "preferred": 0.2, "semantic": 0.2}
+
+VERIFICATION_WEIGHTS = {
+    "verified": 1.0,
+    "claimed": 0.85,
+    "needs_reverification": 0.5,
+    "unverified": 0.2,
+}
 
 #: Freshers evaluated against a senior role lose these composite points.
 SENIORITY_PENALTY = -25
@@ -64,7 +81,20 @@ LEVEL_ORDER = {"basic": 0, "intermediate": 1, "advanced": 2}
 
 
 def band_for(score: int) -> str:
-    return "strong" if score >= 80 else "moderate" if score >= 60 else "developing" if score >= 40 else "early"
+    """Map readiness score 0..100 to band using SOP-05 min_coverage_pct as the developing floor."""
+    from ..rag.policy_rag import load_sop_params
+
+    sop05 = load_sop_params("SOP-05")
+    developing_min = int(sop05.get("min_coverage_pct", 40))
+    strong_min = max(80, developing_min)
+    moderate_min = min(strong_min, max(60, developing_min))
+    if score >= strong_min:
+        return "strong"
+    if score >= moderate_min:
+        return "moderate"
+    if score >= developing_min:
+        return "developing"
+    return "early"
 
 
 def level_rank(level: str | None) -> int:
@@ -182,13 +212,17 @@ def higher_level(a: str | None, b: str | None) -> str:
 
 
 def job_tier(job) -> str:
-    """Derive the JKLU placement tier from the top of the salary band:
-    standard < 8 LPA, dream 8-15 LPA, super_dream >= 15 LPA."""
+    """Derive the JKLU placement tier dynamically from SOP-01 CTC thresholds."""
+    from ..rag.policy_rag import load_sop_params
+
+    sop01 = load_sop_params("SOP-01")
+    super_dream_min = float(sop01.get("super_dream_min_lpa", 15.0))
+    dream_min = float(sop01.get("dream_min_lpa", 8.0))
     salary = list(getattr(job, "salary_lpa", None) or [0, 0])
     upper = max(salary) if salary else 0
-    if upper >= 15:
+    if upper >= super_dream_min:
         return "super_dream"
-    if upper >= 8:
+    if upper >= dream_min:
         return "dream"
     return "standard"
 
@@ -211,6 +245,13 @@ def job_eligibility(student, job) -> tuple[bool, list[str]]:
     if allowed and not is_branch_eligible(branch, allowed):
         allowed_disp = sorted({str(b).strip().upper() for b in allowed if str(b).strip()})
         reasons.append(f"Branch '{branch.upper() or 'n/a'}' is not in the allowed branches ({', '.join(allowed_disp)})")
+    max_backlogs = getattr(job, "max_backlogs", None)
+    if max_backlogs is not None:
+        student_backlogs = int(getattr(student, "backlogs", 0) or 0)
+        if student_backlogs > int(max_backlogs):
+            reasons.append(
+                f"Active backlogs ({student_backlogs}) exceed maximum allowed ({int(max_backlogs)}) per SOP-03"
+            )
     return (len(reasons) == 0, reasons)
 
 
@@ -218,31 +259,86 @@ def _as_dict(skill) -> dict:
     return {"skill": skill.id, "name": skill.name, "category": skill.category}
 
 
-def _with_evidence(skill, student_skills: dict[str, list[str]], levels: dict[str, str] | None) -> dict:
+def _with_evidence(
+    skill,
+    student_skills: dict[str, list[str]],
+    levels: dict[str, str] | None,
+    verification_statuses: dict[str, str] | None = None,
+) -> dict:
     d = _as_dict(skill)
-    ev = student_skills.get(skill.id) or []
-    d["evidence"] = ev[0] if ev else ""
+    ev = list(student_skills.get(skill.id) or [])
+    resume_ev = [e for e in ev if not str(e).lower().startswith(("[interview ", "interview "))]
+    interview_notes = [e for e in ev if str(e).lower().startswith(("[interview ", "interview "))]
+    d["evidence"] = resume_ev[0] if resume_ev else (ev[0] if ev else "")
+    if interview_notes:
+        d["verification_note"] = interview_notes[-1]
     d["level"] = (levels or {}).get(skill.id, "basic")
+    if verification_statuses is not None:
+        status = str(verification_statuses.get(skill.id) or "claimed").lower()
+        if status not in VERIFICATION_WEIGHTS:
+            status = "claimed"
+        d["verification_status"] = status
+        if status == "unverified":
+            d["effective_level"] = "basic"
     return d
 
 
-def _proficiency_bonus(matched_req, req_count: int, levels: dict[str, str] | None) -> int:
+def _preferred_with_status(skill, verification_statuses: dict[str, str] | None = None) -> dict:
+    d = _as_dict(skill)
+    if verification_statuses is not None:
+        status = str(verification_statuses.get(skill.id) or "claimed").lower()
+        if status not in VERIFICATION_WEIGHTS:
+            status = "claimed"
+        d["verification_status"] = status
+    return d
+
+
+def _proficiency_bonus(
+    matched_req,
+    req_count: int,
+    levels: dict[str, str] | None,
+    verification_statuses: dict[str, str] | None = None,
+) -> int:
     if not levels or req_count <= 0:
         return 0
-    pts = sum(PROFICIENCY_POINTS.get(str(levels.get(s.id) or "basic").lower(), 0) for s in matched_req)
+    pts = 0.0
+    for s in matched_req:
+        lvl = str(levels.get(s.id) or "basic").lower()
+        if verification_statuses is not None:
+            vs = str(verification_statuses.get(s.id) or "claimed").lower()
+            if vs not in VERIFICATION_WEIGHTS:
+                vs = "claimed"
+            if vs == "unverified":
+                lvl = "basic"
+            pts += PROFICIENCY_POINTS.get(lvl, 0) * VERIFICATION_WEIGHTS[vs]
+        else:
+            pts += PROFICIENCY_POINTS.get(lvl, 0)
     return min(10, round(pts / req_count))
 
 
-def score_job(student_skills: dict[str, list[str]], job, sim: float, taxonomy: Taxonomy,
-              *, levels: dict[str, str] | None = None, student=None) -> JobScore:
+def score_job(
+    student_skills: dict[str, list[str]],
+    job,
+    sim: float,
+    taxonomy: Taxonomy,
+    *,
+    levels: dict[str, str] | None = None,
+    student=None,
+    verification_statuses: dict[str, str] | None = None,
+) -> JobScore:
     """score = 100 * (0.6*required_coverage + 0.2*preferred_ratio + 0.2*semantic_sim),
     plus a small proficiency bonus (0..10) when `levels` is supplied.
 
     Coverage is depth-weighted (§19.3.1): each required skill credits 1.0 at or
     above the target depth (advanced for senior roles, intermediate otherwise),
-    0.4 one level below, 0.1 two below. When `levels` is None every present
-    skill counts as meeting the target, so the score stays byte-for-byte equal
-    to the original flat formula.
+    0.4 one level below, 0.1 two below. When `levels` is None and
+    `verification_statuses` is None every present skill counts as meeting the
+    target, so the score stays byte-for-byte equal to the original flat formula.
+
+    When `verification_statuses` is provided, coverage and proficiency bonus
+    apply verification multipliers (`verified=1.0`, `claimed=0.85`,
+    `needs_reverification=0.5`, `unverified=0.2` with effective depth capped at
+    `basic`) and flag unverified / needs-reverification job skills explicitly.
 
     When `student` is supplied and is a campus fresher scored against a senior
     role, -25 points are deducted (§19.3.2). Required skills the student has at
@@ -257,53 +353,91 @@ def score_job(student_skills: dict[str, list[str]], job, sim: float, taxonomy: T
     matched_pref = [s for s in pref if s.id in student_skills]
     missing_pref = [s for s in pref if s.id not in student_skills]
 
-    # §19.3.1 — depth-weighted required coverage.
+    # §19.3.1 — depth-weighted + verification-weighted required coverage.
     target = target_depth_for(job)
     weights: list[float] = []
     proficiency_gaps: list[dict] = []
-    # `levels is None` = the original flat formula: a present skill is assumed to
-    # meet the target (byte-for-byte parity, §19.3.1 docstring). With levels
-    # supplied, depth is graded against the target and any shortfall becomes a gap.
     for s in req:
         if s.id not in student_skills:
-            # Absent entirely: no credit under the old formula either, and it is a
-            # reportable gap (the planner turns gaps into modules).
             weights.append(0.0)
             proficiency_gaps.append({
                 "skill": s.id, "current_level": "none",
                 "target_level": target,
             })
             continue
-        if levels is None:
+        if levels is None and verification_statuses is None:
             weights.append(1.0)
             continue
-        have = str(levels.get(s.id) or "basic").lower()
-        weights.append(depth_weight(have, target))
-        if level_rank(have) < level_rank(target):
-            proficiency_gaps.append({
-                "skill": s.id, "current_level": have,
+        v_status = "verified"
+        v_weight = 1.0
+        if verification_statuses is not None:
+            v_status = str(verification_statuses.get(s.id) or "claimed").lower()
+            if v_status not in VERIFICATION_WEIGHTS:
+                v_status = "claimed"
+            v_weight = VERIFICATION_WEIGHTS[v_status]
+
+        have_raw = str((levels or {}).get(s.id) or "basic").lower()
+        eff_have = "basic" if v_status == "unverified" else have_raw
+        dw = depth_weight(eff_have, target) if levels is not None else 1.0
+        weights.append(round(dw * v_weight, 4))
+
+        below_target = (levels is not None) and (level_rank(eff_have) < level_rank(target))
+        if below_target or v_status in ("unverified", "needs_reverification"):
+            gap_entry: dict[str, str] = {
+                "skill": s.id,
+                "current_level": eff_have,
                 "target_level": target,
-            })
+            }
+            if v_status in ("unverified", "needs_reverification"):
+                gap_entry["verification_status"] = v_status
+            proficiency_gaps.append(gap_entry)
+
     coverage = (sum(weights) / len(req)) if req else 1.0
-    pref_score = len(matched_pref) / len(pref) if pref else 0.0
+    if verification_statuses is not None and pref:
+        pref_weights = []
+        for s in matched_pref:
+            vs = str(verification_statuses.get(s.id) or "claimed").lower()
+            pref_weights.append(VERIFICATION_WEIGHTS.get(vs, 0.85))
+        pref_score = sum(pref_weights) / len(pref)
+    else:
+        pref_score = len(matched_pref) / len(pref) if pref else 0.0
     sim = max(0.0, min(1.0, sim))
     base = round(100 * (WEIGHTS["coverage"] * coverage + WEIGHTS["preferred"] * pref_score + WEIGHTS["semantic"] * sim))
-    bonus = _proficiency_bonus(matched_req, len(req), levels)
+    bonus = _proficiency_bonus(matched_req, len(req), levels, verification_statuses)
 
     # §19.3.2 — experience mismatch penalty for campus freshers on senior roles.
     penalty = 0
     if student is not None and is_campus_fresher(student) and is_senior_job(job):
         penalty = SENIORITY_PENALTY
 
+    unverified_skills: list[str] = []
+    needs_rev_skills: list[str] = []
+    matched_statuses: dict[str, str] = {}
+    if verification_statuses is not None:
+        for s in matched_req + matched_pref:
+            if s.id in matched_statuses:
+                continue
+            vs = str(verification_statuses.get(s.id) or "claimed").lower()
+            if vs not in VERIFICATION_WEIGHTS:
+                vs = "claimed"
+            matched_statuses[s.id] = vs
+            if vs == "unverified":
+                unverified_skills.append(s.id)
+            elif vs == "needs_reverification":
+                needs_rev_skills.append(s.id)
+
     score = max(0, min(100, base + bonus + penalty))
     return JobScore(
         job_id=job.id, score=score, band=band_for(score),
-        matched_required=[_with_evidence(s, student_skills, levels) for s in matched_req],
+        matched_required=[_with_evidence(s, student_skills, levels, verification_statuses) for s in matched_req],
         missing_required=[_as_dict(s) for s in missing_req],
-        matched_preferred=[_as_dict(s) for s in matched_pref],
+        matched_preferred=[_preferred_with_status(s, verification_statuses) for s in matched_pref],
         missing_preferred=[_as_dict(s) for s in missing_pref],
         semantic_sim=round(sim, 3),
         proficiency_bonus=bonus,
         proficiency_gaps=proficiency_gaps,
         seniority_penalty=penalty,
+        unverified_skills=unverified_skills,
+        needs_reverification_skills=needs_rev_skills,
+        verification_statuses=matched_statuses,
     )

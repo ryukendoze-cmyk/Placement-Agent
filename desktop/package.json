@@ -1,0 +1,34 @@
+{
+  "name": "jklu-careeros-desktop",
+  "version": "3.0.0",
+  "description": "JKLU CareerOS Desktop Shell (Electron)",
+  "main": "main.js",
+  "scripts": {
+    "desktop:dev": "electron .",
+    "desktop:build": "electron-builder --win portable nsis"
+  },
+  "devDependencies": {
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "in.edu.jklu.careeros.desktop",
+    "productName": "JKLU CareerOS",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "splash.html",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ],
+      "icon": "../app/static/icons/icon-512.png"
+    }
+  }
+}

@@ -177,11 +177,16 @@ def _sop_eligibility_benchmark(session, ctx) -> dict:
     return out
 
 
-def _planner_dag_benchmark() -> dict:
+def _planner_dag_benchmark(session=None) -> dict:
+    from ..plan.planner import _load_courses, _pack_weeks, pick_course_for_skill
     from ..plan.prereq import PREREQUISITE_GRAPH, topological_order
+    from ..rag.policy_rag import load_sops
 
+    courses = _load_courses(session) if session is not None else []
     violations = 0
     cycles = 0
+    duplicate_courses = 0
+    unverified_urls = 0
     per_profile: list[dict] = []
     for targets in DAG_PROFILES:
         ordered = topological_order(PREREQUISITE_GRAPH, list(targets))
@@ -191,13 +196,43 @@ def _planner_dag_benchmark() -> dict:
             for prereq in PREREQUISITE_GRAPH.get(skill, []):
                 if prereq in pos and pos[prereq] >= pos[skill]:
                     profile_violations += 1
+        seen_cids: set[str] = set()
+        items_spec: list[tuple[str, str, int, bool]] = []
+        if courses:
+            for skill in ordered:
+                c = pick_course_for_skill(skill, courses)
+                if c is None:
+                    continue
+                cid = str(c.get("id") or "")
+                url = str(c.get("url") or "").strip()
+                if not url.startswith(("http://", "https://")):
+                    unverified_urls += 1
+                if cid in seen_cids:
+                    continue
+                seen_cids.add(cid)
+                items_spec.append((skill, cid, int(c.get("hours") or 4), True))
+            packed, _ = _pack_weeks(items_spec)
+            packed_cids = [p[2] for p in packed]
+            duplicate_courses += max(0, len(packed_cids) - len(set(packed_cids)))
         cycles += 1 if _has_cycle(PREREQUISITE_GRAPH, ordered) else 0
         violations += profile_violations
-        per_profile.append({"targets": list(targets), "ordered": ordered,
-                            "violations": profile_violations})
-    return {"profiles": len(DAG_PROFILES), "violations": violations,
-            "cycles": cycles, "valid": violations == 0 and cycles == 0,
-            "per_profile": per_profile}
+        per_profile.append({
+            "targets": list(targets),
+            "ordered": ordered,
+            "violations": profile_violations,
+        })
+    is_valid = violations == 0 and cycles == 0 and duplicate_courses == 0
+    return {
+        "profiles": len(DAG_PROFILES),
+        "violations": violations,
+        "cycles": cycles,
+        "duplicate_courses": duplicate_courses,
+        "unverified_urls": unverified_urls,
+        "sop_rules_checked": len(load_sops()),
+        "valid": is_valid,
+        "passed": is_valid,
+        "per_profile": per_profile,
+    }
 
 
 def _has_cycle(graph: dict[str, list[str]], nodes: list[str]) -> bool:
@@ -236,32 +271,100 @@ def _agent_grounding_benchmark(session) -> dict:
     result = verify_text(text, known)
     hallucinated = HALLUCINATED_IDS
     intercepted = [h for h in hallucinated if h in result["unverified"]]
+
+    # Numeric SOP claim & fake URL interception benchmark
+    numeric_probe = verify_text(
+        "Under SOP-04 requires a score of 40 and Dream tier starts at 99 LPA "
+        "and Standard allows 10 backlogs via https://fake.unverified.example/course",
+        known,
+        allowed_urls={"https://nptel.ac.in/course"},
+    )
+    numeric_caught = (
+        any("SOP-04:mock_threshold=40" in u for u in numeric_probe["unverified"])
+        and any("SOP-01:dream_lpa=99" in u for u in numeric_probe["unverified"])
+        and any("SOP-03:backlog_limit=10" in u for u in numeric_probe["unverified"])
+        and any("https://fake.unverified.example/course" in u for u in numeric_probe["unverified"])
+    )
     return {"hallucinated": list(hallucinated),
             "unverified": list(result["unverified"]),
             "verified": list(result["verified"]),
             "grounding_score": result["grounding_score"],
-            "interception_rate": round(len(intercepted) / len(hallucinated), 4)}
+            "interception_rate": round(len(intercepted) / len(hallucinated), 4),
+            "numeric_and_url_interception": 1.0 if numeric_caught else 0.0,
+            "numeric_probe_unverified": list(numeric_probe["unverified"])}
+
+
+def _live_agent_metrics_summary(session) -> dict:
+    """Compute real persisted AgentRun operational metrics (read-only)."""
+    try:
+        import math
+
+        from sqlmodel import select
+
+        from ..models import AgentRun
+
+        runs = session.exec(select(AgentRun)).all()
+    except Exception:
+        return {
+            "total_runs": 0,
+            "completed_runs": 0,
+            "failed_runs": 0,
+            "success_rate": None,
+            "p95_latency_ms": 0.0,
+            "avg_latency_ms": 0.0,
+            "fallback_rate": 0.0,
+        }
+    total = len(runs)
+    if total == 0:
+        return {
+            "total_runs": 0,
+            "completed_runs": 0,
+            "failed_runs": 0,
+            "success_rate": None,
+            "p95_latency_ms": 0.0,
+            "avg_latency_ms": 0.0,
+            "fallback_rate": 0.0,
+        }
+    latencies = sorted(float(r.total_latency_ms or 0) for r in runs)
+    p95 = latencies[max(0, math.ceil(0.95 * len(latencies)) - 1)]
+    completed = sum(1 for r in runs if r.status in ("completed", "awaiting_approval"))
+    failed = sum(1 for r in runs if r.status == "failed")
+    fallbacks = sum(1 for r in runs if r.fallback_triggered)
+    return {
+        "total_runs": total,
+        "completed_runs": completed,
+        "failed_runs": failed,
+        "success_rate": round(completed / total, 4),
+        "p95_latency_ms": round(p95, 2),
+        "avg_latency_ms": round(sum(latencies) / total, 2),
+        "fallback_rate": round(fallbacks / total, 4),
+    }
 
 
 def run_evaluation_benchmark(session, ctx) -> dict:
-    """Run all four benchmark suites; deterministic and side-effect free."""
+    """Run all automated benchmark suites plus live agent operational telemetry."""
     sop_rag = _sop_rag_benchmark(ctx)
     matching = _matching_benchmark(ctx)
     matching["sop_eligibility"] = _sop_eligibility_benchmark(session, ctx)
-    planner_dag = _planner_dag_benchmark()
+    planner_dag = _planner_dag_benchmark(session)
     agent_grounding = _agent_grounding_benchmark(session)
+    agent_metrics = _live_agent_metrics_summary(session)
     return {
         "sop_rag": sop_rag,
         "matching": matching,
         "planner_dag": planner_dag,
         "agent_grounding": agent_grounding,
+        "agent_metrics": agent_metrics,
         "summary": {
             "rag_recall_at_3": sop_rag["recall_at_3"],
             "rag_mrr": sop_rag["mean_reciprocal_rank"],
             "dag_valid": planner_dag["valid"],
             "hallucination_interception": agent_grounding["interception_rate"],
+            "numeric_and_url_interception": agent_grounding["numeric_and_url_interception"],
+            "agent_success_rate": agent_metrics["success_rate"],
             "all_passed": (sop_rag["recall_at_3"] >= 0.9
                            and planner_dag["valid"]
-                           and agent_grounding["interception_rate"] == 1.0),
+                           and agent_grounding["interception_rate"] == 1.0
+                           and agent_grounding["numeric_and_url_interception"] == 1.0),
         },
     }

@@ -371,6 +371,16 @@ def cmd_eval_benchmark() -> int:
         return 1
 
 
+def cmd_warm_cache() -> int:
+    """Instantiate LocalEmbedder and run a probe embed to warm/verify the cache."""
+    embedder = LocalEmbedder()
+    vec = embedder.embed("JKLU CareerOS placement readiness warmup")
+    fell_back = getattr(embedder, "_fallback", None) is not None
+    mode = "HashingEmbedder fallback (offline)" if fell_back else "SentenceTransformer local cache"
+    print(f"warm-cache: {mode} ready (dim={len(vec)})")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="app.cli", description="PS-06 placement agent CLI")
     sub = parser.add_subparsers(dest="command")
@@ -392,6 +402,7 @@ def main(argv: list[str] | None = None) -> int:
     plj = sub.add_parser("purge-live-jobs", help="purge live scraped jobs, related records, embeddings, and output caches")
     plj.add_argument("--keep-output", action="store_true", default=False, help="preserve output JSON caches instead of clearing them")
     sub.add_parser("eval-benchmark", help="run the automated RAG/matching/planner/grounding evaluation benchmark")
+    sub.add_parser("warm-cache", help="pre-download or verify the local sentence-transformers embedding cache")
     try:
         args = parser.parse_args(argv)
     except SystemExit as e:
@@ -408,6 +419,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_purge_live_jobs(keep_output=args.keep_output)
     if args.command == "eval-benchmark":
         return cmd_eval_benchmark()
+    if args.command == "warm-cache":
+        return cmd_warm_cache()
     parser.print_help(sys.stderr)
     return 2
 

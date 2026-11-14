@@ -1,0 +1,29 @@
+{
+  "demo_pin": "2026",
+  "personas": [
+    {
+      "email": "rohit.shetty@jklu.edu.in",
+      "role": "student",
+      "name": "Rohit Shetty",
+      "department": "CSE",
+      "user_id": "rohit.shetty",
+      "pin_hash": "pbkdf2_sha256$120000$b4ae4edd105ef8b78762e55b3edb78a4$08fd431cf4f2640b97d3f8a392956763ba1d87d62ef288b79db48f683ff7d743"
+    },
+    {
+      "email": "faculty.mentor@jklu.edu.in",
+      "role": "faculty_mentor",
+      "name": "Dr. Faculty Mentor",
+      "department": "CSE",
+      "user_id": "faculty.mentor",
+      "pin_hash": "pbkdf2_sha256$120000$7ac4738afb5a62d71f59bb5baa5d1979$d834fa7afaf266be71b386bff48cb1088756aad4839106a2793c66b7033921d0"
+    },
+    {
+      "email": "tpo.admin@jklu.edu.in",
+      "role": "tpo_admin",
+      "name": "TPO Administrator",
+      "department": "Placement Cell",
+      "user_id": "tpo.admin",
+      "pin_hash": "pbkdf2_sha256$120000$e70fcbbeffd4ee201f8870161283f920$9007b2c31f530be550fe3fbed8c4c40a18fae73d38984e2a2d2635632f745481"
+    }
+  ]
+}

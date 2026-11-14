@@ -1,0 +1,25 @@
+From: campus.hiring@novacode.io
+To: placement@jklu.edu.in
+Subject: Standard Campus Hiring 2027 - NovaCode Solutions
+
+Hello Placement Cell,
+
+Company: NovaCode Solutions
+Role: Associate Software Engineer
+Location: Jaipur
+Work Mode: On-site
+CTC: 6.5 LPA
+Eligibility: B.Tech CSE / IT, 2027 batch, CGPA >= 6.5
+
+Must have:
+• Python
+• SQL
+• REST APIs
+
+Bonus:
+* React
+* Git
+
+Best regards,
+Campus Hiring Team
+NovaCode Solutions
