@@ -117,15 +117,51 @@ class AppContext:
     task_queue: object | None = None
 
 
+def backfill_memory_vectors(ctx: AppContext) -> int:
+    """Warm an empty in-memory vector store from persisted Student and Job rows on startup."""
+    from ..embeddings.store import MemoryVectorStore
+
+    store = getattr(ctx, "vector_store", None)
+    embedder = getattr(ctx, "embedder", None)
+    engine = getattr(ctx, "engine", None)
+    if store is None or embedder is None or engine is None:
+        return 0
+    if not isinstance(store, MemoryVectorStore):
+        return 0
+
+    from sqlmodel import Session, select
+
+    from ..models import Job, Student
+
+    warmed = 0
+    try:
+        with Session(engine) as db:
+            for st in db.exec(select(Student)).all():
+                if store.get("student", st.id) is not None:
+                    continue
+                text = (st.resume_text or "").strip() or f"{st.name} {st.branch}".strip()
+                if text:
+                    store.upsert("student", st.id, embedder.embed(text))
+                    warmed += 1
+            for job in db.exec(select(Job)).all():
+                vec = ctx.job_vectors.get(job.id) or store.get("job", job.id)
+                if vec is None and (job.description or "").strip():
+                    vec = embedder.embed(job.description)
+                if vec is not None:
+                    if store.get("job", job.id) is None:
+                        store.upsert("job", job.id, vec)
+                    ctx.job_vectors.setdefault(job.id, vec)
+                    warmed += 1
+    except Exception:
+        pass
+    return warmed
+
+
 def create_app(ctx: AppContext) -> FastAPI:
     app = FastAPI(title="PS-06 Placement Agent", version="0.1.0")
     app.state.ctx = ctx
     # Warm in-memory vector store when booting over an existing non-Postgres database
-    try:
-        from app.api.__main__ import backfill_memory_vectors
-        backfill_memory_vectors(ctx)
-    except Exception:
-        pass
+    backfill_memory_vectors(ctx)
     app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
     app.state.templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 

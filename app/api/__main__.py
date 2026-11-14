@@ -3,7 +3,7 @@
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
 
-from app.api.main import AppContext, create_app
+from app.api.main import AppContext, backfill_memory_vectors, create_app
 from app.config import settings
 from app.db import init_db, make_engine
 from app.embeddings.embedder import HashingEmbedder, LocalEmbedder
@@ -40,44 +40,6 @@ class _SessionPerOpPgVectorStore:
     def get(self, kind: str, ref_id: str) -> list[float] | None:
         with self._factory() as db:
             return PgVectorStore(db, dim=self.dim, ensure_table=False).get(kind, ref_id)
-
-
-def backfill_memory_vectors(ctx: AppContext) -> int:
-    """Warm an empty in-memory vector store from persisted Student and Job rows on startup."""
-    store = getattr(ctx, "vector_store", None)
-    embedder = getattr(ctx, "embedder", None)
-    engine = getattr(ctx, "engine", None)
-    if store is None or embedder is None or engine is None:
-        return 0
-    if not isinstance(store, MemoryVectorStore):
-        return 0
-
-    from sqlmodel import Session, select
-
-    from app.models import Job, Student
-
-    warmed = 0
-    try:
-        with Session(engine) as db:
-            for st in db.exec(select(Student)).all():
-                if store.get("student", st.id) is not None:
-                    continue
-                text = (st.resume_text or "").strip() or f"{st.name} {st.branch}".strip()
-                if text:
-                    store.upsert("student", st.id, embedder.embed(text))
-                    warmed += 1
-            for job in db.exec(select(Job)).all():
-                vec = ctx.job_vectors.get(job.id) or store.get("job", job.id)
-                if vec is None and (job.description or "").strip():
-                    vec = embedder.embed(job.description)
-                if vec is not None:
-                    if store.get("job", job.id) is None:
-                        store.upsert("job", job.id, vec)
-                    ctx.job_vectors.setdefault(job.id, vec)
-                    warmed += 1
-    except Exception:
-        pass
-    return warmed
 
 
 def _build_ctx() -> AppContext:

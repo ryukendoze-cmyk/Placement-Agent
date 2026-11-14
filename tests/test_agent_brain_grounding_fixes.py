@@ -15,8 +15,7 @@ from sqlmodel import Session, select
 from app.agent.orchestrator import run_agent
 from app.agent.tools import call_tool
 from app.agent.verifier import verify_text
-from app.api.__main__ import backfill_memory_vectors
-from app.api.main import AppContext
+from app.api.main import AppContext, backfill_memory_vectors
 from app.db import init_db, make_engine
 from app.embeddings.embedder import HashingEmbedder
 from app.embeddings.store import MemoryVectorStore
