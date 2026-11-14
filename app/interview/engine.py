@@ -17,12 +17,29 @@ MAX_TURNS = 8
 
 EVALUATE_ANSWER_SYSTEM = (
     "TASK: evaluate_answer\n"
-    "You are a technical interviewer. Evaluate the candidate's answer against the interview question "
-    "and expected keywords. Respond ONLY with a valid JSON object containing keys: "
-    "\"score\" (integer from 0 to 100), \"feedback\" (concise 1-2 sentence constructive feedback string), "
-    "\"rubric\" (object with keys \"technical_accuracy\", \"depth_and_examples\", \"communication_clarity\", "
-    "each an integer from 0 to 100), \"matched_keywords\" (list of strings), "
-    "\"missed_keywords\" (list of strings), and \"ideal_answer_hint\" (string, one sentence describing a strong answer)."
+    "You are a strict, zero-leniency senior technical interviewer grading an answer for placement readiness.\n"
+    "Verify factual correctness strictly against the question, expected keywords, and reference outline.\n"
+    "Rules:\n"
+    "1. Simply repeating words from the question, dropping buzzwords, writing vague filler "
+    "(e.g., 'plays an important role', 'it is core architecture', 'should be efficient'), or inventing false "
+    "definitions earns ZERO technical credit.\n"
+    "2. Never inflate scores for grammar, length, or confident tone when technical facts are missing or wrong.\n"
+    "3. Classify verdict strictly:\n"
+    "   - 'wrong_or_baseless' (score 0-18, technical_accuracy 0-12, depth_and_examples 0-10): blank, 'I don't know', "
+    "gibberish, fabricated/wrong definitions, word salad, off-topic, or zero accurate technical claims.\n"
+    "   - 'vague_superficial' (score 19-36, technical_accuracy 15-35): hand-wavy intuition or copied terms without "
+    "explaining the mechanism.\n"
+    "   - 'partial' (score 37-62): partially correct mechanism, missing major outline points or containing errors.\n"
+    "   - 'solid' (score 63-84): factually accurate explanation covering most outline points with clear reasoning.\n"
+    "   - 'strong' (score 85-100): complete, accurate, production-grade answer with concrete examples and trade-offs.\n"
+    "Respond ONLY with a valid JSON object containing keys: "
+    "\"verdict\" (one of \"wrong_or_baseless\", \"vague_superficial\", \"partial\", \"solid\", \"strong\"), "
+    "\"accurate_claims\" (list of accurate technical points actually explained; [] if none), "
+    "\"errors_or_bluffs\" (list of false claims, buzzword salad, or vague filler detected), "
+    "\"score\" (integer 0-100), \"feedback\" (direct 1-2 sentence evaluation; state clearly if wrong/baseless, never flatter), "
+    "\"rubric\" (object with integer keys \"technical_accuracy\", \"depth_and_examples\", \"communication_clarity\"), "
+    "\"matched_keywords\" (list of strings actually used accurately), "
+    "\"missed_keywords\" (list of strings), and \"ideal_answer_hint\" (one sentence describing a strong answer)."
 )
 
 INTERVIEW_FEEDBACK_SYSTEM = (
@@ -90,49 +107,164 @@ def _is_non_answer(text: str) -> bool:
     )
 
 
-def _deterministic_evaluate(q: Question, answer_text: str) -> dict:
-    """Offline fallback evaluator when the configured LLM fails or emits invalid JSON."""
-    text = (answer_text or "").strip()
+_INTERVIEW_STOPWORDS = frozenset({
+    "about", "above", "across", "after", "again", "against", "also", "always", "another",
+    "because", "before", "being", "below", "between", "both", "could", "does", "doing",
+    "done", "during", "each", "either", "every", "first", "from", "have", "having", "here",
+    "however", "important", "into", "just", "like", "main", "make", "many", "means", "more",
+    "most", "much", "need", "only", "other", "overall", "play", "plays", "process", "role",
+    "same", "scenario", "should", "since", "some", "such", "than", "that", "their", "them",
+    "then", "there", "these", "they", "thing", "think", "this", "those", "through", "under",
+    "used", "using", "very", "what", "when", "where", "which", "while", "with", "would", "your",
+})
+
+_NEGATIVE_FEEDBACK_RE = re.compile(
+    r"\b(baseless|completely wrong|incorrect|inaccurate|nonsense|irrelevant|off[- ]topic|"
+    r"no technical|does not answer|fails to explain|fabricated|meaningless)\b",
+    re.IGNORECASE,
+)
+
+
+def _content_tokens(text: str) -> set[str]:
+    return {
+        tok
+        for tok in re.findall(r"[a-z0-9_+#-]{3,}", (text or "").lower())
+        if tok not in _INTERVIEW_STOPWORDS
+    }
+
+
+def _answer_grounding_stats(q: Question, answer_text: str) -> dict:
+    """Measure keyword hits, non-question-parroted hits, and outline concept overlap."""
+    low = (answer_text or "").lower()
     keywords = [str(k).strip() for k in (q.keywords or ()) if str(k).strip()]
-    low = text.lower()
     matched = [k for k in keywords if re.search(rf"\b{re.escape(k.lower())}", low)]
     missed = [k for k in keywords if k not in matched]
 
+    q_tokens = _content_tokens(q.question)
+    ans_tokens = _content_tokens(low)
+    outline_text = " ".join(str(x) for x in (q.outline or ()))
+    outline_tokens = _content_tokens(outline_text) - q_tokens
+    outline_hits = sorted(ans_tokens & outline_tokens)
+    non_question_kw_hits = [k for k in matched if k.lower() not in q.question.lower()]
+
+    raw_words = re.findall(r"[a-z0-9_+#-]+", low)
+    total_words = len(raw_words)
+    unique_ratio = (len(set(raw_words)) / total_words) if total_words else 1.0
+    max_freq = max((raw_words.count(w) for w in set(raw_words)), default=0) if total_words else 0
+    is_stuffed = total_words >= 5 and (
+        unique_ratio < 0.45 or (total_words >= 6 and max_freq / total_words > 0.35)
+    )
+
+    return {
+        "matched": matched,
+        "missed": missed,
+        "keywords_total": len(keywords),
+        "outline_hits": outline_hits,
+        "outline_total": len(outline_tokens),
+        "non_question_kw_hits": non_question_kw_hits,
+        "word_count": total_words,
+        "unique_ratio": unique_ratio,
+        "is_stuffed": is_stuffed,
+    }
+
+
+def _deterministic_evaluate(q: Question, answer_text: str) -> dict:
+    """Strict offline fallback evaluator when the configured LLM fails or emits invalid JSON."""
+    text = (answer_text or "").strip()
+    stats = _answer_grounding_stats(q, text)
+    matched = stats["matched"]
+    missed = stats["missed"]
+    hint = "; ".join(q.outline[:2]) if q.outline else (
+        f"Cover {', '.join(missed[:3])} with a concrete implementation example." if missed else ""
+    )
+
     if _is_non_answer(text):
         return {
-            "score": 15,
-            "feedback": "No technical explanation provided. Review core fundamentals and outline a concrete example.",
+            "verdict": "wrong_or_baseless",
+            "accurate_claims": [],
+            "errors_or_bluffs": ["No technical explanation provided."],
+            "score": 10,
+            "feedback": "No technical explanation provided. Review core fundamentals and outline a concrete mechanism.",
+            "rubric": {
+                "technical_accuracy": 5,
+                "depth_and_examples": 5,
+                "communication_clarity": 20,
+            },
+            "matched_keywords": [],
+            "missed_keywords": list(q.keywords or ()),
+            "ideal_answer_hint": hint,
+        }
+
+    words = stats["word_count"]
+    keywords = [str(k).strip() for k in (q.keywords or ()) if str(k).strip()]
+    kw_ratio = len(matched) / max(1, len(keywords)) if keywords else 0.0
+    outline_ratio = min(1.0, len(stats["outline_hits"]) / max(2, min(4, stats["outline_total"] or 3)))
+
+    if stats["is_stuffed"] or (len(matched) == 0 and len(stats["outline_hits"]) == 0):
+        return {
+            "verdict": "wrong_or_baseless",
+            "accurate_claims": [],
+            "errors_or_bluffs": ["Answer lacks accurate technical concepts or repeats filler."],
+            "score": 12 if words >= 4 else 8,
+            "feedback": (
+                f"Answer did not accurately explain key concepts ({', '.join(missed[:3]) or 'core mechanism'}). "
+                "Focus on exact definitions and concrete mechanisms instead of vague phrasing."
+            ),
             "rubric": {
                 "technical_accuracy": 10,
-                "depth_and_examples": 10,
-                "communication_clarity": 25,
+                "depth_and_examples": 8,
+                "communication_clarity": 25 if words >= 6 else 15,
             },
             "matched_keywords": matched,
             "missed_keywords": missed,
-            "ideal_answer_hint": "; ".join(q.outline[:2]) if q.outline else "",
+            "ideal_answer_hint": hint,
         }
 
-    words = re.findall(r"\b\w+\b", low)
-    kw_ratio = len(matched) / max(1, len(keywords)) if keywords else 0.5
+    # If the candidate only parroted a single word from the question with zero outline concepts, keep strictly low
+    if len(matched) == 1 and not stats["non_question_kw_hits"] and len(stats["outline_hits"]) == 0:
+        return {
+            "verdict": "vague_superficial",
+            "accurate_claims": [],
+            "errors_or_bluffs": ["Merely echoed question terminology without explaining how it works."],
+            "score": 20,
+            "feedback": (
+                f"Merely mentioning '{matched[0]}' without explaining how it works is insufficient. "
+                f"Address {', '.join(missed[:3]) or 'the underlying mechanism'}."
+            ),
+            "rubric": {
+                "technical_accuracy": 18,
+                "depth_and_examples": 15,
+                "communication_clarity": 35,
+            },
+            "matched_keywords": matched,
+            "missed_keywords": missed,
+            "ideal_answer_hint": hint,
+        }
+
+    low = text.lower()
     depth_signals = sum(
         1
         for tok in ("because", "example", "for instance", "trade-off", "tradeoff", "latency", "throughput", "index", "cache", "test", "scale")
         if tok in low
     )
-    tech = min(92, max(20, round(25 + 65 * kw_ratio)))
-    depth = min(90, max(20, round(20 + 35 * kw_ratio + min(30, len(words) // 2) + min(15, depth_signals * 5))))
-    clarity = min(92, max(30, round(35 + min(35, len(words)) + (15 if len(words) >= 12 else 0))))
-    score = round((tech * 0.45) + (depth * 0.35) + (clarity * 0.20))
-    hint = "; ".join(q.outline[:2]) if q.outline else (
-        f"Cover {', '.join(missed[:3])} with a concrete implementation example." if missed else ""
-    )
+    evidence_factor = min(1.0, 0.7 * kw_ratio + 0.3 * outline_ratio)
+    tech = min(94, max(15, round(10 + 82 * evidence_factor)))
+    word_depth = min(22, words // 2) if (kw_ratio > 0 or outline_ratio > 0) else 0
+    depth = min(90, max(12, round(10 + 48 * evidence_factor + word_depth + min(12, depth_signals * 4))))
+    clarity = min(90, max(25, round(25 + min(30, words) * max(0.35, evidence_factor) + (12 if words >= 12 and evidence_factor >= 0.4 else 0))))
+    score = round((tech * 0.55) + (depth * 0.30) + (clarity * 0.15))
+
     if matched and missed:
         fb = f"Covered {', '.join(matched[:3])}. Deepen your answer on {', '.join(missed[:3])}."
     elif matched:
         fb = f"Solid coverage of {', '.join(matched[:3])} with clear reasoning."
     else:
-        fb = f"Answer lacked key concepts ({', '.join(missed[:3])}). Focus on concrete mechanisms and trade-offs."
+        fb = f"Partially addressed {', '.join(stats['outline_hits'][:3])}, but missed {', '.join(missed[:3])}."
+    verdict = "strong" if score >= 82 else ("solid" if score >= 63 else ("partial" if score >= 37 else "vague_superficial"))
     return {
+        "verdict": verdict,
+        "accurate_claims": matched[:3],
+        "errors_or_bluffs": [],
         "score": max(0, min(100, score)),
         "feedback": fb,
         "rubric": {
@@ -143,6 +275,112 @@ def _deterministic_evaluate(q: Question, answer_text: str) -> dict:
         "matched_keywords": matched,
         "missed_keywords": missed,
         "ideal_answer_hint": hint,
+    }
+
+
+def _reconcile_evaluation(q: Question, answer_text: str, parsed: dict) -> dict:
+    """Enforce strict technical grading invariants on both live LLM and fallback outputs.
+
+    Prevents lenient LLMs from awarding 45-65/100 to fabricated definitions,
+    question-parroting, or vague word salad just because answers are grammatically fluent.
+    """
+    out = dict(parsed or {})
+    stats = _answer_grounding_stats(q, answer_text)
+    score = max(0, min(100, _coerce_score(out.get("score"))))
+    feedback = str(out.get("feedback") or "").strip()
+    raw_rub = out.get("rubric") if isinstance(out.get("rubric"), dict) else {}
+    rubric = {
+        k: max(0, min(100, _coerce_score(raw_rub.get(k, score))))
+        for k in RUBRIC_KEYS
+    }
+    matched = [str(x) for x in (out.get("matched_keywords") or []) if str(x).strip()]
+    missed = [str(x) for x in (out.get("missed_keywords") or []) if str(x).strip()]
+    ideal = str(out.get("ideal_answer_hint") or "").strip()
+    verdict = str(out.get("verdict") or "").strip().lower()
+    raw_claims = out.get("accurate_claims")
+    has_claims_field = isinstance(raw_claims, list)
+    accurate_claims = [str(x).strip() for x in raw_claims if str(x).strip()] if has_claims_field else []
+    raw_errors = out.get("errors_or_bluffs")
+    errors_or_bluffs = [str(x).strip() for x in raw_errors if str(x).strip()] if isinstance(raw_errors, list) else []
+
+    tech = rubric["technical_accuracy"]
+    depth = rubric["depth_and_examples"]
+    comm = rubric["communication_clarity"]
+
+    if _is_non_answer(answer_text) or stats["is_stuffed"]:
+        verdict = "wrong_or_baseless"
+        tech = min(tech, 10)
+        depth = min(depth, 8)
+        comm = min(comm, 25)
+        score = min(score, 12)
+        if not feedback:
+            feedback = "No valid technical explanation was provided."
+    elif verdict == "wrong_or_baseless" or (has_claims_field and not accurate_claims and (errors_or_bluffs or tech < 60)):
+        verdict = "wrong_or_baseless"
+        tech = min(tech, 15)
+        depth = min(depth, 10)
+        score = min(score, 15)
+    elif verdict == "vague_superficial":
+        tech = min(tech, 32)
+        depth = min(depth, 25)
+        score = min(score, 32)
+    else:
+        # Cross-check against baseless bluffing / question parroting when no outline or
+        # non-question keywords are supported and accurate_claims is absent/empty.
+        zero_grounding = (
+            len(stats["matched"]) == 0
+            and len(stats["outline_hits"]) == 0
+            and not accurate_claims
+        )
+        parrot_only = (
+            len(stats["non_question_kw_hits"]) == 0
+            and len(stats["outline_hits"]) == 0
+            and len(stats["matched"]) <= 1
+            and not accurate_claims
+        )
+        if zero_grounding and (stats["word_count"] < 4 or _NEGATIVE_FEEDBACK_RE.search(feedback) or tech <= 65):
+            verdict = "wrong_or_baseless"
+            tech = min(tech, 15)
+            depth = min(depth, 10)
+            score = min(score, 15)
+        elif parrot_only and (_NEGATIVE_FEEDBACK_RE.search(feedback) or tech <= 65):
+            verdict = verdict or "vague_superficial"
+            tech = min(tech, 22)
+            depth = min(depth, 18)
+            score = min(score, 22)
+        elif _NEGATIVE_FEEDBACK_RE.search(feedback) and tech <= 55:
+            tech = min(tech, 28)
+            depth = min(depth, 22)
+            score = min(score, 28)
+
+    # Enforce technical-first composite weighting so communication_clarity cannot rescue wrong tech
+    weighted = round(0.60 * tech + 0.25 * depth + 0.15 * comm)
+    score = min(score, weighted + 3)
+
+    if tech <= 15:
+        score = min(score, 15)
+    elif tech <= 25:
+        score = min(score, 25)
+    elif tech <= 35:
+        score = min(score, 35)
+    elif tech <= 45:
+        score = min(score, 45)
+
+    rubric = {
+        "technical_accuracy": max(0, min(100, tech)),
+        "depth_and_examples": max(0, min(100, depth)),
+        "communication_clarity": max(0, min(100, comm)),
+    }
+    return {
+        "verdict": verdict or ("strong" if score >= 82 else ("solid" if score >= 63 else ("partial" if score >= 37 else "wrong_or_baseless"))),
+        "accurate_claims": accurate_claims,
+        "errors_or_bluffs": errors_or_bluffs,
+        "score": max(0, min(100, score)),
+        "feedback": feedback,
+        "rubric": rubric,
+        "matched_keywords": matched,
+        "missed_keywords": missed,
+        "ideal_answer_hint": ideal,
     }
 
 
@@ -369,14 +607,14 @@ class InterviewSession:
             if not error_recovered:
                 error_recovered = "deterministic_rubric_fallback"
 
-        score = _coerce_score(parsed.get("score"))
-        feedback = str(parsed.get("feedback") or "")
-        raw_rub = parsed.get("rubric") if isinstance(parsed.get("rubric"), dict) else {}
-        rubric = {k: max(0, min(100, _coerce_score(raw_rub.get(k, score)))) for k in RUBRIC_KEYS}
-        matched = [str(x) for x in (parsed.get("matched_keywords") or [])]
-        missed = [str(x) for x in (parsed.get("missed_keywords") or [])]
-        ideal = str(parsed.get("ideal_answer_hint") or "")
-        score = max(0, min(100, score))
+        reconciled = _reconcile_evaluation(q, text, parsed)
+        score = reconciled["score"]
+        feedback = reconciled["feedback"]
+        rubric = reconciled["rubric"]
+        matched = reconciled["matched_keywords"]
+        missed = reconciled["missed_keywords"]
+        ideal = reconciled["ideal_answer_hint"]
+        verdict = reconciled["verdict"]
         d = pend["difficulty"]
         if score >= 70:
             nd = min(2, d + 1)
@@ -386,6 +624,8 @@ class InterviewSession:
             nd = d
         pend["a"] = text
         pend["score"] = score
+        pend["feedback"] = feedback
+        pend["verdict"] = verdict
         pend["next_difficulty"] = nd
         pend["rubric"] = rubric
         pend["matched_keywords"] = matched
@@ -401,9 +641,7 @@ class InterviewSession:
                 and self.turn < MAX_TURNS
                 and missed
                 and not _is_non_answer(text)
-                and score >= 25
-                and ((35 <= score < 75)
-                     or rubric.get("depth_and_examples", 100) < 60)):
+                and (score < 75 or rubric.get("depth_and_examples", 100) < 60)):
             followup_probe = generate_followup_probe(
                 question=q.question, answer=text, missed_keywords=missed[:2],
                 skill_id=q.skill_id, llm=self.llm)

@@ -32,10 +32,15 @@
     #pulse.on { background: #1D5C42; box-shadow: 0 0 0 0 rgba(29, 92, 66, 0.6); animation: throb 1.25s infinite; }
     @keyframes throb { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(29, 92, 66, 0.6); } 70% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(29, 92, 66, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(29, 92, 66, 0); } }
     #ideal-answer[hidden] { display: none; }
+    .qa-turn-card { break-inside: avoid; page-break-inside: avoid; }
     @media print {
-      #interview, header, nav, #print-btn { display: none !important; }
-      body { background: #ffffff !important; }
-      #summary { box-shadow: none !important; border: none !important; padding: 0 !important; }
+      @page { margin: 12mm; }
+      #interview, header, nav, #print-btn, .no-print { display: none !important; }
+      body { background: #ffffff !important; color: #111827 !important; }
+      main { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+      #summary { box-shadow: none !important; border: none !important; padding: 0 !important; display: block !important; }
+      #qa-transcript-box { display: block !important; }
+      .qa-turn-card { break-inside: avoid; page-break-inside: avoid; border-color: #d1d5db !important; background: #ffffff !important; }
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     }
   </style>
@@ -103,7 +108,7 @@
       <!-- M18.1: adaptive follow-up probe callout (hidden until generated) -->
       <div id="followup-probe" hidden class="text-sm text-[#1B5E43] bg-[#E3F2EA] border border-[#C8E4D5] rounded-2xl px-4 py-3"></div>
 
-      <!-- M18.3: acoustic telemetry pill (WPM / STAR / delivery / coaching) -->
+      <!-- M18.3: communication telemetry pill (Delivery / STAR / Fillers / coaching) -->
       <div id="speech-telemetry" hidden></div>
 
       <!-- Real-Time Rubric Card -->
@@ -228,6 +233,19 @@
           {% endif %}
         </div>
         <div id="skill-verification-list" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <div id="summary-meta" hidden class="mt-6 pt-5 border-t border-[#ECEAE2] grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs"></div>
+
+      <div id="qa-transcript-box" hidden class="mt-6 pt-6 border-t border-[#ECEAE2]">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-[#6E6C64] font-mono">Interview Questions &amp; Responses</h3>
+            <p class="text-xs text-[#6E6C64] mt-0.5">Complete turn-by-turn transcript of questions asked, submitted answers, and rubric feedback.</p>
+          </div>
+          <span id="qa-turn-count" class="text-xs font-mono text-[#5C5A52]"></span>
+        </div>
+        <div id="qa-transcript-list" class="space-y-4"></div>
       </div>
     </div>
 

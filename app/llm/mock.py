@@ -128,7 +128,9 @@ class MockLLM:
             words = len(token_set)
             unique_ratio = (len(set(token_set)) / words) if words > 0 else 1.0
             max_freq = max((token_set.count(w) for w in set(token_set)), default=0) if words > 0 else 0
-            length_bonus = 30 if words >= 12 else max(0, round(30 * words / 12))
+            # Scale elaboration credit by matched keyword hits so rambling nonsense gets zero free points
+            hit_scale = min(1.0, hits / max(1, min(2, denom))) if keywords else 0.5
+            length_bonus = round((30 if words >= 12 else max(0, round(30 * words / 12))) * hit_scale)
             is_stuffed = words >= 5 and (
                 unique_ratio < 0.45 or (words >= 6 and max_freq / words > 0.35)
             )
@@ -136,20 +138,57 @@ class MockLLM:
                 # Anti-gaming guard: penalize repetitive keyword stuffing
                 length_bonus = min(length_bonus, 5)
                 keyword_score = round(keyword_score * unique_ratio * 0.75)
-            score = max(0, min(100, keyword_score + length_bonus))
-            technical = score
-            depth = max(0, min(100, round(0.6 * length_bonus + 0.4 * keyword_score)))
-            communication = max(0, min(100, round(0.5 * score + 0.5 * min(100, words * 3))))
+
+            question_low = (payload.get("question") or "").lower()
+            non_q_hits = [k for k in matched if k not in question_low]
+            outline = [str(x) for x in (payload.get("outline") or []) if str(x).strip()]
+            outline_toks = {
+                t for line in outline for t in re.findall(r"[a-z0-9_+#-]{4,}", line.lower())
+                if t not in set(re.findall(r"[a-z0-9_+#-]{4,}", question_low))
+            }
+            outline_overlap = len(set(token_set) & outline_toks)
+
+            if hits == 0 and outline_overlap == 0:
+                score = min(14, max(0, words))
+                technical = min(10, score)
+                depth = min(8, score)
+                communication = min(25, max(10, words * 2))
+                verdict = "wrong_or_baseless"
+                accurate_claims = []
+                errors_or_bluffs = ["No accurate concepts or mechanisms matched."]
+                feedback = (
+                    f"Baseless or off-topic answer: missed core concepts ({', '.join(missed[:3]) or 'fundamentals'})."
+                )
+            elif hits == 1 and not non_q_hits and outline_overlap == 0 and not is_stuffed and denom >= 2:
+                score = 22
+                technical = 18
+                depth = 15
+                communication = 35
+                verdict = "vague_superficial"
+                accurate_claims = []
+                errors_or_bluffs = ["Echoed question term without explaining the mechanism."]
+                feedback = (
+                    f"Matched only 1/{denom} keyword from the question without explaining the mechanism."
+                )
+            else:
+                score = max(0, min(100, keyword_score + length_bonus))
+                technical = score
+                depth = max(0, min(100, round(0.6 * length_bonus + 0.4 * keyword_score)))
+                communication = max(0, min(100, round(0.5 * score + 0.5 * min(100, words * 3))))
+                verdict = (
+                    "strong" if score >= 82 else ("solid" if score >= 63 else ("partial" if score >= 37 else "vague_superficial"))
+                )
+                accurate_claims = list(matched[:3])
+                errors_or_bluffs = ["Repetitive keyword stuffing detected."] if is_stuffed else []
+                feedback = (
+                    f"Matched {hits}/{denom} key concepts; answer "
+                    f"{'is detailed' if length_bonus >= 25 else 'could be more detailed'}."
+                )
             rubric = {
                 "technical_accuracy": technical,
                 "depth_and_examples": depth,
                 "communication_clarity": communication,
             }
-            feedback = (
-                f"Matched {hits}/{denom} key concepts; answer "
-                f"{'is detailed' if length_bonus == 30 else 'could be more detailed'}."
-            )
-            outline = [str(x) for x in (payload.get("outline") or []) if str(x).strip()]
             if outline:
                 ideal = "Key points a strong answer covers: " + "; ".join(outline) + "."
             else:
@@ -159,6 +198,9 @@ class MockLLM:
                 )
             if json_mode:
                 return json.dumps({
+                    "verdict": verdict,
+                    "accurate_claims": accurate_claims,
+                    "errors_or_bluffs": errors_or_bluffs,
                     "score": score,
                     "feedback": feedback,
                     "rubric": rubric,

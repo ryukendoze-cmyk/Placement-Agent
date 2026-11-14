@@ -146,7 +146,7 @@
         <span class="text-xs text-[#7A776E] font-mono">/ 100</span>
       </div>
       <div id="kpi-interview-meta" class="mt-2 pt-2 border-t border-[#F0EEE7] text-[11px] text-[#5C5A52] font-mono">
-        {% if kpis.avg_wpm is not none %}{{ kpis.avg_wpm }} WPM{% else %}-- WPM{% endif %} &middot; STAR {% if kpis.avg_star_completeness is not none %}{{ kpis.avg_star_completeness }}%{% else %}--{% endif %}
+        STAR {% if kpis.avg_star_completeness is not none %}{{ kpis.avg_star_completeness }}%{% else %}--{% endif %} &middot; Fillers {% if kpis.avg_filler_rate is not none %}{{ kpis.avg_filler_rate }}%{% else %}--{% endif %}
       </div>
     </div>
 
@@ -640,7 +640,7 @@
       setText("kpi-skills-meta", (k.claimed_skills_count ?? 0) + " claimed · " + (k.flagged_skills_count ?? 0) + " flagged");
       setText("kpi-interviews-done", (k.interviews_completed ?? 0) + " done");
       setText("kpi-interview-score", k.best_interview_score !== null && k.best_interview_score !== undefined ? String(k.best_interview_score) : "--");
-      setText("kpi-interview-meta", (k.avg_wpm !== null && k.avg_wpm !== undefined ? k.avg_wpm + " WPM" : "-- WPM") + " · STAR " + (k.avg_star_completeness !== null && k.avg_star_completeness !== undefined ? k.avg_star_completeness + "%" : "--"));
+      setText("kpi-interview-meta", "STAR " + (k.avg_star_completeness !== null && k.avg_star_completeness !== undefined ? k.avg_star_completeness + "%" : "--") + " · Fillers " + (k.avg_filler_rate !== null && k.avg_filler_rate !== undefined ? k.avg_filler_rate + "%" : "--"));
       setText("kpi-eligible-drives", String(k.eligible_drives_count ?? 0));
       setText("kpi-evaluated-drives", "/ " + (k.total_drives_evaluated ?? 0) + " drives");
 

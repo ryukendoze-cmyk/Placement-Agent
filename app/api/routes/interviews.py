@@ -355,12 +355,19 @@ def _finalize(session: Session, row: Interview, summary, turn=None,
             session.commit()
     except Exception:
         logger.warning("match re-rank after interview finalization failed", exc_info=True)
+    job_obj = session.get(Job, row.job_id) if row.job_id else None
     summary_payload = {
+        "interview_id": row.id,
+        "student_name": getattr(student, "name", "") or row.student_id or "",
+        "job_title": getattr(job_obj, "title", "") or getattr(row, "role", None) or "Technical Mock Interview",
+        "role": getattr(row, "role", None),
+        "started_at": row.started_at.isoformat() if row.started_at else "",
         "score": summary.score,
         "per_skill": summary.per_skill,
         "feedback": summary.feedback,
         "rubric_overall": summary.rubric_overall,
         "skill_updates": skill_updates,
+        "transcript": summary.transcript,
     }
     if speech_summary:
         summary_payload["speech_summary"] = speech_summary
@@ -539,10 +546,14 @@ def get_interview(iid: str, request: Request, session: Session = Depends(get_ses
         enforce_student_scope(request, row.student_id)
     fb = dict(row.feedback or {}) if isinstance(row.feedback, dict) else {}
     fb.pop("_resume_probes", None)
+    student = session.get(Student, row.student_id) if row.student_id else None
+    job_obj = session.get(Job, row.job_id) if row.job_id else None
     return {
         "interview_id": row.id,
         "student_id": row.student_id,
+        "student_name": getattr(student, "name", "") or row.student_id or "",
         "job_id": row.job_id,
+        "job_title": getattr(job_obj, "title", "") or getattr(row, "role", None) or "Technical Mock Interview",
         "role": getattr(row, "role", None),
         "finished": row.finished,
         "score": row.score,

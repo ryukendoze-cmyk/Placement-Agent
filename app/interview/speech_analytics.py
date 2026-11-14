@@ -78,25 +78,16 @@ def analyze_speech_delivery(text: str, duration_seconds: float | None = None) ->
     star_score = sum(25 for v in star_components.values() if v)
 
     # --- delivery score ----------------------------------------------------
-    # pacing (30): in-band = full, out-of-band = partial, unknown duration = neutral
-    if wpm == 0:
-        pacing = 25
-    elif _OPTIMAL_WPM[0] <= wpm <= _OPTIMAL_WPM[1]:
-        pacing = 30
-    else:
-        # distance from the band, clamped
-        if wpm < _OPTIMAL_WPM[0]:
-            dist = _OPTIMAL_WPM[0] - wpm
-        else:
-            dist = wpm - _OPTIMAL_WPM[1]
-        pacing = max(0, 30 - int(dist / 10))
+    # Inaccurate browser STT/recording timing can produce bogus WPM spikes, so
+    # delivery relies on filler discipline and STAR structure with neutral pacing credit.
+    pacing = 25
     # filler discipline (30): full credit at 0%, none at >=15%
     filler_credit = max(0, round(30 * (1 - min(filler_rate_pct, 15.0) / 15.0)))
-    # STAR (40): proportional to components present
-    star_credit = round(40 * star_score / 100)
+    # STAR (45): proportional to components present
+    star_credit = round(45 * star_score / 100)
     delivery_score = max(0, min(100, pacing + filler_credit + star_credit))
 
-    # --- coaching tip (priority: fillers > pacing > STAR > praise) ---------
+    # --- coaching tip (priority: fillers > STAR > praise) ------------------
     coaching_tip = _coaching_tip(filler_words, filler_rate_pct, wpm, star_components, word_count)
 
     return {
@@ -117,17 +108,13 @@ def _coaching_tip(filler_words, filler_rate_pct, wpm, star_components, word_coun
         preview = ", ".join(f"'{f}'" for f in top[:3])
         return (f"Reduce filler words ({preview}) - you used {filler_count} "
                 f"({filler_rate_pct}%) to sound more authoritative.")
-    if wpm and wpm > _OPTIMAL_WPM[1]:
-        return f"Slow down - you spoke at {wpm} WPM; aim for {_OPTIMAL_WPM[0]}-{_OPTIMAL_WPM[1]} WPM."
-    if wpm and wpm < _OPTIMAL_WPM[0]:
-        return f"Pick up the pace - {wpm} WPM is below the {_OPTIMAL_WPM[0]} WPM floor; add energy."
     missing = [k for k, v in star_components.items() if not v]
     if missing and word_count >= 8:
         label = missing[0].capitalize()
-        return (f"Quantify the {label} of your STAR answer (add the metric or concrete "
-                f"outcome you achieved).")
+        return (f"Strengthen your STAR structure by adding a concrete {label} "
+                f"(specific mechanism, example, or measurable outcome).")
     if not star_components["result"]:
-        return "Quantify the outcome (Result) with latency or throughput metrics."
+        return "Quantify the outcome (Result) with latency, throughput, or accuracy metrics."
     return "Strong structure - keep pairing each answer with a measurable result."
 
 

@@ -182,21 +182,49 @@ function renderRubric(rubric, matched, missed, ideal) {
   if (tg) tg.textContent = "Show ideal answer";
 }
 
-// M18.3: display WPM / STAR / delivery / coaching telemetry pill for a turn.
+// M18.3: display Delivery / STAR / Filler / coaching telemetry card for a turn (no WPM).
+function _cleanCoachingTip(rawTip) {
+  const tip = String(rawTip || "").trim();
+  if (!tip) return "";
+  if (/\bwpm\b/i.test(tip) || /pick up the pace|slow down - you spoke/i.test(tip)) {
+    return "Structure your explanation with concrete mechanisms, edge cases, and measurable results.";
+  }
+  return tip;
+}
+
 function renderSpeechTelemetry(sa) {
   const box = $("speech-telemetry");
   if (!box) return;
-  if (!sa) { box.hidden = true; box.textContent = ""; return; }
+  if (!sa) { box.hidden = true; box.innerHTML = ""; return; }
   const star = sa.star_score != null ? sa.star_score : 0;
-  const wpm = sa.wpm || 0;
   const delivery = sa.delivery_score != null ? sa.delivery_score : 0;
   const fillers = (sa.filler_words || []).length;
-  const pacing = wpm > 0 ? (wpm + " WPM") : "typed (no pacing)";
+  const tip = _cleanCoachingTip(sa.coaching_tip);
+
   box.hidden = false;
-  box.className = "text-xs font-mono text-[#4A483F] bg-[#FAF9F5] border border-[#E5E3DC] rounded-xl px-3.5 py-2.5 mt-3";
-  box.textContent = "Delivery " + delivery + "/100 | STAR " + star + "/100 | " +
-    pacing + " | fillers " + fillers +
-    (sa.coaching_tip ? " | " + sa.coaching_tip : "");
+  box.className = "rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] px-4 py-3 mt-3 space-y-2";
+  box.innerHTML = "";
+
+  const pills = document.createElement("div");
+  pills.className = "flex flex-wrap items-center gap-2";
+  [
+    "Delivery " + delivery + "/100",
+    "STAR " + star + "/100",
+    "Fillers " + fillers
+  ].forEach(function (labelText) {
+    const pill = document.createElement("span");
+    pill.className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-white border border-[#E2DEC9] text-[#4A483F]";
+    pill.textContent = labelText;
+    pills.appendChild(pill);
+  });
+  box.appendChild(pills);
+
+  if (tip) {
+    const tipEl = document.createElement("p");
+    tipEl.className = "text-xs text-[#5C5A52] leading-relaxed";
+    tipEl.textContent = tip;
+    box.appendChild(tipEl);
+  }
 }
 
 function startTimer() {
@@ -276,12 +304,10 @@ function renderSpeechSummary(ss) {
   }
   const delivery = ss.avg_delivery_score != null ? ss.avg_delivery_score : 0;
   const star = ss.avg_star_score != null ? ss.avg_star_score : 0;
-  const pacing = ss.avg_wpm ? (ss.avg_wpm + " WPM avg") : "Text mode (no mic WPM)";
   const fillers = ss.total_fillers || 0;
   const turns = ss.turns_measured || 0;
   box.hidden = false;
-  content.textContent = "Delivery " + delivery + "/100 | STAR " + star + "/100 | " +
-    pacing + " | Total fillers " + fillers + " (" + turns + " turns)";
+  content.textContent = "Delivery " + delivery + "/100 · STAR " + star + "/100 · Total fillers " + fillers + " (" + turns + " turns)";
 }
 
 function renderSkillVerification(updates) {
@@ -314,6 +340,159 @@ function renderSkillVerification(updates) {
     pill.className = cls;
     pill.textContent = u.skill_id + ": " + label + " (" + (u.score != null ? u.score : "—") + "/100)";
     list.appendChild(pill);
+  });
+}
+
+function renderSummaryMeta(d) {
+  const box = $("summary-meta");
+  if (!box) return;
+  const candidate = d.student_name || "";
+  const target = d.job_title || d.role || "";
+  const iid = d.interview_id || interviewId || "";
+  if (!candidate && !target && !iid) {
+    box.hidden = true;
+    box.innerHTML = "";
+    return;
+  }
+  box.hidden = false;
+  box.innerHTML = "";
+  const items = [
+    { label: "Candidate", value: candidate || "Registered Student" },
+    { label: "Target Role / Drive", value: target || "Technical Mock Interview" },
+    { label: "Session Reference", value: iid || "—" }
+  ];
+  items.forEach(function (it) {
+    const cell = document.createElement("div");
+    cell.className = "rounded-xl bg-[#FAF9F5] border border-[#E5E3DC] px-3.5 py-2.5";
+    const lbl = document.createElement("div");
+    lbl.className = "text-[10px] uppercase tracking-wider font-mono text-[#6E6C64]";
+    lbl.textContent = it.label;
+    const val = document.createElement("div");
+    val.className = "text-xs font-semibold text-[#1C1E1B] mt-0.5";
+    val.textContent = it.value;
+    cell.appendChild(lbl);
+    cell.appendChild(val);
+    box.appendChild(cell);
+  });
+}
+
+function renderTranscriptReport(transcript) {
+  const box = $("qa-transcript-box");
+  const list = $("qa-transcript-list");
+  const countEl = $("qa-turn-count");
+  if (!box || !list) return;
+  list.innerHTML = "";
+  const turns = Array.isArray(transcript)
+    ? transcript.filter(function (t) { return t && (t.score !== null && t.score !== undefined || (t.a && String(t.a).trim())); })
+    : [];
+  if (!turns.length) {
+    box.hidden = true;
+    if (countEl) countEl.textContent = "";
+    return;
+  }
+  box.hidden = false;
+  if (countEl) countEl.textContent = turns.length + " evaluated turn" + (turns.length === 1 ? "" : "s");
+  const diffNames = ["Easy", "Medium", "Hard"];
+
+  turns.forEach(function (t, idx) {
+    const card = document.createElement("div");
+    card.className = "qa-turn-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 sm:p-5 space-y-3";
+
+    const header = document.createElement("div");
+    header.className = "flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-[#ECEAE2]";
+
+    const left = document.createElement("div");
+    left.className = "flex flex-wrap items-center gap-2";
+
+    const qNum = document.createElement("span");
+    qNum.className = "text-xs font-bold font-mono uppercase tracking-wider text-[#1C1E1B]";
+    qNum.textContent = "Question " + (idx + 1);
+    left.appendChild(qNum);
+
+    if (t.skill_id) {
+      const sk = document.createElement("span");
+      sk.className = "px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-white border border-[#D5D2C6] text-[#1D5C42]";
+      sk.textContent = t.skill_id;
+      left.appendChild(sk);
+    }
+
+    const diffLabel = diffNames[t.difficulty] || "Medium";
+    const diffEl = document.createElement("span");
+    diffEl.className = "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#EFECE4] text-[#4A483F]";
+    diffEl.textContent = diffLabel;
+    left.appendChild(diffEl);
+
+    if (t.is_resume_probe) {
+      const tag = document.createElement("span");
+      tag.className = "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#E3F2EA] text-[#1B5E43]";
+      tag.textContent = "Resume Probe";
+      left.appendChild(tag);
+    } else if (t.is_followup) {
+      const tag = document.createElement("span");
+      tag.className = "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#E3F2EA] text-[#1B5E43]";
+      tag.textContent = "Follow-up";
+      left.appendChild(tag);
+    }
+    header.appendChild(left);
+
+    const sc = Number(t.score);
+    const scPill = document.createElement("span");
+    let scCls = "px-2.5 py-0.5 rounded-full text-xs font-mono font-bold border ";
+    if (sc >= 70) {
+      scCls += "bg-[#E3F2EA] text-[#1B5E43] border-[#C8E4D5]";
+    } else if (sc >= 45) {
+      scCls += "bg-[#FEF6E6] text-[#9A5B13] border-[#F2D59B]";
+    } else {
+      scCls += "bg-[#FDF0ED] text-[#9E2A20] border-[#F5D0C8]";
+    }
+    scPill.className = scCls;
+    scPill.textContent = (Number.isFinite(sc) ? sc : "—") + "/100";
+    header.appendChild(scPill);
+    card.appendChild(header);
+
+    const qBlock = document.createElement("div");
+    const qLbl = document.createElement("div");
+    qLbl.className = "text-[11px] font-bold uppercase tracking-wider text-[#6E6C64] mb-1";
+    qLbl.textContent = "Question Asked";
+    const qTxt = document.createElement("p");
+    qTxt.className = "text-sm font-semibold text-[#1C1E1B] leading-relaxed";
+    qTxt.textContent = t.q || "—";
+    qBlock.appendChild(qLbl);
+    qBlock.appendChild(qTxt);
+    card.appendChild(qBlock);
+
+    const aBlock = document.createElement("div");
+    aBlock.className = "rounded-xl bg-white border border-[#E5E3DC] px-3.5 py-2.5";
+    const aLbl = document.createElement("div");
+    aLbl.className = "text-[11px] font-bold uppercase tracking-wider text-[#6E6C64] mb-1";
+    aLbl.textContent = "Candidate Answer";
+    const aTxt = document.createElement("p");
+    aTxt.className = "text-sm text-[#353732] leading-relaxed whitespace-pre-wrap";
+    aTxt.textContent = (t.a && String(t.a).trim()) ? String(t.a) : "(No answer submitted)";
+    aBlock.appendChild(aLbl);
+    aBlock.appendChild(aTxt);
+    card.appendChild(aBlock);
+
+    if (t.feedback || (t.matched_keywords && t.matched_keywords.length) || (t.missed_keywords && t.missed_keywords.length)) {
+      const fBlock = document.createElement("div");
+      fBlock.className = "text-xs text-[#4A483F] space-y-1 pt-1";
+      if (t.feedback) {
+        const fbP = document.createElement("p");
+        fbP.textContent = "Evaluator Note: " + t.feedback;
+        fBlock.appendChild(fbP);
+      }
+      const m = Array.isArray(t.matched_keywords) && t.matched_keywords.length ? ("Matched: " + t.matched_keywords.join(", ")) : "";
+      const ms = Array.isArray(t.missed_keywords) && t.missed_keywords.length ? ("Missed: " + t.missed_keywords.join(", ")) : "";
+      if (m || ms) {
+        const kwP = document.createElement("p");
+        kwP.className = "font-mono text-[11px] text-[#6E6C64]";
+        kwP.textContent = [m, ms].filter(Boolean).join(" · ");
+        fBlock.appendChild(kwP);
+      }
+      card.appendChild(fBlock);
+    }
+
+    list.appendChild(card);
   });
 }
 
@@ -382,6 +561,8 @@ function renderSummary(d) {
   }
   renderSpeechSummary(d.speech_summary);
   renderSkillVerification(d.skill_updates);
+  renderSummaryMeta(d);
+  renderTranscriptReport(d.transcript);
 }
 
 function printScorecard() {
@@ -394,12 +575,18 @@ async function loadInitial() {
   const d = await r.json();
   if (d.finished) {
     renderSummary({
+      interview_id: d.interview_id,
+      student_name: d.student_name,
+      job_title: d.job_title,
+      role: d.role,
+      started_at: d.started_at,
       score: d.score,
       per_skill: (d.feedback || {}).per_skill,
       feedback: (d.feedback || {}).overall,
       rubric_overall: (d.feedback || {}).rubric_overall,
       speech_summary: d.speech_summary || (d.feedback || {}).speech_summary,
-      skill_updates: d.skill_updates || (d.feedback || {}).skill_updates || []
+      skill_updates: d.skill_updates || (d.feedback || {}).skill_updates || [],
+      transcript: d.transcript || []
     });
     return;
   }
