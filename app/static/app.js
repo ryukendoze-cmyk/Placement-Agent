@@ -6,6 +6,7 @@ let recognition = null;
 let recognizing = false;
 let evaluating = false;
 let turn = 1;
+let interviewCoverage = null;
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const HAS_MEDIA_RECORDER = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
 const HAS_STT = !!(SR || HAS_MEDIA_RECORDER);
@@ -133,7 +134,7 @@ function renderStepper(done, current) {
   const el = $("stepper");
   if (!el) return;
   el.innerHTML = "";
-  for (let i = 1; i <= 8; i++) {
+  for (let i = Math.max(1, current - 4); i <= Math.max(current, Math.min(current + 3, (interviewCoverage || {}).base_question_goal || 8)); i++) {
     const dot = document.createElement("span");
     dot.className = "turn-dot" + (i <= done ? " done" : (i === current ? " current" : ""));
     if (i <= done) {
@@ -249,8 +250,37 @@ function setPulse(on) {
   if (p) p.className = on ? "on" : "";
 }
 
+function renderCoverage(coverage, summary) {
+  interviewCoverage = coverage || null;
+  const box = $(summary ? "summary-coverage" : "skill-coverage");
+  if (!box || !coverage) return;
+  const targets = coverage.targets || [];
+  box.textContent = "Skill coverage: " + coverage.assessed + "/" + coverage.total + " assessed. " +
+    (coverage.remaining ? coverage.remaining + " still need assessment. " : "All target skills assessed. ") +
+    "Assessed does not mean verified. " + targets.map(function (t) {
+      return (t.name || t.skill_id) + ": " + t.status + (t.assessment_limited ? " (review required)" : "");
+    }).join("; ");
+}
+
+async function endInterviewEarly() {
+  if (evaluating) return;
+  setEvaluating(true);
+  try {
+    const response = await fetch("/api/interviews/" + interviewId + "/finish", { method: "POST" });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || "Could not end interview");
+    renderSummary(data.summary);
+  } catch (error) {
+    $("feedback").textContent = String(error.message || error);
+  } finally { setEvaluating(false); }
+}
+
 function showQuestion(question) {
-  $("status").textContent = "Turn " + turn + " of 8";
+  const source = $("question-source");
+  if (source) source.textContent = question.source === "live_ai" ? "Live AI generated question" :
+    "Offline practice question" + (question.generation_error ? " - AI generation unavailable (" + question.generation_error + ")" : "");
+  if (source && question.assessment_limited) source.textContent += ". Limited reference: requires further assessment before verification.";
+  $("status").textContent = "Turn " + turn;
   $("question").textContent = question.question;
   $("skill").textContent = question.skill_id;
   setDifficultyBadge(question.difficulty);
@@ -269,18 +299,16 @@ function setEvaluating(active) {
     if (sendBtn) {
       if (!sendBtn.dataset.origHtml) sendBtn.dataset.origHtml = sendBtn.innerHTML;
       sendBtn.disabled = true;
-      sendBtn.textContent = "Evaluating with AI...";
+      sendBtn.textContent = "Evaluating answer...";
       sendBtn.classList.add("opacity-60", "cursor-wait");
     }
     if (micBtn) micBtn.disabled = true;
     if (answerBox) answerBox.disabled = true;
-    $("status").textContent = "Turn " + turn + " of 8 · Evaluating with AI...";
+    $("status").textContent = "Turn " + turn + " · Evaluating answer...";
     const fb = $("feedback");
     if (fb) {
       fb.className = "text-sm font-medium text-[#1B5E43] bg-[#E3F2EA] border border-[#C8E4D5] rounded-2xl px-4 py-3 mb-4";
-      fb.textContent = turn >= 8
-        ? "AI is evaluating your final answer and generating overall interview feedback..."
-        : "AI is evaluating your answer and preparing the next question...";
+      fb.textContent = "Evaluating your answer and preparing the next question or assessment summary...";
     }
   } else {
     if (sendBtn) {
@@ -422,6 +450,12 @@ function renderTranscriptReport(transcript) {
     diffEl.textContent = diffLabel;
     left.appendChild(diffEl);
 
+    if (t.question_source) {
+      const provenance = document.createElement("span");
+      provenance.textContent = "Question: " + t.question_source + " | Grading: " + (t.evaluation_source || "pending") + (t.generation_error ? " | " + t.generation_error : "");
+      provenance.className = "text-xs";
+      left.appendChild(provenance);
+    }
     if (t.is_resume_probe) {
       const tag = document.createElement("span");
       tag.className = "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#E3F2EA] text-[#1B5E43]";
@@ -497,17 +531,21 @@ function renderTranscriptReport(transcript) {
 }
 
 function renderSummary(d) {
+  const scoreLabel = $("assessment-score-label");
+  const limited = (d.coverage && d.coverage.targets || []).some(function (t) { return t.assessment_limited; });
+  if (scoreLabel) scoreLabel.textContent = d.completion_reason === "ended_early" || limited ? "Partial Practice Score" : "Overall Assessment Score";
   stopActiveSpeech();
   lastRecordingDurationSec = null;
   micStartMs = 0;
   const probeBox = $("followup-probe");
   if (probeBox) { probeBox.hidden = true; probeBox.textContent = ""; }
-  $("status").textContent = "Interview complete";
+  $("status").textContent = d.completion_reason === "ended_early" ? "Interview ended early" : "Interview complete";
+  renderCoverage(d.coverage, true);
   $("interview").style.display = "none";
   $("summary").style.display = "block";
   stopTimer();
   setPulse(false);
-  renderStepper(8, 8);
+  renderStepper((d.transcript || []).length, (d.transcript || []).length);
   $("score").textContent = (d.score == null ? "?" : d.score) + "/100";
   $("summary-feedback").textContent = d.feedback || "";
   const bars = $("bars");
@@ -586,10 +624,13 @@ async function loadInitial() {
       rubric_overall: (d.feedback || {}).rubric_overall,
       speech_summary: d.speech_summary || (d.feedback || {}).speech_summary,
       skill_updates: d.skill_updates || (d.feedback || {}).skill_updates || [],
+      coverage: d.coverage,
+      completion_reason: d.completion_reason,
       transcript: d.transcript || []
     });
     return;
   }
+  renderCoverage(d.coverage);
   turn = d.transcript.filter(function (t) { return t.score !== null; }).length + 1;
   const pending = (function () {
     for (let i = d.transcript.length - 1; i >= 0; i--) {
@@ -597,7 +638,7 @@ async function loadInitial() {
     }
     return null;
   })();
-  if (pending) showQuestion({ question: pending.q, skill_id: pending.skill_id, difficulty: pending.difficulty });
+  if (pending) showQuestion({ question: pending.q, skill_id: pending.skill_id, difficulty: pending.difficulty, source: pending.question_source, generation_error: pending.generation_error, assessment_limited: pending.assessment_limited });
 }
 
 async function submitAnswer(text) {
@@ -620,7 +661,7 @@ async function submitAnswer(text) {
     const d = await r.json().catch(function () { return {}; });
     setEvaluating(false);
     if (!r.ok) {
-      $("status").textContent = "Turn " + turn + " of 8";
+      $("status").textContent = "Turn " + turn;
       const fb = $("feedback");
       if (fb) {
         fb.className = "text-sm font-medium text-[#9E2A20] bg-[#FDF0ED] border border-[#F5D0C8] rounded-2xl px-4 py-3 mb-4";
@@ -654,13 +695,16 @@ async function submitAnswer(text) {
         probeBox.textContent = "";
       }
     }
+    renderCoverage(d.coverage);
+    const assessmentNotice = $("assessment-notice");
+    if (assessmentNotice) assessmentNotice.textContent = d.error_recovered ? "Offline grading fallback: this answer cannot verify the skill. " + d.error_recovered : "Grading: " + (d.evaluation_source || "mock/offline");
     turn += 1;
     $("answer").value = "";
     $("answer").focus();
     if (d.question) showQuestion(d.question);
   } catch (err) {
     setEvaluating(false);
-    $("status").textContent = "Turn " + turn + " of 8";
+    $("status").textContent = "Turn " + turn;
     const fb = $("feedback");
     if (fb) {
       fb.className = "text-sm font-medium text-[#9E2A20] bg-[#FDF0ED] border border-[#F5D0C8] rounded-2xl px-4 py-3 mb-4";

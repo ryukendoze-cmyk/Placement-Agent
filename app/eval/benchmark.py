@@ -327,7 +327,7 @@ def _live_agent_metrics_summary(session) -> dict:
         }
     latencies = sorted(float(r.total_latency_ms or 0) for r in runs)
     p95 = latencies[max(0, math.ceil(0.95 * len(latencies)) - 1)]
-    completed = sum(1 for r in runs if r.status in ("completed", "awaiting_approval"))
+    completed = sum(1 for r in runs if r.status in ("completed", "awaiting_approval", "awaiting_input"))
     failed = sum(1 for r in runs if r.status == "failed")
     fallbacks = sum(1 for r in runs if r.fallback_triggered)
     return {
@@ -343,18 +343,26 @@ def _live_agent_metrics_summary(session) -> dict:
 
 def run_evaluation_benchmark(session, ctx) -> dict:
     """Run all automated benchmark suites plus live agent operational telemetry."""
+    import time
+    from datetime import datetime, timezone
+
+    t0 = time.perf_counter()
     sop_rag = _sop_rag_benchmark(ctx)
     matching = _matching_benchmark(ctx)
     matching["sop_eligibility"] = _sop_eligibility_benchmark(session, ctx)
     planner_dag = _planner_dag_benchmark(session)
     agent_grounding = _agent_grounding_benchmark(session)
     agent_metrics = _live_agent_metrics_summary(session)
+    duration_ms = round((time.perf_counter() - t0) * 1000, 2)
+    evaluated_at = datetime.now(timezone.utc).isoformat()
     return {
         "sop_rag": sop_rag,
         "matching": matching,
         "planner_dag": planner_dag,
         "agent_grounding": agent_grounding,
         "agent_metrics": agent_metrics,
+        "benchmark_duration_ms": duration_ms,
+        "evaluated_at": evaluated_at,
         "summary": {
             "rag_recall_at_3": sop_rag["recall_at_3"],
             "rag_mrr": sop_rag["mean_reciprocal_rank"],
@@ -362,6 +370,7 @@ def run_evaluation_benchmark(session, ctx) -> dict:
             "hallucination_interception": agent_grounding["interception_rate"],
             "numeric_and_url_interception": agent_grounding["numeric_and_url_interception"],
             "agent_success_rate": agent_metrics["success_rate"],
+            "benchmark_duration_ms": duration_ms,
             "all_passed": (sop_rag["recall_at_3"] >= 0.9
                            and planner_dag["valid"]
                            and agent_grounding["interception_rate"] == 1.0

@@ -1,584 +1,1281 @@
 {% extends "base.html" %}
+{% block title %}Personalized Placement Strategy — JKLU CareerOS{% endblock %}
 {% block content %}
-{% set computed_weeks = (plan_items | map(attribute='week') | max) if plan_items else 1 %}
-<div class="space-y-6" id="plan-workspace" data-sid="{{ sid }}" data-plan-id="{{ plan.id if plan is not none else '' }}">
-  <!-- Header -->
-  <div class="flex flex-wrap items-end justify-between gap-4 pb-3 border-b border-[#E5E3DC]">
+<style>
+  /* Typography polish: enforce Fraunces display headings, Inter prose/UI controls,
+     and crisp JetBrains Mono exclusively for tabular numbers & compact code badges. */
+  #plan-workspace {
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #plan-workspace .font-serif-display {
+    font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    letter-spacing: -0.02em;
+  }
+  #plan-workspace .mono,
+  #plan-workspace .font-mono {
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  #plan-workspace .kpi-num {
+    font-variant-numeric: tabular-nums;
+  }
+</style>
+
+{% set rt = strategy.get('readiness_trajectory', {}) if strategy else {} %}
+{% set constraints = strategy.get('constraints', {}) if strategy else {} %}
+{% set telemetry = strategy.get('telemetry', {}) if strategy else {} %}
+{% set cur_cap = constraints.get('weekly_cap', 10) %}
+{% set cur_mode = constraints.get('target_mode', 'single') %}
+{% set cur_horizon = constraints.get('horizon_weeks', 4) %}
+{% set cur_cost = constraints.get('cost_filter', 'all') %}
+{% set cur_strat = constraints.get('strategy_mode', 'balanced') %}
+{% set cur_excl = constraints.get('exclude_unreachable', false) %}
+{% set pct = ((done_hours / total_hours) * 100) if total_hours else 0 %}
+{% set ns = namespace(max_week=1) %}
+{% for it in plan_items %}{% if it.week > ns.max_week %}{% set ns.max_week = it.week %}{% endif %}{% endfor %}
+{% set sprint_wks = constraints.get('sprint_weeks') or ns.max_week %}
+
+<div class="space-y-6" id="plan-workspace"
+     data-student-id="{{ sid }}"
+     data-plan-id="{{ plan.id if plan else '' }}"
+     data-job-id="{{ plan.job_id if plan else '' }}">
+
+  <!-- ZONE 1: HEADER & INTERACTIVE CONSTRAINT CONTROL BAR -->
+  <div class="flex flex-wrap items-start justify-between gap-4">
     <div>
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[#1B5E43] text-xs font-semibold mb-2">
-        <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
-        Prerequisite-Sequenced Curriculum
+      <div class="flex flex-wrap items-center gap-2 mb-2.5">
+        <span class="pill-sage inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
+          Constraint-Solved Career Trajectory
+        </span>
+        <span id="solver-tier-pill" class="pill-stone text-xs font-medium px-3 py-1 rounded-full">
+          Solver: <span class="mono font-semibold">{{ strategy.get('solver_tier', 'CPM-DAG + RCPSP') }}</span>
+        </span>
+        <span id="grounding-score-pill" class="pill-sage text-xs font-semibold px-3 py-1 rounded-full kpi-num">
+          Grounding: <span class="mono">{{ strategy.get('grounding_score', 100) }}%</span>
+        </span>
       </div>
-      <h1 class="font-serif-display text-2xl sm:text-3xl font-semibold tracking-tight text-[#1C1E1B]">Personalized Upskilling Roadmap</h1>
-      <p class="text-sm text-[#5C5A52] mt-1">
-        {% if plan is not none %}
-        Sequenced for your target role in {{ computed_weeks }} week{% if computed_weeks != 1 %}s{% endif %} ({{ total_hours }}h total, &le;10h/week cap) using verified official courses and skill-verification quizzes.
-        {% else %}
-        Sequenced by prerequisite dependencies, priority role gaps, and verified official courses (&le;10h/week cap).
-        {% endif %}
+      <h1 class="font-serif-display text-2xl sm:text-3xl font-semibold text-[#1C1E1B]">
+        Personalized Placement Strategy
+      </h1>
+      <p class="text-sm text-[#4A483F] mt-1.5 leading-relaxed">
+        Multi-drive skill optimization, critical-path sequencing, Bayesian mastery tracking, and cap-compliant weekly sprints.
       </p>
     </div>
-    {% if plan is not none %}
+
     <div class="flex flex-wrap items-center gap-2.5">
-      <div id="plan-switcher-wrap" class="hidden items-center gap-2">
-        <label for="plan-switcher" class="text-xs font-mono text-[#5C5A52]">Roadmap:</label>
-        <select id="plan-switcher" onchange="switchActivePlan(this.value)"
-                class="rounded-full border border-[#D8D4C7] bg-white px-3 py-1.5 text-xs font-medium text-[#1C1E1B] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]">
+      <div id="plan-switcher-wrap" class="hidden flex items-center gap-2">
+        <label for="plan-switcher" class="text-xs font-semibold text-[#4A483F]">Active Plan</label>
+        <select id="plan-switcher" onchange="switchPlan(this.value)"
+                class="text-xs sm:text-[13px] bg-white border border-[#E5E3DC] rounded-lg px-3 py-2 font-medium text-[#1C1E1B]"></select>
+      </div>
+
+      <label class="inline-flex items-center gap-2 text-xs sm:text-[13px] font-medium text-[#1C1E1B] bg-white border border-[#E5E3DC] rounded-lg px-3.5 py-2 cursor-pointer select-none">
+        <input id="include-upgrades-toggle" type="checkbox"
+               class="rounded border-[#C8E4D5] text-[#1D5C42] focus:ring-[#1D5C42]">
+        <span>Include depth &amp; verification upgrades</span>
+      </label>
+
+      <button id="regen-btn" onclick="regenPlan()"
+              class="btn-secondary-pill text-xs sm:text-[13px] px-4 py-2 rounded-lg inline-flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5 text-[#1D5C42]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        Re-Solve Plan
+      </button>
+    </div>
+  </div>
+
+  <!-- Interactive Constraint & Portfolio Control Bar -->
+  <div class="editorial-card bg-[#FAF9F5] p-4 sm:p-5 rounded-2xl border border-[#E5E3DC]">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-end">
+      <div>
+        <div class="text-xs font-semibold text-[#4A483F] mb-1.5">Target Portfolio</div>
+        <div class="inline-flex rounded-lg border border-[#E5E3DC] bg-white p-1 w-full" role="group" aria-label="Target Mode">
+          <button type="button" onclick="setTargetMode('single')" data-target-mode="single"
+                  class="ctrl-mode-btn flex-1 text-xs font-semibold py-1.5 px-2.5 rounded-md transition {% if cur_mode == 'single' %}bg-[#1D5C42] text-white{% else %}text-[#4A483F] hover:text-[#1C1E1B]{% endif %}">
+            Single Role
+          </button>
+          <button type="button" onclick="setTargetMode('portfolio')" data-target-mode="portfolio"
+                  class="ctrl-mode-btn flex-1 text-xs font-semibold py-1.5 px-2.5 rounded-md transition {% if cur_mode == 'portfolio' %}bg-[#1D5C42] text-white{% else %}text-[#4A483F] hover:text-[#1C1E1B]{% endif %}">
+            Top-3 Drives
+          </button>
+          <button type="button" onclick="setTargetMode('crunch')" data-target-mode="crunch"
+                  class="ctrl-mode-btn flex-1 text-xs font-semibold py-1.5 px-2.5 rounded-md transition {% if cur_mode == 'crunch' %}bg-[#1D5C42] text-white{% else %}text-[#4A483F] hover:text-[#1C1E1B]{% endif %}">
+            Crunch
+          </button>
+        </div>
+        <input type="hidden" id="ctrl-target-mode" value="{{ cur_mode }}">
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between text-xs font-semibold text-[#4A483F] mb-2">
+          <label for="ctrl-weekly-cap">Weekly Effort Cap</label>
+          <span id="ctrl-cap-val" class="mono text-[#1D5C42] font-semibold kpi-num">{{ cur_cap }}h/wk</span>
+        </div>
+        <input id="ctrl-weekly-cap" type="range" min="5" max="25" step="1" value="{{ cur_cap }}"
+               oninput="document.getElementById('ctrl-cap-val').textContent = this.value + 'h/wk'"
+               class="w-full accent-[#1D5C42] cursor-pointer">
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5">
+        <div>
+          <label for="ctrl-horizon" class="block text-xs font-semibold text-[#4A483F] mb-1.5">Horizon</label>
+          <select id="ctrl-horizon" class="w-full text-xs sm:text-[13px] font-medium bg-white border border-[#E5E3DC] rounded-lg px-2.5 py-2 text-[#1C1E1B]">
+            <option value="2" {% if cur_horizon == 2 %}selected{% endif %}>2 Weeks</option>
+            <option value="4" {% if cur_horizon == 4 %}selected{% endif %}>4 Weeks</option>
+            <option value="6" {% if cur_horizon == 6 %}selected{% endif %}>6 Weeks</option>
+            <option value="8" {% if cur_horizon == 8 %}selected{% endif %}>8 Weeks</option>
+          </select>
+        </div>
+        <div>
+          <label for="ctrl-cost" class="block text-xs font-semibold text-[#4A483F] mb-1.5">Cost Tier</label>
+          <select id="ctrl-cost" class="w-full text-xs sm:text-[13px] font-medium bg-white border border-[#E5E3DC] rounded-lg px-2.5 py-2 text-[#1C1E1B]">
+            <option value="all" {% if cur_cost == 'all' %}selected{% endif %}>All Verified</option>
+            <option value="free" {% if cur_cost == 'free' %}selected{% endif %}>Free Only</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label for="ctrl-strategy-mode" class="block text-xs font-semibold text-[#4A483F] mb-1.5">Objective Function</label>
+        <select id="ctrl-strategy-mode" class="w-full text-xs sm:text-[13px] font-medium bg-white border border-[#E5E3DC] rounded-lg px-3 py-2 text-[#1C1E1B]">
+          <option value="balanced" {% if cur_strat == 'balanced' %}selected{% endif %}>Balanced Trajectory</option>
+          <option value="max_roi" {% if cur_strat == 'max_roi' %}selected{% endif %}>Max Match ROI (+pts/hr)</option>
+          <option value="fastest_unblock" {% if cur_strat == 'fastest_unblock' %}selected{% endif %}>Fastest Eligibility Unblock</option>
+          <option value="deep_mastery" {% if cur_strat == 'deep_mastery' %}selected{% endif %}>Deep Mastery / Senior Prep</option>
         </select>
       </div>
-      <label class="inline-flex items-center gap-1.5 text-xs text-[#5C5A52] px-2.5 py-1.5 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] cursor-pointer">
-        <input type="checkbox" id="include-upgrades-toggle" class="rounded border-[#C8C3B4] text-[#1D5C42] focus:ring-[#1D5C42]">
-        <span>Include depth upgrades</span>
-      </label>
-      <button id="regen-btn" type="button" onclick="genPlanTop('{{ sid }}', this)"
-              class="btn-secondary-pill px-4 py-2 text-xs">
-        <svg class="w-3.5 h-3.5 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
-        <span>Regenerate plan (AI)</span>
-      </button>
+
+      <div class="flex items-center justify-between gap-2.5">
+        <label class="inline-flex items-center gap-2 text-xs font-medium text-[#1C1E1B] bg-white border border-[#E5E3DC] rounded-lg px-3 py-2 cursor-pointer select-none flex-1">
+          <input id="ctrl-exclude-unreachable" type="checkbox" {% if cur_excl %}checked{% endif %}
+                 class="rounded border-[#C8E4D5] text-[#1D5C42] focus:ring-[#1D5C42]">
+          <span class="leading-tight">Pivot SOP-03 blocked drives</span>
+        </label>
+        <button type="button" onclick="regenPlan()"
+                class="btn-primary-pill text-xs sm:text-[13px] px-4 py-2 rounded-lg whitespace-nowrap">
+          Apply
+        </button>
+      </div>
+    </div>
+
+    {% if strategy.get('pivot_alert') %}
+    {% set pa = strategy.get('pivot_alert') %}
+    <div id="pivot-alert-banner" class="mt-3.5 px-4 py-2.5 rounded-xl bg-[#FEF3C7] border border-[#F2D59B] text-xs sm:text-[13px] text-[#1C1E1B]">
+      <span class="font-semibold text-[#92400E] mr-1.5">SOP-03 Pivot:</span>
+      Redirected focus from <span class="font-medium">{{ pa.from_job_title }}</span> to <span class="font-semibold text-[#1D5C42]">{{ pa.to_job_title }}</span> ({{ pa.reason }}).
+    </div>
+    {% endif %}
+
+    {% if strategy.get('pareto_alert') %}
+    <div id="pareto-alert-banner" class="mt-3.5 px-4 py-2.5 rounded-xl bg-[#F2F7F4] border border-[#C8E4D5] text-xs sm:text-[13px] text-[#1B5E43]">
+      <span class="font-semibold mr-1.5">Horizon Pareto Fit:</span>
+      {{ strategy.get('pareto_alert') }}
     </div>
     {% endif %}
   </div>
 
-  {% if plan is none %}
-  <!-- Empty State -->
-  <div class="editorial-card p-12 text-center max-w-xl mx-auto">
-    <div class="w-14 h-14 rounded-2xl bg-[#E3F2EA] text-[#1D5C42] mx-auto flex items-center justify-center mb-4">
-      <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg>
-    </div>
-    <h2 class="font-serif-display text-xl font-semibold text-[#1C1E1B] mb-1.5">No upskilling plan generated yet</h2>
-    <p class="text-xs text-[#5C5A52] leading-relaxed mb-6">Create a prerequisite-ordered curriculum tailored to close the verified skill gaps identified in your highest-probability placement matches.</p>
-    <button id="regen-btn" type="button" onclick="genPlanTop('{{ sid }}', this)"
-            class="btn-primary-pill px-5 py-2.5 text-xs">
-      <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"/></svg>
-      <span>Generate a plan</span>
-    </button>
-  </div>
-  {% else %}
-  {% set pct = (100 * done_hours / total_hours)|round(1) if total_hours else 0 %}
-  <!-- Progress Overview Card -->
-  <div class="editorial-card p-6">
-    <div class="flex flex-wrap items-center justify-between gap-4 mb-3">
+  {% if plan %}
+  <!-- ZONE 2: THREE-CARD IMPACT & SOP GATE STRIP -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <!-- Card 1: Readiness & Drive Unlock Trajectory -->
+    <div class="editorial-card p-5 flex flex-col justify-between">
       <div>
-        <p class="text-xs uppercase tracking-wider text-[#6E6C64] font-semibold font-mono">Curriculum Completion</p>
-        <div class="flex items-baseline gap-2 mt-0.5">
-          <span id="plan-pct-label" class="font-serif-display text-3xl font-semibold text-[#1C1E1B] tabular-nums">{{ pct }}%</span>
-          <span id="plan-hours-label" class="text-xs text-[#5C5A52] font-mono tabular-nums">({{ done_hours }} / {{ total_hours }} hrs completed)</span>
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <h2 class="text-xs font-semibold uppercase tracking-wide text-[#4A483F]">Readiness &amp; Unlock Delta</h2>
+          <span id="plan-modules-pill" class="pill-sage text-xs font-semibold px-2.5 py-0.5 rounded-full">
+            {{ plan_items|length }} Modules
+          </span>
+        </div>
+
+        <div class="flex flex-wrap items-baseline gap-2.5">
+          <span class="font-serif-display text-3xl font-semibold text-[#1C1E1B] kpi-num">
+            {{ rt.get('before_pct', 0) }}% &rarr; {{ rt.get('after_pct', 0) }}%
+          </span>
+          <span class="pill-sage mono text-xs font-semibold px-2.5 py-0.5 rounded-full kpi-num">
+            +{{ rt.get('delta_pct', 0) }} pts
+          </span>
+        </div>
+
+        <div class="mt-2">
+          <span id="plan-weeks-pill" class="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full bg-[#EFECE4] text-[#4A483F]">
+            <span class="mono font-semibold text-[#1C1E1B] mr-1">{{ sprint_wks }}</span> sprint wk{% if sprint_wks != 1 %}s{% endif %} (&le;{{ cur_cap }}h/wk)
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 mt-4">
+          <div class="bg-[#FAF9F5] border border-[#E5E3DC] rounded-xl px-3 py-2.5">
+            <div class="text-xs font-medium text-[#4A483F]">Eligible Drives</div>
+            <div class="text-base font-semibold text-[#1C1E1B] kpi-num mt-0.5">
+              {{ rt.get('eligible_drives_before', 0) }} &rarr; {{ rt.get('eligible_drives_after', 0) }}
+              {% if rt.get('drives_unlocked_delta', 0) > 0 %}
+              <span class="text-[#1D5C42] mono text-xs font-semibold">(+{{ rt.get('drives_unlocked_delta', 0) }})</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="bg-[#FAF9F5] border border-[#E5E3DC] rounded-xl px-3 py-2.5">
+            <div class="text-xs font-medium text-[#4A483F]">Critical Path</div>
+            <div class="text-base font-semibold text-[#1C1E1B] kpi-num mt-0.5">
+              {{ rt.get('critical_path_hours', total_hours) }}h
+              <span class="text-xs font-normal text-[#4A483F]">({{ rt.get('critical_weeks', 1) }} wks)</span>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="flex flex-wrap items-center gap-2 text-right">
-        <span id="plan-weeks-pill" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#FAF9F5] text-[#4A483F] border border-[#E2DEC9] font-mono">
-          {{ computed_weeks }} week{% if computed_weeks != 1 %}s{% endif %} (&le;10h/wk)
-        </span>
-        <span id="plan-modules-pill" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">
-          <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
-          {{ plan_items|length }} Learning Modules
-        </span>
-      </div>
-    </div>
-    <div class="w-full bg-[#EFECE4] rounded-full h-2.5 overflow-hidden">
-      <div id="plan-bar" class="bg-[#1D5C42] h-2.5 rounded-full transition-all duration-500 ease-out" style="width: {{ pct }}%"></div>
-    </div>
-  </div>
 
-  <!-- AI Advisor Narrative Callout -->
-  <div id="plan-narrative-card" class="rounded-2xl border border-[#DCE8E1] bg-[#F2F7F4] p-5 border-l-4 border-l-[#1D5C42] {% if not plan.narrative %}hidden{% endif %}">
-    <div class="flex items-start gap-3.5">
-      <div class="w-9 h-9 rounded-xl bg-[#E3F2EA] text-[#1D5C42] flex items-center justify-center shrink-0 mt-0.5 border border-[#C8E4D5]">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.516 0c.85.493 1.508 1.333 1.508 2.316V18"/></svg>
-      </div>
-      <div>
-        <div class="flex flex-wrap items-center gap-2 mb-1">
-          <h2 class="text-xs font-bold uppercase tracking-wider text-[#1B5E43] font-mono">AI Placement Advisor Narrative</h2>
-          <span id="plan-job-label" class="text-[11px] font-mono text-[#5C5A52]"></span>
+      <div class="mt-4 pt-3.5 border-t border-[#E5E3DC]">
+        <div class="flex items-center justify-between text-xs sm:text-[13px] mb-2">
+          <span class="font-medium text-[#4A483F]">Plan Completion</span>
+          <span class="mono kpi-num text-[#1C1E1B]">
+            <strong id="plan-pct-label">{{ '%.1f'|format(pct) }}%</strong>
+            <span id="plan-hours-label" class="text-[#4A483F]">({{ done_hours }} / {{ total_hours }} hrs)</span>
+          </span>
         </div>
-        <p id="plan-narrative-text" class="text-sm text-[#1C1E1B] leading-relaxed font-sans">{{ plan.narrative }}</p>
+        <div class="h-2 bg-[#EFECE4] rounded-full overflow-hidden">
+          <div id="plan-bar" class="h-full bg-[#1D5C42] transition-all duration-500 rounded-full"
+               style="width: {{ '%.1f'|format(pct) }}%"></div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Curriculum Roadmap Table -->
-  <div class="editorial-card overflow-hidden">
-    <div class="px-6 py-4 border-b border-[#ECEAE2] flex flex-wrap items-center justify-between gap-2">
-      <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Curriculum Roadmap</h2>
-      <span class="text-xs font-mono text-[#7A776E]">Week &middot; Prerequisites &middot; Verified Source &middot; Offline Guide &middot; Skill Quiz</span>
+    <!-- Card 2: Multi-Drive Portfolio Impact (Top 4 Drives) -->
+    <div class="editorial-card p-5">
+      <div class="flex items-center justify-between gap-2 mb-3">
+        <h2 class="text-xs font-semibold uppercase tracking-wide text-[#4A483F]">Portfolio Impact (Top 4 Drives)</h2>
+        <span class="text-xs font-medium text-[#5C5A52]">Score Lift</span>
+      </div>
+      <div class="space-y-2.5">
+        {% for drv in strategy.get('portfolio_drives', []) %}
+        <div class="p-3 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC]">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div class="text-[13px] font-semibold text-[#1C1E1B] leading-snug truncate" title="{{ drv.title }}">{{ drv.title }}</div>
+              <div class="text-xs text-[#4A483F] mt-0.5">{{ drv.company }} &middot; {{ drv.tier }}</div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="mono text-[13px] font-semibold text-[#1C1E1B] kpi-num">{{ drv.before_score }}% &rarr; {{ drv.after_score }}%</div>
+              {% if drv.eligible_after and not drv.eligible_before %}
+              <div class="text-xs font-semibold text-[#1D5C42] mt-0.5">Unlocks Drive</div>
+              {% elif drv.hard_blocked %}
+              <div class="text-xs font-semibold text-[#9E2A20] mt-0.5">SOP-03 Block</div>
+              {% elif drv.eligible_after %}
+              <div class="text-xs font-medium text-[#1D5C42] mt-0.5">Eligible</div>
+              {% else %}
+              <div class="text-xs font-medium text-[#4A483F] mt-0.5">{{ ', '.join(drv.blocking_sops[:2]) }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="relative h-2 bg-[#EFECE4] rounded-full overflow-hidden mt-2">
+            <div class="absolute inset-y-0 left-0 bg-[#95D5B2] rounded-full" style="width: {{ drv.after_score }}%"></div>
+            <div class="absolute inset-y-0 left-0 bg-[#1D5C42] rounded-full" style="width: {{ drv.before_score }}%"></div>
+          </div>
+        </div>
+        {% else %}
+        <p class="text-sm text-[#4A483F] italic">Compute matches to see multi-drive lift across campus opportunities.</p>
+        {% endfor %}
+      </div>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left text-sm">
-        <thead class="bg-[#FAF9F5] text-[#5C5A52] text-xs font-semibold uppercase tracking-wider border-b border-[#ECEAE2]">
-          <tr>
-            <th class="px-5 py-3.5">Week / Skill</th>
-            <th class="px-5 py-3.5">Recommended Course &amp; Offline Guide</th>
-            <th class="px-5 py-3.5">Provider</th>
-            <th class="px-5 py-3.5">Effort</th>
-            <th class="px-5 py-3.5">Status</th>
-            <th class="px-5 py-3.5 text-right">Verification Action</th>
-          </tr>
-        </thead>
-        <tbody id="plan-items-tbody" class="divide-y divide-[#ECEAE2]">
-          {% set ns = namespace(prev_week=0) %}
-          {% for it in plan_items %}
-          {% if it.week != ns.prev_week %}
-          {% set ns.prev_week = it.week %}
-          <tr class="bg-[#FAF9F5]">
-            <td colspan="6" class="px-5 py-2 text-[11px] font-mono font-semibold uppercase tracking-wider text-[#1B5E43]">
-              Week {{ it.week }} Schedule
-            </td>
-          </tr>
+
+    <!-- Card 3: Institutional SOP & Eligibility Gate Radar -->
+    <div class="editorial-card p-5">
+      <div class="flex items-center justify-between gap-2 mb-3">
+        <h2 class="text-xs font-semibold uppercase tracking-wide text-[#4A483F]">SOP &amp; Eligibility Gate Radar</h2>
+        <span class="mono text-xs text-[#5C5A52]">placement_sops.json</span>
+      </div>
+      <div class="space-y-2.5">
+        {% for g in strategy.get('sop_gates', []) %}
+        <div class="flex items-start justify-between gap-2.5 p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC]">
+          <div class="min-w-0">
+            <div class="text-[13px] font-semibold text-[#1C1E1B] leading-snug">
+              <span class="mono text-[11px] font-semibold px-1.5 py-0.5 rounded bg-[#EFECE4] text-[#4A483F] mr-1.5">{{ g.sop_id }}</span>{{ g.title }}
+            </div>
+            <p class="text-xs text-[#4A483F] leading-relaxed mt-1">{{ g.detail }}</p>
+            {% if g.sop_id == 'SOP-04' and g.status != 'PASS' %}
+            <a href="/students/{{ sid }}/interview"
+               class="inline-flex items-center gap-1 mt-1.5 text-xs font-semibold text-[#1D5C42] hover:underline">
+              Launch Mock Interview Sprint &rarr;
+            </a>
+            {% endif %}
+          </div>
+          {% if g.status == 'PASS' %}
+          <span class="pill-sage text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0">PASS</span>
+          {% elif g.status == 'BLOCK_HARD' %}
+          <span class="pill-coral text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0">HARD BLOCK</span>
+          {% elif g.status == 'BLOCK_REMEDIABLE' %}
+          <span class="bg-[#FEF3C7] text-[#92400E] border border-[#F5D08A] text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0">FIXABLE</span>
+          {% else %}
+          <span class="pill-stone text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0">WARN</span>
           {% endif %}
-          <tr id="row-{{ it.id }}" class="hover:bg-[#FAF9F5] transition-colors align-top">
-            <td class="px-5 py-4">
-              <div class="flex flex-col gap-1.5">
-                <div class="flex flex-wrap items-center gap-1.5">
-                  <span class="text-[11px] font-mono text-[#6E6C64]">W{{ it.week }} &middot; #{{ it.order }}</span>
-                  <span class="font-mono font-semibold text-[#1C1E1B] text-xs px-2.5 py-0.5 rounded-full bg-[#EFECE4] border border-[#E2DEC9] whitespace-nowrap">{{ it.skill_id }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ZONE 3: TRI-VIEW WORKSPACE (SPRINTS + ROADMAP, CRITICAL-PATH DAG, WHAT-IF SIMULATOR) -->
+  <div class="editorial-card overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-[#E5E3DC] bg-[#FAF9F5] flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center gap-2" role="tablist" aria-label="Plan Workspace Views">
+        <button type="button" onclick="switchWorkspaceTab('sprints')" id="tab-btn-sprints"
+                class="ws-tab-btn text-xs sm:text-[13px] font-semibold px-4 py-2 rounded-lg bg-[#1D5C42] text-white transition">
+          Sprint Swimlanes &amp; Roadmap
+        </button>
+        <button type="button" onclick="switchWorkspaceTab('dag')" id="tab-btn-dag"
+                class="ws-tab-btn text-xs sm:text-[13px] font-semibold px-4 py-2 rounded-lg bg-white border border-[#E5E3DC] text-[#4A483F] hover:text-[#1C1E1B] transition">
+          Critical-Path Dependency DAG
+        </button>
+        <button type="button" onclick="switchWorkspaceTab('simulator')" id="tab-btn-simulator"
+                class="ws-tab-btn text-xs sm:text-[13px] font-semibold px-4 py-2 rounded-lg bg-white border border-[#E5E3DC] text-[#4A483F] hover:text-[#1C1E1B] transition">
+          Counterfactual What-If Simulator
+        </button>
+      </div>
+      <div class="text-xs font-medium text-[#4A483F] flex items-center gap-2">
+        <span>Max Week Load: <strong class="mono text-[#1C1E1B]">{{ telemetry.get('sprint_max_week_hours', 0) }}h / {{ cur_cap }}h cap</strong></span>
+        {% if telemetry.get('sprint_cap_compliant', true) %}
+        <span class="pill-sage px-2.5 py-0.5 rounded-full text-[11px] font-semibold">Cap Compliant</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- TAB A: CAP-COMPLIANT SPRINT SWIMLANES + CURRICULUM TABLE -->
+    <div id="view-sprints" class="ws-view">
+      <!-- Module-Split Weekly Sprint Swimlanes -->
+      {% set swimlanes = strategy.get('sprint_swimlanes', []) %}
+      {% if swimlanes %}
+      <div class="p-5 sm:p-6 border-b border-[#E5E3DC]">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <h2 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Module-Level Weekly Sprints (Cap-Enforced)</h2>
+          <span class="text-xs font-medium text-[#4A483F]">Long courses auto-split cleanly across syllabus parts</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {% for wk in swimlanes %}
+          <div class="rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between gap-2 pb-2.5 mb-3 border-b border-[#E5E3DC]">
+                <span class="text-sm font-semibold text-[#1C1E1B]">Week {{ wk.week }}</span>
+                <div class="flex items-center gap-2">
+                  <span class="mono text-xs font-medium text-[#4A483F] kpi-num">{{ wk.allocated_hours }}h / {{ wk.capacity_hours }}h</span>
+                  <span class="{% if wk.cap_compliant %}pill-sage{% else %}pill-coral{% endif %} mono text-[11px] font-semibold px-2.5 py-0.5 rounded-full kpi-num">
+                    {{ wk.utilization_pct }}%
+                  </span>
                 </div>
-                <div id="skill-meta-{{ it.id }}" class="flex flex-wrap gap-1 text-[11px] font-mono"></div>
               </div>
-            </td>
-            <td class="px-5 py-4">
-              <div class="space-y-1.5">
+              <div class="space-y-2.5">
+                {% for card in wk.cards %}
+                <div class="p-3.5 rounded-xl bg-white border {% if card.kind == 'sop_action' %}border-[#E5C97B]{% else %}border-[#E5E3DC]{% endif %}">
+                  <div class="flex items-start justify-between gap-2.5">
+                    <div class="min-w-0">
+                      <div class="flex flex-wrap items-center gap-1.5">
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-[#EFECE4] text-[#1C1E1B]">{{ card.skill_id }}</span>
+                        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#E3F2EA] text-[#1B5E43]">{{ card.part_label }}</span>
+                        {% if card.priority_tier == 'Gate-Blocker' %}
+                        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#FEF3C7] text-[#92400E]">Gate-Blocker</span>
+                        {% endif %}
+                      </div>
+                      <p class="text-[13px] font-semibold text-[#1C1E1B] mt-2 leading-snug">{{ card.course_title }}</p>
+                      <p class="text-xs text-[#4A483F] mt-1 leading-relaxed">{{ card.module_label }}</p>
+                    </div>
+                    <span class="mono text-sm font-bold text-[#1D5C42] kpi-num shrink-0">{{ card.hours }}h</span>
+                  </div>
+                  <div class="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-[#ECEAE2] text-xs">
+                    <span class="text-[#4A483F] font-medium">
+                      ROI: <strong class="text-[#1C1E1B] kpi-num">+{{ card.roi_pts_per_hr }} pts/hr</strong> &middot; {{ card.drives_helped }} drive{% if card.drives_helped != 1 %}s{% endif %}
+                    </span>
+                    {% if card.kind == 'sop_action' %}
+                    <a href="{{ card.action_url }}" class="font-semibold text-[#1D5C42] hover:underline whitespace-nowrap">Open Mock &rarr;</a>
+                    {% elif card.status == 'done' %}
+                    <span class="text-[#1D5C42] font-semibold whitespace-nowrap">Verified</span>
+                    {% else %}
+                    <button type="button" onclick="openVerifyModal('{{ card.item_id }}')"
+                            class="px-2.5 py-1 rounded-md bg-[#E3F2EA] text-[#1B5E43] font-semibold hover:bg-[#D1EAD9] transition whitespace-nowrap">
+                      Verify
+                    </button>
+                    {% endif %}
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Detailed Curriculum Roadmap & Control Table -->
+      <div class="px-5 py-4 border-b border-[#E5E3DC] bg-[#FAF9F5] flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Curriculum Roadmap &amp; Counterfactual Controls</h3>
+          <p class="text-xs text-[#4A483F] mt-0.5">Inline Course Swapper &middot; BKT Posterior Mastery &middot; Offline Guides &middot; Micro-Quiz Verification &amp; TPO Waivers</p>
+        </div>
+      </div>
+
+      {% if plan_items %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs font-semibold uppercase tracking-wide text-[#4A483F] bg-[#FAF9F5] border-b border-[#E5E3DC]">
+              <th class="py-3.5 px-4">Week / Skill &amp; BKT</th>
+              <th class="py-3.5 px-4">Course, Offline Guide &amp; Swapper</th>
+              <th class="py-3.5 px-4">ROI &amp; Scope</th>
+              <th class="py-3.5 px-4">Effort</th>
+              <th class="py-3.5 px-4">Status</th>
+              <th class="py-3.5 px-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="plan-items-tbody" class="divide-y divide-[#ECEAE2]">
+            {% set ns_w = namespace(last_week=0) %}
+            {% for it in plan_items %}
+            {% if it.week != ns_w.last_week %}
+            {% set ns_w.last_week = it.week %}
+            <tr class="bg-[#FAF9F5]">
+              <td colspan="6" class="py-2.5 px-4 text-xs font-semibold text-[#1C1E1B]">
+                Week {{ it.week }} Core Track
+              </td>
+            </tr>
+            {% endif %}
+            <tr id="row-{{ it.id }}" class="{% if it.status == 'done' %}bg-[#F2F7F4]{% else %}hover:bg-[#FAF9F5]{% endif %} transition">
+              <td class="py-4 px-4 align-top">
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span class="mono text-xs font-medium text-[#4A483F]">W{{ it.week }} &middot; #{{ it.order }}</span>
+                  <span class="px-2.5 py-0.5 rounded-md bg-[#EFECE4] text-[#1C1E1B] text-xs font-semibold">{{ it.skill_id }}</span>
+                  {% if it.priority_tier == 'Gate-Blocker' %}
+                  <span class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#FEF3C7] text-[#92400E]">Gate-Blocker</span>
+                  {% elif it.priority_tier == 'Verification Upgrade' %}
+                  <span class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#E3F2EA] text-[#1B5E43]">Re-Verify</span>
+                  {% else %}
+                  <span class="text-[11px] font-medium px-2 py-0.5 rounded-md bg-[#EFECE4] text-[#4A483F]">{{ it.priority_tier }}</span>
+                  {% endif %}
+                </div>
+                <div id="skill-meta-{{ it.id }}" class="mt-2.5 space-y-1.5 text-xs">
+                  <div class="flex items-center justify-between gap-2 text-[#4A483F] max-w-[180px]">
+                    <span class="font-medium">BKT Mastery</span>
+                    <span class="mono kpi-num text-[#1C1E1B] font-semibold">{{ it.bkt_mastery_pct }}% ({{ it.bkt_band }})</span>
+                  </div>
+                  <div class="h-1.5 bg-[#EFECE4] rounded-full overflow-hidden max-w-[180px]">
+                    <div class="h-full bg-[#1D5C42] rounded-full" style="width: {{ it.bkt_mastery_pct }}%"></div>
+                  </div>
+                  {% if it.covers_skills and it.covers_skills|length > 1 %}
+                  <div class="text-xs font-medium text-[#1D5C42]">
+                    Covers: {{ ' + '.join(it.covers_skills) }}
+                  </div>
+                  {% endif %}
+                  {% if it.on_critical_path %}
+                  <div class="text-xs font-semibold text-[#9E2A20]">Critical Path (0h slack)</div>
+                  {% elif it.slack_h and it.slack_h > 0 %}
+                  <div class="text-xs text-[#4A483F]">Slack: +{{ it.slack_h }}h buffer</div>
+                  {% endif %}
+                </div>
+              </td>
+
+              <td class="py-4 px-4 align-top">
                 <div class="flex flex-wrap items-center gap-2">
                   {% if it.course_url %}
-                  <a href="{{ it.course_url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-[#1C1E1B] hover:text-[#1D5C42] transition-colors inline-flex items-center gap-1.5">
-                    <span>{{ it.course_title or 'Course Module' }}</span>
-                    <svg class="w-3 h-3 text-[#7A776E] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+                  <a href="{{ it.course_url }}" target="_blank" rel="noopener noreferrer"
+                     class="text-sm font-semibold text-[#1C1E1B] hover:text-[#1D5C42] underline decoration-[#C8E4D5] underline-offset-4">
+                    {{ it.course_title or it.skill_id }}
                   </a>
                   {% else %}
-                  <span class="font-medium text-[#1C1E1B]">{{ it.course_title or 'Self-guided practice' }}</span>
+                  <span class="text-sm font-semibold text-[#1C1E1B]">{{ it.course_title or it.skill_id }}</span>
                   {% endif %}
-                  {% if it.course_cost %}
-                  <span class="text-[11px] text-[#5C5A52] px-2 py-0.5 rounded-full bg-[#F5F3EC] border border-[#E5E3DC] font-mono">{{ it.course_cost }}</span>
+                  {% if it.course_cost == 'free' %}
+                  <span class="pill-sage text-[11px] font-semibold px-2.5 py-0.5 rounded-full">Free</span>
+                  {% elif it.course_cost %}
+                  <span class="pill-stone text-[11px] font-medium px-2.5 py-0.5 rounded-full">{{ it.course_cost }}</span>
                   {% endif %}
-                  <span id="url-badge-{{ it.id }}" class="hidden"></span>
+                  <span id="url-badge-{{ it.id }}" class="pill-sage text-[11px] font-semibold px-2.5 py-0.5 rounded-full">Verified Source</span>
                 </div>
-                <details id="guide-{{ it.id }}" class="hidden text-xs text-[#5C5A52] rounded-xl bg-[#FAF9F5] border border-[#ECEAE2] px-3 py-2">
-                  <summary class="cursor-pointer font-medium text-[#1B5E43] select-none">Offline Study Guide (Key Topics &amp; Syllabus)</summary>
-                  <div id="guide-body-{{ it.id }}" class="mt-2 space-y-1.5"></div>
-                </details>
-              </div>
-            </td>
-            <td class="px-5 py-4 text-xs text-[#5C5A52] font-mono">{{ it.course_provider or 'Official Docs' }}</td>
-            <td class="px-5 py-4 font-mono text-xs text-[#1C1E1B] tabular-nums whitespace-nowrap">{{ it.hours }} hrs</td>
-            <td class="px-5 py-4">
-              {% if it.status == 'done' %}
-              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5] font-mono uppercase tracking-wider whitespace-nowrap">
-                <svg class="w-3 h-3 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
-                <span>done</span>
-              </span>
-              {% elif it.status == 'published' %}
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#E6F0FA] text-[#1E4B7A] border border-[#C2DAF2] font-mono uppercase tracking-wider whitespace-nowrap">
-                published
-              </span>
-              {% else %}
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#4A483F] border border-[#E2DEC9] font-mono uppercase tracking-wider whitespace-nowrap">
-                pending
-              </span>
-              {% endif %}
-            </td>
-            <td class="px-5 py-4 text-right">
-              {% if it.status == 'done' %}
-              <button type="button"
-                      onclick="openPlanQuiz('{{ plan.id }}', '{{ it.id }}', '{{ it.skill_id }}', '{{ (it.course_title or it.skill_id)|e }}')"
-                      class="inline-flex items-center justify-center px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#5C5A52] hover:bg-[#E2DEC9] transition-colors whitespace-nowrap cursor-pointer">
-                Completed &middot; Retake Quiz
-              </button>
-              {% else %}
-              <button type="button"
-                      onclick="openPlanQuiz('{{ plan.id }}', '{{ it.id }}', '{{ it.skill_id }}', '{{ (it.course_title or it.skill_id)|e }}')"
-                      class="inline-flex items-center justify-center px-4 py-1.5 rounded-full text-xs font-semibold bg-[#1D5C42] text-white hover:bg-[#154531] transition-colors whitespace-nowrap cursor-pointer">
-                Verify &amp; Complete
-              </button>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+                <div class="text-xs text-[#4A483F] mt-1.5">
+                  Provider: <strong class="font-medium text-[#1C1E1B]">{{ it.course_provider or 'Verified Catalog' }}</strong> &middot; Modality: {{ it.recommended_modality }}
+                </div>
+
+                {% if it.alternatives %}
+                <div class="mt-2.5 flex flex-wrap items-center gap-2">
+                  <label for="swap-{{ it.id }}" class="text-xs font-semibold text-[#4A483F]">Swap Course:</label>
+                  <select id="swap-{{ it.id }}" onchange="swapCourse('{{ it.id }}', this.value)"
+                          class="text-xs font-medium bg-white border border-[#E5E3DC] rounded-lg px-2.5 py-1.5 text-[#1C1E1B]">
+                    <option value="">Keep current ({{ it.hours }}h &middot; {{ it.course_cost }})</option>
+                    {% for alt in it.alternatives %}
+                    <option value="{{ alt.id }}">{{ alt.title }} ({{ alt.hours }}h &middot; {{ alt.cost }})</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                {% endif %}
+
+                <button type="button" onclick="toggleGuide('{{ it.id }}')"
+                        class="mt-2.5 text-xs font-medium text-[#4A483F] hover:text-[#1D5C42] inline-flex items-center gap-1.5 border border-[#E5E3DC] rounded-lg px-2.5 py-1 bg-[#FAF9F5]">
+                  <span id="guide-arrow-{{ it.id }}" class="mono text-[11px]">[+]</span> Offline Study Guide (Key Topics &amp; Syllabus)
+                </button>
+                <div id="guide-{{ it.id }}" class="hidden mt-2.5 p-3 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC] text-xs text-[#1C1E1B]">
+                  <div id="guide-body-{{ it.id }}">
+                    {% if it.key_topics %}
+                    <div class="text-xs font-semibold text-[#4A483F] mb-1">Key Topics</div>
+                    <p class="text-xs text-[#1C1E1B] leading-relaxed mb-2.5">{{ ', '.join(it.key_topics) }}</p>
+                    {% endif %}
+                    {% if it.syllabus %}
+                    <div class="text-xs font-semibold text-[#4A483F] mb-1">Syllabus Outline</div>
+                    <ul class="list-disc pl-4 space-y-1 text-xs text-[#4A483F] leading-relaxed">
+                      {% for mod in it.syllabus %}
+                      <li>{{ mod }}</li>
+                      {% endfor %}
+                    </ul>
+                    {% else %}
+                    <span class="text-[#4A483F]">Loading structured study guide...</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </td>
+
+              <td class="py-4 px-4 align-top kpi-num">
+                <div class="text-sm font-semibold text-[#1D5C42]">+{{ it.roi_pts_per_hr }} pts/hr</div>
+                <div class="text-xs text-[#4A483F] mt-1">
+                  +{{ it.primary_delta_pts }} pts primary &middot; {{ it.drives_helped }} drive{% if it.drives_helped != 1 %}s{% endif %}
+                </div>
+              </td>
+
+              <td class="py-4 px-4 align-top mono text-sm font-semibold text-[#1C1E1B] kpi-num whitespace-nowrap">{{ it.hours }} hrs</td>
+
+              <td class="py-4 px-4 align-top">
+                <span id="status-{{ it.id }}"
+                      class="status-pill {% if it.status == 'done' %}pill-sage{% else %}pill-stone{% endif %} text-xs font-semibold uppercase px-3 py-1 rounded-full">
+                  {{ it.status }}
+                </span>
+              </td>
+
+              <td class="py-4 px-4 align-top text-right whitespace-nowrap">
+                <div class="flex flex-col items-end gap-2">
+                  {% if it.status == 'done' %}
+                  <span class="text-xs font-semibold text-[#1D5C42]">Quiz Verified</span>
+                  {% else %}
+                  <button type="button" onclick="openVerifyModal('{{ it.id }}')"
+                          class="btn-primary-pill text-xs px-3.5 py-1.5 rounded-lg">
+                    Verify &amp; Complete
+                  </button>
+                  <button type="button" onclick="openWaiverModal('{{ it.id }}', '{{ it.skill_id }}')"
+                          class="text-xs font-medium text-[#4A483F] hover:text-[#1D5C42] underline">
+                    Request Waiver
+                  </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="p-10 text-center">
+        <div class="font-serif-display text-lg font-semibold text-[#1C1E1B] mb-1">All required and preferred skills are covered</div>
+        <p class="text-sm text-[#4A483F]">Toggle Depth &amp; Verification Upgrades above or click Re-Solve Plan to optimize your next drive portfolio.</p>
+      </div>
+      {% endif %}
     </div>
+
+    <!-- TAB B: INTERACTIVE CRITICAL-PATH DEPENDENCY DAG -->
+    <div id="view-dag" class="ws-view hidden p-5 sm:p-6">
+      {% set dag = strategy.get('dag', {}) %}
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="lg:col-span-2 rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 overflow-x-auto">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3 text-xs text-[#4A483F]">
+            <span class="font-medium">Prerequisite &amp; Critical-Path Flow (Click any node to inspect slack &amp; counterfactual ROI)</span>
+            <span>Critical Path Total: <strong class="mono text-[#1C1E1B]">{{ dag.get('critical_path_hours', 0) }}h</strong></span>
+          </div>
+          {% if dag.get('nodes') %}
+          <svg id="dag-svg" viewBox="0 0 {{ dag.get('width', 760) }} {{ dag.get('height', 240) }}"
+               class="w-full min-w-[640px] h-auto" role="img" aria-label="Skill Prerequisite DAG">
+            <defs>
+              <marker id="dag-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#9A968B"></polygon>
+              </marker>
+              <marker id="dag-arrow-crit" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#1D5C42"></polygon>
+              </marker>
+            </defs>
+            {% for e in dag.get('edges', []) %}
+            <line x1="{{ e.x1 }}" y1="{{ e.y1 }}" x2="{{ e.x2 }}" y2="{{ e.y2 }}"
+                  stroke="{% if e.critical %}#1D5C42{% else %}#C5C2B8{% endif %}"
+                  stroke-width="{% if e.critical %}2.5{% else %}1.5{% endif %}"
+                  {% if not e.critical %}stroke-dasharray="4 3"{% endif %}
+                  marker-end="url(#{% if e.critical %}dag-arrow-crit{% else %}dag-arrow{% endif %})"></line>
+            {% endfor %}
+
+            {% for n in dag.get('nodes', []) %}
+            <g class="cursor-pointer dag-node-group" onclick="inspectDagNode('{{ n.id }}')" data-node-id="{{ n.id }}">
+              <rect x="{{ n.x }}" y="{{ n.y }}" width="168" height="60" rx="10"
+                    fill="{% if n.kind == 'owned' %}#E3F2EA{% elif n.kind == 'gate' %}#FEF3C7{% else %}#FFFFFF{% endif %}"
+                    stroke="{% if n.on_critical_path %}#1D5C42{% elif n.kind == 'owned' %}#40916C{% else %}#D8D5CB{% endif %}"
+                    stroke-width="{% if n.on_critical_path %}2.2{% else %}1.2{% endif %}"
+                    {% if n.kind == 'plan_item' and n.status != 'done' and not n.on_critical_path %}stroke-dasharray="4 2"{% endif %}></rect>
+              <text x="{{ n.x + 10 }}" y="{{ n.y + 20 }}" font-size="12" font-family="'Inter', ui-sans-serif, system-ui, sans-serif" font-weight="600" fill="#1C1E1B">
+                {{ n.label[:20] }}
+              </text>
+              <text x="{{ n.x + 10 }}" y="{{ n.y + 37 }}" font-size="11" font-family="'Inter', ui-sans-serif, system-ui, sans-serif" fill="#4A483F">
+                {% if n.kind == 'owned' %}Verified Foundation{% else %}{{ n.hours }}h &middot; +{{ n.roi_pts_per_hr }} pts/h{% endif %}
+              </text>
+              <text x="{{ n.x + 10 }}" y="{{ n.y + 52 }}" font-size="10.5" font-family="'Inter', ui-sans-serif, system-ui, sans-serif" font-weight="600"
+                    fill="{% if n.on_critical_path %}#1D5C42{% else %}#5C5A52{% endif %}">
+                {% if n.kind == 'owned' %}0h &middot; Unlocks downstream{% elif n.on_critical_path %}Critical Path (ES {{ n.early_start_h }}h){% else %}Slack +{{ n.slack_h }}h{% endif %}
+              </text>
+            </g>
+            {% endfor %}
+          </svg>
+          {% else %}
+          <div class="p-8 text-center text-sm text-[#4A483F]">Generate a plan to visualize the prerequisite dependency DAG.</div>
+          {% endif %}
+        </div>
+
+        <div id="dag-inspector" class="rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-5 flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-semibold uppercase tracking-wide text-[#4A483F] mb-1">CPM Node Inspector</div>
+            <h3 id="dag-insp-title" class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Select a skill node</h3>
+            <p id="dag-insp-course" class="text-xs sm:text-[13px] text-[#4A483F] mt-1.5 leading-relaxed">Click any node in the graph to inspect Critical Path timing, slack, and marginal drive ROI.</p>
+            <div id="dag-insp-metrics" class="hidden mt-4 space-y-2 text-xs">
+              <div class="flex justify-between p-2.5 rounded-lg bg-white border border-[#E5E3DC]">
+                <span class="text-[#4A483F] font-medium">Priority Tier</span>
+                <span id="dag-insp-tier" class="font-semibold text-[#1C1E1B]"></span>
+              </div>
+              <div class="flex justify-between p-2.5 rounded-lg bg-white border border-[#E5E3DC]">
+                <span class="text-[#4A483F] font-medium">Early Start &rarr; Finish</span>
+                <span id="dag-insp-es" class="mono text-[#1C1E1B] kpi-num"></span>
+              </div>
+              <div class="flex justify-between p-2.5 rounded-lg bg-white border border-[#E5E3DC]">
+                <span class="text-[#4A483F] font-medium">Schedule Slack</span>
+                <span id="dag-insp-slack" class="mono text-[#1C1E1B] kpi-num"></span>
+              </div>
+              <div class="flex justify-between p-2.5 rounded-lg bg-white border border-[#E5E3DC]">
+                <span class="text-[#4A483F] font-medium">Counterfactual ROI</span>
+                <span id="dag-insp-roi" class="mono text-[#1D5C42] font-semibold kpi-num"></span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 pt-3.5 border-t border-[#E5E3DC] text-xs text-[#4A483F] leading-relaxed">
+            Green solid border indicates zero-slack Critical Path items that govern minimum calendar time to target readiness.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB C: COUNTERFACTUAL WHAT-IF & PACE SIMULATOR -->
+    <div id="view-simulator" class="ws-view hidden p-5 sm:p-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div class="rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-4">
+          <div>
+            <div class="text-xs font-semibold text-[#4A483F] mb-2">1. Toggle Skills to Simulate</div>
+            <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+              {% for it in plan_items %}
+              <label class="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-white border border-[#E5E3DC] text-xs cursor-pointer">
+                <span class="inline-flex items-center gap-2">
+                  <input type="checkbox" class="sim-skill-chk rounded text-[#1D5C42] focus:ring-[#1D5C42]"
+                         value="{{ it.skill_id }}" checked>
+                  <span class="font-semibold text-[#1C1E1B]">{{ it.skill_id }}</span>
+                </span>
+                <span class="mono text-xs text-[#4A483F] kpi-num">{{ it.hours }}h</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between text-xs font-semibold text-[#4A483F] mb-1.5">
+              <label for="sim-weekly-cap">2. Weekly Study Pace</label>
+              <span id="sim-cap-label" class="mono text-[#1D5C42] font-semibold">{{ cur_cap }}h/wk</span>
+            </div>
+            <input id="sim-weekly-cap" type="range" min="5" max="25" step="1" value="{{ cur_cap }}"
+                   oninput="document.getElementById('sim-cap-label').textContent = this.value + 'h/wk'"
+                   class="w-full accent-[#1D5C42]">
+          </div>
+
+          <label class="flex items-center gap-2 text-xs sm:text-[13px] font-medium text-[#1C1E1B] cursor-pointer">
+            <input id="sim-mock-chk" type="checkbox" class="rounded text-[#1D5C42] focus:ring-[#1D5C42]">
+            <span>Assume Mock Interview &ge; 65 passed (SOP-04)</span>
+          </label>
+
+          <button id="sim-run-btn" type="button" onclick="runWhatIfSimulation()"
+                  class="btn-primary-pill w-full py-2.5 rounded-lg text-xs sm:text-[13px] font-semibold">
+            Run Counterfactual Simulation
+          </button>
+        </div>
+
+        <div class="lg:col-span-2 rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-5">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3.5">
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-wide text-[#4A483F]">Live Portfolio Counterfactual Output</div>
+              <h3 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Projected Drive Scores &amp; Time-to-Eligibility</h3>
+            </div>
+            <div id="sim-summary-pills" class="flex flex-wrap items-center gap-2 text-xs">
+              <span class="pill-stone px-3 py-1 rounded-full">Select skills &amp; click Run</span>
+            </div>
+          </div>
+          <div id="sim-results-body" class="space-y-2.5 text-sm text-[#4A483F]">
+            <p class="p-4 rounded-xl bg-white border border-[#E5E3DC] leading-relaxed">
+              Adjust weekly study hours, toggle specific skills or SOP-04 Mock Interview pass, and click
+              <strong class="text-[#1C1E1B]">Run Counterfactual Simulation</strong> to compute live matching score deltas across your visible campus drives.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ZONE 4: GROUNDED AI STRATEGY BRIEF & SELF-HEALING RECOVERY LEDGER -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div id="plan-narrative-card" class="lg:col-span-2 editorial-card p-5 sm:p-6 border-l-4 border-l-[#1D5C42] bg-[#F2F7F4]">
+      <div class="flex items-start gap-3.5">
+        <div class="w-9 h-9 rounded-xl bg-[#E3F2EA] text-[#1D5C42] flex items-center justify-center shrink-0 mt-0.5">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-1.04"/>
+            <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-1.04"/>
+          </svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="text-xs font-semibold uppercase tracking-wide text-[#1B5E43] mb-1.5 flex flex-wrap items-center gap-2">
+            <span>AI Placement Strategy Brief</span>
+            <span id="plan-job-label" class="font-medium normal-case text-[#4A483F]"></span>
+          </div>
+          <p id="plan-narrative-text" class="text-sm sm:text-[15px] text-[#1C1E1B] leading-relaxed">
+            {{ plan.narrative or 'Sequenced against prerequisite dependencies and SOP gates.' }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="editorial-card p-5">
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <h2 class="text-xs font-semibold uppercase tracking-wide text-[#4A483F]">Telemetry &amp; Recovery Ledger</h2>
+        <span class="mono text-xs font-semibold text-[#1D5C42] kpi-num">{{ telemetry.get('solve_time_ms', 1) }}ms</span>
+      </div>
+      <div class="text-xs text-[#4A483F] mb-3">
+        Evaluated <strong class="text-[#1C1E1B]">{{ telemetry.get('skills_evaluated', 0) }}</strong> skills &times;
+        <strong class="text-[#1C1E1B]">{{ telemetry.get('courses_evaluated', 0) }}</strong> courses &times;
+        <strong class="text-[#1C1E1B]">{{ telemetry.get('drives_evaluated', 0) }}</strong> drives
+      </div>
+      <div class="space-y-2.5 max-h-44 overflow-y-auto pr-1">
+        {% for rec in strategy.get('recovery_ledger', []) %}
+        <div class="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC] text-xs">
+          <span class="font-semibold text-[#1D5C42] block mb-0.5">{{ rec.kind }}</span>
+          <span class="text-[#1C1E1B] leading-relaxed">{{ rec.detail }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="editorial-card p-12 text-center">
+    <div class="font-serif-display text-xl font-semibold text-[#1C1E1B] mb-2">No strategy generated yet</div>
+    <p class="text-sm text-[#4A483F] max-w-md mx-auto mb-5 leading-relaxed">
+      Compute job matches first or click below to solve a constraint-aware placement strategy tailored to your profile.
+    </p>
+    <button onclick="regenPlan()" class="btn-primary-pill px-5 py-2.5 text-sm rounded-lg">
+      Generate Placement Strategy
+    </button>
   </div>
   {% endif %}
 </div>
 
 <!-- Skill Verification Micro-Quiz Modal -->
-<div id="plan-quiz-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="quiz-modal-title">
-  <div class="bg-white rounded-2xl border border-[#E5E3DC] shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-4">
-    <div class="flex items-start justify-between gap-3 border-b border-[#ECEAE2] pb-3">
+<div id="plan-quiz-modal" role="dialog" aria-modal="true" aria-labelledby="quiz-modal-title"
+     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+  <div class="bg-white rounded-2xl border border-[#E5E3DC] shadow-2xl max-w-xl w-full overflow-hidden">
+    <div class="px-6 py-4 border-b border-[#E5E3DC] bg-[#FAF9F5] flex items-center justify-between">
       <div>
-        <p class="text-[11px] font-mono uppercase tracking-wider text-[#1B5E43] font-semibold">Skill Verification Micro-Quiz</p>
-        <h3 id="quiz-modal-title" class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Verify Competency</h3>
-        <p id="quiz-modal-subtitle" class="text-xs text-[#5C5A52] mt-0.5"></p>
+        <div class="text-xs font-semibold uppercase tracking-wide text-[#1D5C42]">
+          Skill Verification Gate
+        </div>
+        <h3 id="quiz-modal-title" class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Verify Skill</h3>
+        <p id="quiz-modal-subtitle" class="text-xs text-[#4A483F] mt-0.5"></p>
       </div>
-      <button type="button" onclick="closePlanQuiz()" class="px-2.5 py-1 rounded-full text-xs font-mono text-[#5C5A52] hover:bg-[#EFECE4] cursor-pointer">Close</button>
+      <button type="button" onclick="closeVerifyModal()"
+              class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#E5E3DC] text-[#4A483F] hover:text-[#1C1E1B]">
+        Close
+      </button>
     </div>
 
-    <div id="quiz-topics-box" class="hidden rounded-xl bg-[#FAF9F5] border border-[#ECEAE2] p-3 text-xs text-[#4A483F]"></div>
-    <div id="quiz-questions-box" class="space-y-4"></div>
-    <div id="quiz-feedback-box" class="hidden rounded-xl border p-3 text-xs space-y-2"></div>
+    <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+      <div id="quiz-topics-box" class="hidden p-3.5 rounded-xl bg-[#F2F7F4] border border-[#C8E4D5] text-xs sm:text-[13px] text-[#1B5E43]"></div>
+      <div id="quiz-questions-box" class="space-y-4"></div>
+      <div id="quiz-feedback-box" class="hidden p-3.5 rounded-xl border text-xs sm:text-[13px]"></div>
+    </div>
 
-    <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-[#ECEAE2]">
-      <button type="button" onclick="closePlanQuiz()" class="btn-secondary-pill px-4 py-2 text-xs">Cancel</button>
-      <button id="quiz-submit-btn" type="button" onclick="submitPlanQuiz()" class="btn-primary-pill px-5 py-2 text-xs">Submit Answers &amp; Verify</button>
+    <div class="px-6 py-3.5 border-t border-[#E5E3DC] bg-[#FAF9F5] flex items-center justify-between">
+      <span class="text-xs text-[#4A483F]">Pass threshold: <strong class="text-[#1C1E1B]">70%</strong> (verifies skill &amp; refreshes matches)</span>
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="closeVerifyModal()"
+                class="btn-secondary-pill text-xs px-4 py-2 rounded-lg">Cancel</button>
+        <button id="quiz-submit-btn" type="button" onclick="submitVerifyQuiz()"
+                class="btn-primary-pill text-xs px-4 py-2 rounded-lg">Submit Answers</button>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- Proficiency Waiver Request Modal -->
+<div id="plan-waiver-modal" role="dialog" aria-modal="true" aria-labelledby="waiver-modal-title"
+     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+  <div class="bg-white rounded-2xl border border-[#E5E3DC] shadow-2xl max-w-md w-full overflow-hidden">
+    <div class="px-6 py-4 border-b border-[#E5E3DC] bg-[#FAF9F5] flex items-center justify-between">
+      <div>
+        <div class="text-xs font-semibold uppercase tracking-wide text-[#1D5C42]">
+          HITL Governance Gate
+        </div>
+        <h3 id="waiver-modal-title" class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Request Proficiency Waiver</h3>
+      </div>
+      <button type="button" onclick="closeWaiverModal()"
+              class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#E5E3DC] text-[#4A483F] hover:text-[#1C1E1B]">Close</button>
+    </div>
+    <div class="p-5 space-y-3.5 text-xs sm:text-[13px]">
+      <p class="text-[#4A483F] leading-relaxed">
+        Submit existing project or coursework proof to your Faculty Mentor / TPO for
+        <strong id="waiver-skill-label" class="font-semibold text-[#1C1E1B]"></strong>.
+      </p>
+      <div>
+        <label for="waiver-level-select" class="block font-semibold text-xs text-[#4A483F] mb-1.5">Requested Level</label>
+        <select id="waiver-level-select" class="w-full border border-[#E5E3DC] rounded-lg px-3 py-2 bg-white text-[#1C1E1B]">
+          <option value="intermediate" selected>Intermediate</option>
+          <option value="advanced">Advanced</option>
+        </select>
+      </div>
+      <div>
+        <label for="waiver-reason-input" class="block font-semibold text-xs text-[#4A483F] mb-1.5">Justification / Project Link</label>
+        <textarea id="waiver-reason-input" rows="3"
+                  placeholder="Describe coursework, internship project, or GitHub repository demonstrating this skill..."
+                  class="w-full border border-[#E5E3DC] rounded-lg p-3 bg-white text-[#1C1E1B]"></textarea>
+      </div>
+      <div id="waiver-status-box" class="hidden p-3 rounded-lg border text-xs"></div>
+    </div>
+    <div class="px-6 py-3.5 border-t border-[#E5E3DC] bg-[#FAF9F5] flex justify-end gap-2">
+      <button type="button" onclick="closeWaiverModal()" class="btn-secondary-pill text-xs px-4 py-2 rounded-lg">Cancel</button>
+      <button id="waiver-submit-btn" type="button" onclick="submitWaiverRequest()" class="btn-primary-pill text-xs px-4 py-2 rounded-lg">Submit to TPO Queue</button>
+    </div>
+  </div>
+</div>
+
+<script id="dag-nodes-json" type="application/json">{{ (strategy.get('dag', {}).get('nodes', []) if strategy else [])|tojson }}</script>
+
 <script>
-(function () {
-  var quizState = { planId: "", itemId: "", skillId: "", questions: [] };
+const root = document.getElementById('plan-workspace');
+const sid = root.dataset.studentId;
+let activePlanId = root.dataset.planId;
+let activeQuizItemId = null;
+let activeQuizQuestions = [];
+let activeWaiverItemId = null;
+let dagNodesData = [];
+try {
+  dagNodesData = JSON.parse(document.getElementById('dag-nodes-json').textContent || '[]');
+} catch (_e) { dagNodesData = []; }
 
-  function makeEl(tag, cls, text) {
-    var el = document.createElement(tag);
-    if (cls) el.className = cls;
-    if (text !== undefined && text !== null) el.textContent = String(text);
-    return el;
-  }
-
-  function renderItemDetails(plan) {
-    if (!plan || !Array.isArray(plan.items)) return;
-    var jobLbl = document.getElementById("plan-job-label");
-    if (jobLbl && plan.job_title) {
-      jobLbl.textContent = "Target: " + plan.job_title + (plan.company ? " at " + plan.company : "");
-    }
-    plan.items.forEach(function (it) {
-      var metaBox = document.getElementById("skill-meta-" + it.id);
-      if (metaBox) {
-        metaBox.textContent = "";
-        if (it.skill_verification_status === "unverified" || it.skill_verification_status === "needs_reverification") {
-          metaBox.appendChild(makeEl("span", "px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#92400E] border border-[#F59E0B]/40", it.skill_verification_status.replace("_", " ")));
-        } else if (it.skill_verification_status === "verified") {
-          metaBox.appendChild(makeEl("span", "px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]", "verified"));
-        }
-        if (Array.isArray(it.prerequisites) && it.prerequisites.length) {
-          metaBox.appendChild(makeEl("span", "px-2 py-0.5 rounded-full bg-[#FAF9F5] text-[#5C5A52] border border-[#E5E3DC]", "requires: " + it.prerequisites.join(", ")));
-        }
-      }
-      var urlBadge = document.getElementById("url-badge-" + it.id);
-      if (urlBadge) {
-        urlBadge.className = it.url_verified
-          ? "text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]"
-          : "text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#92400E] border border-[#F59E0B]/40";
-        urlBadge.textContent = it.url_verified ? "verified source" : "check source";
-      }
-      var guide = document.getElementById("guide-" + it.id);
-      var guideBody = document.getElementById("guide-body-" + it.id);
-      var hasTopics = Array.isArray(it.key_topics) && it.key_topics.length;
-      var hasSyllabus = Array.isArray(it.syllabus) && it.syllabus.length;
-      if (guide && guideBody && (hasTopics || hasSyllabus)) {
-        guideBody.textContent = "";
-        if (hasTopics) {
-          guideBody.appendChild(makeEl("div", "font-semibold text-[#1C1E1B]", "Key Topics: " + it.key_topics.join(" | ")));
-        }
-        if (hasSyllabus) {
-          var ul = makeEl("ul", "list-disc list-inside space-y-0.5 text-[#5C5A52]");
-          it.syllabus.forEach(function (mod) {
-            ul.appendChild(makeEl("li", "", mod));
-          });
-          guideBody.appendChild(ul);
-        }
-        guide.classList.remove("hidden");
-      }
-    });
-  }
-
-  function hydratePlanWorkspace() {
-    var root = document.getElementById("plan-workspace");
-    if (!root) return;
-    var sid = root.getAttribute("data-sid");
-    var planId = root.getAttribute("data-plan-id");
-    if (planId) {
-      fetch("/api/plans/" + encodeURIComponent(planId))
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (plan) { if (plan) renderItemDetails(plan); })
-        .catch(function () {});
-    }
-    if (sid) {
-      fetch("/api/students/" + encodeURIComponent(sid) + "/plans")
-        .then(function (r) { return r.ok ? r.json() : []; })
-        .then(function (plans) {
-          if (!Array.isArray(plans) || plans.length <= 1) return;
-          var wrap = document.getElementById("plan-switcher-wrap");
-          var sel = document.getElementById("plan-switcher");
-          if (!wrap || !sel) return;
-          sel.textContent = "";
-          plans.forEach(function (p) {
-            var opt = document.createElement("option");
-            opt.value = p.id;
-            opt.textContent = (p.job_title || p.job_id) + " (" + p.total_hours + "h)";
-            if (p.id === planId) opt.selected = true;
-            sel.appendChild(opt);
-          });
-          wrap.classList.remove("hidden");
-          wrap.classList.add("flex");
-          window.__STUDENT_PLANS_CACHE__ = plans;
-        })
-        .catch(function () {});
-    }
-  }
-
-  window.switchActivePlan = function (selectedId) {
-    var plans = window.__STUDENT_PLANS_CACHE__ || [];
-    var plan = plans.find(function (p) { return p.id === selectedId; });
-    if (!plan) return;
-    var root = document.getElementById("plan-workspace");
-    if (root) root.setAttribute("data-plan-id", plan.id);
-    var totalHours = plan.total_hours || 0;
-    var doneHours = (plan.items || []).filter(function (i) { return i.status === "done"; }).reduce(function (a, b) { return a + (b.hours || 0); }, 0);
-    var pct = totalHours ? Math.round((1000 * doneHours) / totalHours) / 10 : 0;
-    var pctEl = document.getElementById("plan-pct-label");
-    var hrsEl = document.getElementById("plan-hours-label");
-    var barEl = document.getElementById("plan-bar");
-    var wksEl = document.getElementById("plan-weeks-pill");
-    var modEl = document.getElementById("plan-modules-pill");
-    var narEl = document.getElementById("plan-narrative-text");
-    if (pctEl) pctEl.textContent = pct + "%";
-    if (hrsEl) hrsEl.textContent = "(" + doneHours + " / " + totalHours + " hrs completed)";
-    if (barEl) barEl.style.width = pct + "%";
-    if (wksEl) wksEl.textContent = (plan.total_weeks || 1) + " week" + ((plan.total_weeks || 1) === 1 ? "" : "s") + " (<=10h/wk)";
-    if (modEl) modEl.textContent = (plan.items || []).length + " Learning Modules";
-    if (narEl) narEl.textContent = plan.narrative || "";
-    var tbody = document.getElementById("plan-items-tbody");
-    if (!tbody) return;
-    tbody.textContent = "";
-    var prevWk = 0;
-    (plan.items || []).forEach(function (it) {
-      if (it.week !== prevWk) {
-        prevWk = it.week;
-        var wkTr = makeEl("tr", "bg-[#FAF9F5]");
-        var wkTd = makeEl("td", "px-5 py-2 text-[11px] font-mono font-semibold uppercase tracking-wider text-[#1B5E43]", "Week " + it.week + " Schedule");
-        wkTd.colSpan = 6;
-        wkTr.appendChild(wkTd);
-        tbody.appendChild(wkTr);
-      }
-      var tr = makeEl("tr", "hover:bg-[#FAF9F5] transition-colors align-top");
-      tr.id = "row-" + it.id;
-      var td1 = makeEl("td", "px-5 py-4");
-      var d1 = makeEl("div", "flex flex-col gap-1.5");
-      var top1 = makeEl("div", "flex flex-wrap items-center gap-1.5");
-      top1.appendChild(makeEl("span", "text-[11px] font-mono text-[#6E6C64]", "W" + it.week + " \u00B7 #" + it.order));
-      top1.appendChild(makeEl("span", "font-mono font-semibold text-[#1C1E1B] text-xs px-2.5 py-0.5 rounded-full bg-[#EFECE4] border border-[#E2DEC9] whitespace-nowrap", it.skill_id));
-      d1.appendChild(top1);
-      var metaDiv = makeEl("div", "flex flex-wrap gap-1 text-[11px] font-mono");
-      metaDiv.id = "skill-meta-" + it.id;
-      d1.appendChild(metaDiv);
-      td1.appendChild(d1);
-      tr.appendChild(td1);
-
-      var td2 = makeEl("td", "px-5 py-4");
-      var d2 = makeEl("div", "space-y-1.5");
-      var row2 = makeEl("div", "flex flex-wrap items-center gap-2");
-      if (it.course_url) {
-        var a = makeEl("a", "font-medium text-[#1C1E1B] hover:text-[#1D5C42] transition-colors inline-flex items-center gap-1.5", it.course_title || "Course Module");
-        a.href = it.course_url;
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        row2.appendChild(a);
-      } else {
-        row2.appendChild(makeEl("span", "font-medium text-[#1C1E1B]", it.course_title || "Self-guided practice"));
-      }
-      if (it.cost_tier || it.course_cost) {
-        row2.appendChild(makeEl("span", "text-[11px] text-[#5C5A52] px-2 py-0.5 rounded-full bg-[#F5F3EC] border border-[#E5E3DC] font-mono", it.cost_tier || it.course_cost));
-      }
-      var ub = makeEl("span", "hidden");
-      ub.id = "url-badge-" + it.id;
-      row2.appendChild(ub);
-      d2.appendChild(row2);
-      var det = makeEl("details", "hidden text-xs text-[#5C5A52] rounded-xl bg-[#FAF9F5] border border-[#ECEAE2] px-3 py-2");
-      det.id = "guide-" + it.id;
-      det.appendChild(makeEl("summary", "cursor-pointer font-medium text-[#1B5E43] select-none", "Offline Study Guide (Key Topics & Syllabus)"));
-      var gb = makeEl("div", "mt-2 space-y-1.5");
-      gb.id = "guide-body-" + it.id;
-      det.appendChild(gb);
-      d2.appendChild(det);
-      td2.appendChild(d2);
-      tr.appendChild(td2);
-
-      tr.appendChild(makeEl("td", "px-5 py-4 text-xs text-[#5C5A52] font-mono", it.course_provider || "Official Docs"));
-      tr.appendChild(makeEl("td", "px-5 py-4 font-mono text-xs text-[#1C1E1B] tabular-nums whitespace-nowrap", it.hours + " hrs"));
-
-      var td5 = makeEl("td", "px-5 py-4");
-      var stCls = it.status === "done"
-        ? "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5] font-mono uppercase"
-        : it.status === "published"
-          ? "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#E6F0FA] text-[#1E4B7A] border border-[#C2DAF2] font-mono uppercase"
-          : "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#4A483F] border border-[#E2DEC9] font-mono uppercase";
-      td5.appendChild(makeEl("span", stCls, it.status));
-      tr.appendChild(td5);
-
-      var td6 = makeEl("td", "px-5 py-4 text-right");
-      var btn = makeEl(
-        "button",
-        it.status === "done"
-          ? "inline-flex items-center justify-center px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#EFECE4] text-[#5C5A52] hover:bg-[#E2DEC9] cursor-pointer"
-          : "inline-flex items-center justify-center px-4 py-1.5 rounded-full text-xs font-semibold bg-[#1D5C42] text-white hover:bg-[#154531] cursor-pointer",
-        it.status === "done" ? "Completed & Retake Quiz" : "Verify & Complete"
-      );
-      btn.type = "button";
-      btn.onclick = function () { openPlanQuiz(plan.id, it.id, it.skill_id, it.course_title || it.skill_id); };
-      td6.appendChild(btn);
-      tr.appendChild(td6);
-      tbody.appendChild(tr);
-    });
-    renderItemDetails(plan);
-  };
-
-  window.openPlanQuiz = function (planId, itemId, skillId, courseTitle) {
-    quizState = { planId: planId, itemId: itemId, skillId: skillId, questions: [] };
-    var modal = document.getElementById("plan-quiz-modal");
-    var titleEl = document.getElementById("quiz-modal-title");
-    var subEl = document.getElementById("quiz-modal-subtitle");
-    var topicsEl = document.getElementById("quiz-topics-box");
-    var qBox = document.getElementById("quiz-questions-box");
-    var fbEl = document.getElementById("quiz-feedback-box");
-    if (titleEl) titleEl.textContent = "Verify Skill: " + skillId;
-    if (subEl) subEl.textContent = (courseTitle || "") + " — loading micro-quiz...";
-    if (topicsEl) { topicsEl.textContent = ""; topicsEl.classList.add("hidden"); }
-    if (fbEl) { fbEl.textContent = ""; fbEl.classList.add("hidden"); }
-    if (qBox) { qBox.textContent = "Loading verification questions..."; }
-    if (modal) { modal.classList.remove("hidden"); modal.classList.add("flex"); }
-
-    fetch("/api/plans/" + encodeURIComponent(planId) + "/items/" + encodeURIComponent(itemId) + "/quiz")
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-      .then(function (res) {
-        if (!res.ok) {
-          if (qBox) qBox.textContent = "Failed to load quiz: " + ((res.j && res.j.detail) || "error");
-          return;
-        }
-        var data = res.j;
-        quizState.questions = data.questions || [];
-        if (subEl) {
-          subEl.textContent = (data.course_title || courseTitle || "") + " | Pass threshold: >= " + (data.passing_score || 70) + "%";
-        }
-        if (topicsEl && Array.isArray(data.key_topics) && data.key_topics.length) {
-          topicsEl.textContent = "Study focus: " + data.key_topics.join(" | ");
-          topicsEl.classList.remove("hidden");
-        }
-        if (qBox) {
-          qBox.textContent = "";
-          quizState.questions.forEach(function (q, idx) {
-            var card = makeEl("div", "space-y-1.5");
-            var lbl = makeEl("label", "block text-xs font-semibold text-[#1C1E1B]", "Q" + (idx + 1) + ". " + (q.prompt || ""));
-            lbl.setAttribute("for", "quiz-ans-" + q.id);
-            var ta = document.createElement("textarea");
-            ta.id = "quiz-ans-" + q.id;
-            ta.rows = 3;
-            ta.placeholder = "Write a concise technical explanation referencing core concepts...";
-            ta.className = "w-full rounded-xl border border-[#D8D4C7] px-3 py-2 text-xs text-[#1C1E1B] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]";
-            card.appendChild(lbl);
-            card.appendChild(ta);
-            qBox.appendChild(card);
-          });
-        }
-      })
-      .catch(function (err) {
-        if (qBox) qBox.textContent = "Network error loading quiz: " + err;
-      });
-  };
-
-  window.closePlanQuiz = function () {
-    var modal = document.getElementById("plan-quiz-modal");
-    if (modal) { modal.classList.add("hidden"); modal.classList.remove("flex"); }
-  };
-
-  window.submitPlanQuiz = function () {
-    var btn = document.getElementById("quiz-submit-btn");
-    var fbEl = document.getElementById("quiz-feedback-box");
-    var answers = {};
-    quizState.questions.forEach(function (q) {
-      var ta = document.getElementById("quiz-ans-" + q.id);
-      answers[q.id] = ta ? ta.value.trim() : "";
-    });
-    if (btn) { btn.disabled = true; btn.textContent = "Grading..."; }
-    fetch("/api/plans/" + encodeURIComponent(quizState.planId) + "/items/" + encodeURIComponent(quizState.itemId) + "/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ answers: answers })
-    })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-      .then(function (res) {
-        if (btn) { btn.disabled = false; btn.textContent = "Submit Answers & Verify"; }
-        var d = res.j || {};
-        if (!res.ok) {
-          if (fbEl) {
-            fbEl.className = "rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800";
-            fbEl.textContent = d.detail || "Quiz submission failed.";
-            fbEl.classList.remove("hidden");
-          }
-          return;
-        }
-        if (!d.passed) {
-          if (fbEl) {
-            fbEl.className = "rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 space-y-1.5";
-            fbEl.textContent = "";
-            fbEl.appendChild(makeEl("div", "font-semibold", "Score: " + d.score + "% (requires >= " + (d.passing_score || 70) + "%). Review and revise your answers below."));
-            (d.feedback || []).forEach(function (row, idx) {
-              var line = "Q" + (idx + 1) + ": " + (row.correct ? "Passed" : "Needs more detail") + (row.explanation ? " — " + row.explanation : "");
-              fbEl.appendChild(makeEl("div", "", line));
-            });
-            fbEl.classList.remove("hidden");
-          }
-          return;
-        }
-        if (window.toast) {
-          var cl = d.closed_loop || {};
-          window.toast("Skill verified (" + d.score + "%)! Readiness: " + (cl.readiness || 0) + "%", "success");
-        }
-        closePlanQuiz();
-        location.reload();
-      })
-      .catch(function (err) {
-        if (btn) { btn.disabled = false; btn.textContent = "Submit Answers & Verify"; }
-        if (fbEl) {
-          fbEl.className = "rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800";
-          fbEl.textContent = "Error: " + err;
-          fbEl.classList.remove("hidden");
-        }
-      });
-  };
-
-  window.genPlanTop = function (sid, btn) {
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = "Generating plan with AI...";
-      btn.classList.add("opacity-60", "cursor-wait");
-    }
-    var incEl = document.getElementById("include-upgrades-toggle");
-    var bodyPayload = { include_upgrades: Boolean(incEl && incEl.checked) };
-    fetch("/api/students/" + encodeURIComponent(sid) + "/plans", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(bodyPayload)
-    })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-      .then(function (x) {
-        if (x.ok) {
-          location.href = "/students/" + encodeURIComponent(sid) + "/plan";
-        } else {
-          if (btn) {
-            btn.disabled = false;
-            btn.textContent = "Generate a plan";
-            btn.classList.remove("opacity-60", "cursor-wait");
-          }
-          if (window.toast) {
-            window.toast("Could not generate plan: " + (x.j && (x.j.detail || JSON.stringify(x.j)) || "Unknown error"), "error");
-          }
-        }
-      })
-      .catch(function (err) {
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = "Generate a plan";
-          btn.classList.remove("opacity-60", "cursor-wait");
-        }
-        if (window.toast) {
-          window.toast("Error: " + err, "error");
-        }
-      });
-  };
-
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") closePlanQuiz();
+function setTargetMode(mode) {
+  document.getElementById('ctrl-target-mode').value = mode;
+  document.querySelectorAll('.ctrl-mode-btn').forEach(btn => {
+    const active = btn.dataset.targetMode === mode;
+    btn.className = 'ctrl-mode-btn flex-1 text-xs font-semibold py-1.5 px-2.5 rounded-md transition ' +
+      (active ? 'bg-[#1D5C42] text-white' : 'text-[#4A483F] hover:text-[#1C1E1B]');
   });
-  document.addEventListener("DOMContentLoaded", hydratePlanWorkspace);
-})();
+}
+
+function switchWorkspaceTab(tab) {
+  document.querySelectorAll('.ws-view').forEach(v => v.classList.add('hidden'));
+  document.getElementById('view-' + tab)?.classList.remove('hidden');
+  document.querySelectorAll('.ws-tab-btn').forEach(b => {
+    const isThis = b.id === 'tab-btn-' + tab;
+    b.className = 'ws-tab-btn text-xs sm:text-[13px] font-semibold px-4 py-2 rounded-lg transition ' +
+      (isThis ? 'bg-[#1D5C42] text-white' : 'bg-white border border-[#E5E3DC] text-[#4A483F] hover:text-[#1C1E1B]');
+  });
+}
+
+function inspectDagNode(nodeId) {
+  const n = dagNodesData.find(x => x.id === nodeId);
+  if (!n) return;
+  document.getElementById('dag-insp-title').textContent = n.label + ' (' + (n.hours || 0) + 'h)';
+  document.getElementById('dag-insp-course').textContent = n.course_title || 'Verified prerequisite foundation';
+  document.getElementById('dag-insp-tier').textContent = n.priority_tier || 'Required';
+  document.getElementById('dag-insp-es').textContent = (n.early_start_h || 0) + 'h -> ' + (n.early_finish_h || 0) + 'h';
+  document.getElementById('dag-insp-slack').textContent = n.on_critical_path ? '0h (Critical Path)' : ('+' + (n.slack_h || 0) + 'h buffer');
+  document.getElementById('dag-insp-roi').textContent = '+' + (n.roi_pts_per_hr || 0) + ' pts/hr (' + (n.drives_helped || 0) + ' drives)';
+  document.getElementById('dag-insp-metrics').classList.remove('hidden');
+}
+
+function showBanner(msg, ok = true) {
+  if (typeof window.toast === 'function') {
+    window.toast(msg, ok ? 'success' : 'error');
+  }
+}
+
+async function hydratePlanMetadata() {
+  try {
+    const res = await fetch(`/api/students/${sid}/plans`);
+    if (!res.ok) return;
+    const plans = await res.json();
+    if (!plans.length) return;
+
+    const current = plans.find(p => p.id === activePlanId) || plans[0];
+    if (!current) return;
+
+    const jobLbl = document.getElementById('plan-job-label');
+    if (jobLbl && (current.job_title || current.company)) {
+      jobLbl.textContent = `Target: ${current.job_title}${current.company ? ' at ' + current.company : ''}`;
+    }
+
+    const wrap = document.getElementById('plan-switcher-wrap');
+    const sel = document.getElementById('plan-switcher');
+    if (plans.length > 1 && sel && wrap) {
+      wrap.classList.remove('hidden');
+      sel.innerHTML = plans.map(p =>
+        `<option value="${p.id}" ${p.id === current.id ? 'selected' : ''}>${p.job_title || p.job_id}${p.company ? ' @ ' + p.company : ''} (${p.total_hours}h)</option>`
+      ).join('');
+    }
+  } catch (e) { /* optional enhancement */ }
+}
+
+async function switchPlan(planId) {
+  if (!planId || planId === activePlanId) return;
+  try {
+    const res = await fetch(`/api/plans/${planId}`);
+    if (!res.ok) return;
+    const plan = await res.json();
+    activePlanId = plan.id;
+    root.dataset.planId = plan.id;
+    root.dataset.jobId = plan.job_id || '';
+    const nar = document.getElementById('plan-narrative-text');
+    if (nar && plan.narrative) nar.textContent = plan.narrative;
+    const jobLbl = document.getElementById('plan-job-label');
+    if (jobLbl) jobLbl.textContent = `Target: ${plan.job_title}${plan.company ? ' at ' + plan.company : ''}`;
+    showBanner(`Loaded strategy for ${plan.job_title || plan.job_id}`);
+  } catch (e) { /* keep active view */ }
+}
+
+async function swapCourse(itemId, newCourseId) {
+  if (!newCourseId || !activePlanId) return;
+  try {
+    const res = await fetch(`/api/plans/${activePlanId}/swap-course`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ item_id: itemId, course_id: newCourseId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showBanner(err.detail || 'Could not swap course', false);
+      return;
+    }
+    showBanner('Swapped course and re-packed weekly sprints.');
+    setTimeout(() => location.reload(), 500);
+  } catch (e) {
+    showBanner('Network error swapping course', false);
+  }
+}
+
+async function toggleGuide(itemId) {
+  const box = document.getElementById(`guide-${itemId}`);
+  const arrow = document.getElementById(`guide-arrow-${itemId}`);
+  const body = document.getElementById(`guide-body-${itemId}`);
+  if (!box) return;
+  const opening = box.classList.contains('hidden');
+  box.classList.toggle('hidden');
+  if (arrow) arrow.textContent = opening ? '[-]' : '[+]';
+  if (!opening || box.dataset.loaded === '1' || !activePlanId) return;
+  try {
+    const res = await fetch(`/api/plans/${activePlanId}/items/${itemId}/quiz`);
+    if (!res.ok) {
+      box.dataset.loaded = '1';
+      return;
+    }
+    const qz = await res.json();
+    const topicsArr = qz.key_topics || (qz.study_guide && qz.study_guide.key_topics) || [];
+    const sylArr = (qz.study_guide && qz.study_guide.syllabus) || [];
+    const topics = topicsArr.map(t => `<li class="ml-4 list-disc">${t}</li>`).join('');
+    const syl = sylArr.map(s => `<li class="ml-4 list-decimal">${s}</li>`).join('');
+    if (topics || syl) {
+      body.innerHTML =
+        (topics ? `<div class="mb-2.5"><div class="text-xs font-semibold text-[#4A483F] mb-1">Key Topics</div><ul class="space-y-1 text-xs text-[#1C1E1B]">${topics}</ul></div>` : '') +
+        (syl ? `<div><div class="text-xs font-semibold text-[#4A483F] mb-1">Syllabus Modules</div><ul class="space-y-1 text-xs text-[#4A483F]">${syl}</ul></div>` : '');
+    }
+    box.dataset.loaded = '1';
+  } catch (e) { /* keep SSR content */ }
+}
+
+async function openVerifyModal(itemId) {
+  if (!activePlanId) return;
+  activeQuizItemId = itemId;
+  const modal = document.getElementById('plan-quiz-modal');
+  const titleEl = document.getElementById('quiz-modal-title');
+  const subEl = document.getElementById('quiz-modal-subtitle');
+  const topicsBox = document.getElementById('quiz-topics-box');
+  const qBox = document.getElementById('quiz-questions-box');
+  const fbBox = document.getElementById('quiz-feedback-box');
+  const submitBtn = document.getElementById('quiz-submit-btn');
+
+  fbBox.classList.add('hidden');
+  fbBox.innerHTML = '';
+  qBox.innerHTML = '<div class="text-sm text-[#4A483F]">Loading skill verification check...</div>';
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Submit Answers';
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+
+  try {
+    const res = await fetch(`/api/plans/${activePlanId}/items/${itemId}/quiz`);
+    if (!res.ok) {
+      qBox.innerHTML = `<div class="text-sm text-[#9E2A20]">Could not load quiz (HTTP ${res.status}).</div>`;
+      return;
+    }
+    const qz = await res.json();
+    activeQuizQuestions = qz.questions || [];
+    titleEl.textContent = `Verify Skill: ${qz.skill_id}`;
+    subEl.textContent = `${qz.course_title || ''} · Passing threshold: ${qz.passing_score || 70}%`;
+
+    const topics = qz.key_topics || (qz.study_guide && qz.study_guide.key_topics) || [];
+    if (topics.length) {
+      topicsBox.classList.remove('hidden');
+      topicsBox.innerHTML = `<strong>Focus Areas:</strong> ${topics.join(', ')}`;
+    } else {
+      topicsBox.classList.add('hidden');
+    }
+
+    qBox.innerHTML = activeQuizQuestions.map((q, qi) => `
+      <div class="p-4 rounded-xl border border-[#E5E3DC] bg-[#FAF9F5]">
+        <div class="flex items-center justify-between gap-2 mb-1.5">
+          <span class="text-xs font-semibold text-[#1C1E1B]">Question ${qi + 1}</span>
+          ${q.difficulty ? `<span class="text-[11px] font-semibold uppercase px-2 py-0.5 rounded bg-[#EFECE4] text-[#4A483F]">${q.difficulty}</span>` : ''}
+        </div>
+        <div class="text-xs sm:text-[13px] text-[#1C1E1B] mb-2.5 leading-relaxed">${q.prompt}</div>
+        ${(q.options && q.options.length) ? `
+          <div class="space-y-1.5">
+            ${q.options.map((opt, oi) => `
+              <label class="flex items-start gap-2 text-xs sm:text-[13px] text-[#1C1E1B] cursor-pointer p-2 rounded hover:bg-white transition">
+                <input type="radio" name="quiz-q-${q.id}" value="${oi}" class="mt-0.5 text-[#1D5C42] focus:ring-[#1D5C42]">
+                <span>${opt}</span>
+              </label>
+            `).join('')}
+          </div>
+        ` : `
+          <textarea id="quiz-ans-${q.id}" rows="3"
+                    placeholder="Write your technical answer covering key concepts and trade-offs..."
+                    class="w-full text-xs sm:text-[13px] border border-[#E5E3DC] rounded-lg p-3 bg-white text-[#1C1E1B] focus:outline-none focus:border-[#1D5C42]"></textarea>
+        `}
+      </div>
+    `).join('');
+  } catch (e) {
+    qBox.innerHTML = '<div class="text-sm text-[#9E2A20]">Network error loading quiz.</div>';
+  }
+}
+
+function closeVerifyModal() {
+  const modal = document.getElementById('plan-quiz-modal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+  activeQuizItemId = null;
+}
+
+async function submitVerifyQuiz() {
+  if (!activePlanId || !activeQuizItemId) return;
+  const answers = {};
+  for (const q of activeQuizQuestions) {
+    if (q.options && q.options.length) {
+      const sel = document.querySelector(`input[name="quiz-q-${q.id}"]:checked`);
+      if (!sel) {
+        showBanner('Please answer every question before submitting.', false);
+        return;
+      }
+      answers[q.id] = Number(sel.value);
+    } else {
+      const ta = document.getElementById(`quiz-ans-${q.id}`);
+      const val = (ta?.value || '').trim();
+      if (!val) {
+        showBanner('Please enter an answer for every question before submitting.', false);
+        return;
+      }
+      answers[q.id] = val;
+    }
+  }
+  const btn = document.getElementById('quiz-submit-btn');
+  const fbBox = document.getElementById('quiz-feedback-box');
+  btn.disabled = true;
+  btn.textContent = 'Checking...';
+
+  try {
+    const res = await fetch(`/api/plans/${activePlanId}/items/${activeQuizItemId}/verify`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ answers }),
+    });
+    const body = await res.json();
+    fbBox.classList.remove('hidden');
+
+    if (body.passed) {
+      const cl = body.closed_loop || {};
+      const matchScore = cl.updated_match_score ?? cl.best_match_score;
+      const matchMsg = matchScore !== undefined
+        ? ` Top job match updated to ${matchScore}% (Readiness ${cl.readiness || 0}%).`
+        : '';
+      fbBox.className = 'p-3.5 rounded-xl border border-[#C8E4D5] bg-[#E3F2EA] text-xs sm:text-[13px] text-[#1B5E43]';
+      fbBox.innerHTML = `<strong>Passed (${body.score}%)!</strong> Skill verified via closed-loop assessment.${matchMsg}`;
+      showBanner(`Skill verified (${body.score}%). Updating readiness...`);
+      setTimeout(() => { closeVerifyModal(); location.reload(); }, 950);
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Retry Answers';
+      const rem = body.remediation || {};
+      const hints = (body.feedback || [])
+        .map((f, i) => `<div>Q${i + 1}: ${f.correct ? 'Correct' : 'Incorrect - ' + (f.explanation || '')}</div>`)
+        .join('');
+      const topicLine = (rem.key_topics && rem.key_topics.length)
+        ? `<div class="mt-2 font-medium text-xs">Focus Concepts: ${rem.key_topics.join(' · ')}</div>`
+        : '';
+      fbBox.className = 'p-3.5 rounded-xl border border-[#F5D0C8] bg-[#FDECE9] text-xs sm:text-[13px] text-[#9E2A20]';
+      fbBox.innerHTML = `<strong>Score ${body.score}% (Need ${body.passing_score || 70}%).</strong> Item stays pending. Review the offline study guide and retry.<div class="mt-1.5 space-y-1">${hints}</div>${topicLine}`;
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Submit Answers';
+    showBanner('Network error verifying answers.', false);
+  }
+}
+
+function openWaiverModal(itemId, skillId) {
+  activeWaiverItemId = itemId;
+  document.getElementById('waiver-skill-label').textContent = skillId;
+  document.getElementById('waiver-status-box').classList.add('hidden');
+  document.getElementById('waiver-submit-btn').disabled = false;
+  const m = document.getElementById('plan-waiver-modal');
+  m.classList.remove('hidden');
+  m.classList.add('flex');
+}
+
+function closeWaiverModal() {
+  const m = document.getElementById('plan-waiver-modal');
+  m.classList.add('hidden');
+  m.classList.remove('flex');
+  activeWaiverItemId = null;
+}
+
+async function submitWaiverRequest() {
+  if (!activePlanId || !activeWaiverItemId) return;
+  const level = document.getElementById('waiver-level-select').value;
+  const reason = document.getElementById('waiver-reason-input').value.trim();
+  const statusBox = document.getElementById('waiver-status-box');
+  const btn = document.getElementById('waiver-submit-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/plans/${activePlanId}/items/${activeWaiverItemId}/waiver`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ target_level: level, reason }),
+    });
+    const data = await res.json();
+    statusBox.classList.remove('hidden');
+    if (res.ok) {
+      statusBox.className = 'p-3 rounded-xl border border-[#C8E4D5] bg-[#E3F2EA] text-[#1B5E43] text-xs';
+      statusBox.textContent = `Submitted ApprovalRequest ${data.approval_id} to TPO queue (${data.skill_id} -> ${data.requested_level}).`;
+      showBanner('Proficiency waiver submitted to TPO queue.');
+      setTimeout(() => closeWaiverModal(), 1000);
+    } else {
+      btn.disabled = false;
+      statusBox.className = 'p-3 rounded-xl border border-[#F5D0C8] bg-[#FDECE9] text-[#9E2A20] text-xs';
+      statusBox.textContent = data.detail || 'Could not submit waiver request.';
+    }
+  } catch (e) {
+    btn.disabled = false;
+    showBanner('Network error submitting waiver request', false);
+  }
+}
+
+async function runWhatIfSimulation() {
+  if (!activePlanId) return;
+  const btn = document.getElementById('sim-run-btn');
+  const outBox = document.getElementById('sim-results-body');
+  const pills = document.getElementById('sim-summary-pills');
+  const checked = Array.from(document.querySelectorAll('.sim-skill-chk:checked')).map(c => c.value);
+  const cap = Number(document.getElementById('sim-weekly-cap').value || 10);
+  const assumeMock = Boolean(document.getElementById('sim-mock-chk').checked);
+
+  btn.disabled = true;
+  btn.textContent = 'Simulating...';
+  try {
+    const res = await fetch(`/api/plans/${activePlanId}/simulate`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ added_skills: checked, weekly_cap: cap, assume_mock_passed: assumeMock }),
+    });
+    const data = await res.json();
+    pills.innerHTML =
+      `<span class="pill-sage px-3 py-1 rounded-full">${data.total_hours}h total &middot; ${data.projected_weeks} wks @ ${data.weekly_cap}h/wk</span>` +
+      `<span class="pill-stone px-3 py-1 rounded-full">Eligible drives: ${data.eligible_drives_before} &rarr; ${data.eligible_drives_after}</span>`;
+
+    outBox.innerHTML = (data.drives || []).map(d => `
+      <div class="p-3.5 rounded-xl bg-white border border-[#E5E3DC] flex items-center justify-between gap-3">
+        <div>
+          <div class="text-sm font-semibold text-[#1C1E1B]">${d.title} <span class="text-[#4A483F] font-normal">(${d.company})</span></div>
+          <div class="text-xs text-[#4A483F] mt-1">
+            ${d.eligible_after ? '<span class="text-[#1D5C42] font-semibold">Eligible after upskilling</span>' : 'Remaining gates: ' + (d.blocking_sops_after || []).join(', ')}
+          </div>
+        </div>
+        <div class="text-right mono kpi-num shrink-0">
+          <div class="text-sm font-semibold text-[#1C1E1B]">${d.before_score}% &rarr; ${d.after_score}%</div>
+          <div class="text-xs font-semibold text-[#1D5C42]">+${d.delta} pts</div>
+        </div>
+      </div>
+    `).join('') || '<div class="p-4 rounded-xl bg-white border border-[#E5E3DC]">No matching drives found.</div>';
+  } catch (e) {
+    outBox.innerHTML = '<div class="p-3.5 rounded-xl bg-[#FDECE9] text-[#9E2A20]">Simulation error.</div>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run Counterfactual Simulation';
+  }
+}
+
+async function regenPlan() {
+  const btn = document.getElementById('regen-btn');
+  const includeUpgrades = Boolean(document.getElementById('include-upgrades-toggle')?.checked);
+  const targetMode = document.getElementById('ctrl-target-mode')?.value || 'single';
+  const weeklyCap = Number(document.getElementById('ctrl-weekly-cap')?.value || 10);
+  const horizonWeeks = Number(document.getElementById('ctrl-horizon')?.value || 4);
+  const costFilter = document.getElementById('ctrl-cost')?.value || 'all';
+  const strategyMode = document.getElementById('ctrl-strategy-mode')?.value || 'balanced';
+  const excludeUnreachable = Boolean(document.getElementById('ctrl-exclude-unreachable')?.checked);
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Solving...';
+  }
+  const jobId = root.dataset.jobId || null;
+  try {
+    const res = await fetch(`/api/students/${sid}/plans`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        job_id: jobId,
+        include_upgrades: includeUpgrades,
+        target_mode: targetMode,
+        weekly_cap: weeklyCap,
+        horizon_weeks: horizonWeeks,
+        cost_filter: costFilter,
+        strategy_mode: strategyMode,
+        exclude_unreachable: excludeUnreachable,
+      }),
+    });
+    if (!res.ok) {
+      const raw = await res.text().catch(() => '');
+      let detail = '';
+      try {
+        const err = raw ? JSON.parse(raw) : {};
+        detail = err.detail || '';
+      } catch (_) {}
+      showBanner(detail || `Could not regenerate plan (HTTP ${res.status})`, false);
+      return;
+    }
+    showBanner('Placement strategy re-solved');
+    location.reload();
+  } catch (e) {
+    showBanner('Network error solving plan', false);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Re-Solve Plan';
+    }
+  }
+}
+
+hydratePlanMetadata();
 </script>
 {% endblock %}

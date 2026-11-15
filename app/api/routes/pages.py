@@ -14,6 +14,7 @@ from app.api.routes.students import (
     is_job_visible_to_student,
 )
 from app.config import settings as _settings
+from app.db import sort_students_alphabetically
 from app.matching.engine import job_eligibility, job_tier
 from app.models import (
     ApprovalRequest,
@@ -61,9 +62,7 @@ def _branch_options() -> list[tuple[str, str]]:
 
 
 def _students_menu(session) -> list:
-    rows = session.exec(select(Student)).all()
-    rows.sort(key=lambda s: (str(s.name or "").strip().lower(), str(s.id or "")))
-    return rows
+    return sort_students_alphabetically(session.exec(select(Student)).all())
 
 
 def _tpl(request: Request, name: str, session: Session, sid: str = "", active: str = "", **ctx):
@@ -374,22 +373,46 @@ def plan_page(sid: str, request: Request, session: Session = Depends(get_session
                         .order_by(UpskillPlan.created_at.desc())).first()
     if plan is None:
         return _tpl(request, "student/plan.html", session, sid=sid, active="plan", plan=None,
-                    plan_items=[], done_hours=0, total_hours=0, error="")
+                    plan_items=[], done_hours=0, total_hours=0, strategy={}, error="")
+    from app.plan.solver import build_plan_strategy
+
     items = session.exec(select(PlanItem).where(PlanItem.plan_id == plan.id)
                          .order_by(PlanItem.order)).all()
+    ctx = getattr(request.app.state, "ctx", None)
+    strategy = build_plan_strategy(plan, session, ctx=ctx, items=items)
+    enrich_map = strategy.get("item_enrichment", {})
     courses = {c.id: c for c in session.exec(select(Course)).all()}
-    plan_items = [{
-        "id": it.id, "order": it.order, "skill_id": it.skill_id, "hours": it.hours, "status": it.status,
-        "week": it.week,
-        "course_title": courses[it.course_id].title if it.course_id in courses else "",
-        "course_url": courses[it.course_id].url if it.course_id in courses else "",
-        "course_provider": courses[it.course_id].provider if it.course_id in courses else "",
-        "course_cost": courses[it.course_id].cost if it.course_id in courses else "",
-    } for it in items]
+    plan_items = []
+    for it in items:
+        c = courses.get(it.course_id)
+        e = enrich_map.get(it.id, {})
+        plan_items.append({
+            "id": it.id, "order": it.order, "skill_id": it.skill_id, "course_id": it.course_id,
+            "hours": it.hours, "status": it.status, "week": it.week,
+            "course_title": c.title if c else "",
+            "course_url": c.url if c else "",
+            "course_provider": c.provider if c else "",
+            "course_cost": c.cost if c else "",
+            "priority_tier": e.get("priority_tier", "Required"),
+            "bkt_mastery_pct": e.get("bkt_mastery_pct", 12),
+            "bkt_band": e.get("bkt_band", "Critical Gap"),
+            "recommended_modality": e.get("recommended_modality", "Guided Module + Quiz"),
+            "roi_pts_per_hr": e.get("roi_pts_per_hr", 0.0),
+            "primary_delta_pts": e.get("primary_delta_pts", 0),
+            "drives_helped": e.get("drives_helped", 1),
+            "drives_unlocked": e.get("drives_unlocked", 0),
+            "covers_skills": e.get("covers_skills", [it.skill_id]),
+            "alternatives": e.get("alternatives", []),
+            "key_topics": e.get("key_topics", []),
+            "syllabus": e.get("syllabus", []),
+            "on_critical_path": e.get("on_critical_path", False),
+            "slack_h": e.get("slack_h", 0.0),
+        })
     done_hours = sum(i["hours"] for i in plan_items if i["status"] == "done")
     total_hours = plan.total_hours or 0
     return _tpl(request, "student/plan.html", session, sid=sid, active="plan", plan=plan,
-                plan_items=plan_items, done_hours=done_hours, total_hours=total_hours, error="")
+                plan_items=plan_items, done_hours=done_hours, total_hours=total_hours,
+                strategy=strategy, error="")
 
 
 @router.get("/students/{sid}/progress")
@@ -451,8 +474,19 @@ def interviews_page(sid: str, request: Request, session: Session = Depends(get_s
         job = session.get(Job, iv.job_id)
         items.append({"id": iv.id, "job_title": job.title if job else iv.job_id,
                       "finished": iv.finished, "score": iv.score,
+                      "completion_reason": (iv.feedback or {}).get("completion_reason"),
                       "started_at": iv.started_at.isoformat()})
     top = session.exec(select(JobMatch).where(JobMatch.student_id == sid)
                        .order_by(JobMatch.score.desc())).first()
     return _tpl(request, "student/interviews.html", session, sid=sid, active="interviews",
                 items=items, top_job_id=(top.job_id if top else None), error="")
+
+
+@router.get("/know-more")
+def know_more_page(
+    request: Request,
+    session: Session = Depends(get_session),
+    _role: str = Depends(require_role("tpo_admin")),
+):
+    """Render the TPO Admin-only System Know More & Engineering Manual."""
+    return _tpl(request, "know_more.html", session, sid="", active="know_more", error="")

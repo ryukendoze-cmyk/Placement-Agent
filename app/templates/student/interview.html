@@ -110,6 +110,7 @@
       </div>
     </div>
 
+    <p id="skill-coverage" class="text-sm mb-4" role="status" aria-live="polite"></p>
     <!-- Live Interview Surface -->
     <div id="interview" class="space-y-4">
       <!-- Question Card -->
@@ -122,11 +123,14 @@
           <span>Target Competency</span>
           <span id="skill" class="text-[#1D5C42] font-semibold"></span>
         </div>
+        <p id="question-source" class="text-xs mb-2" role="status"></p>
         <p id="question" class="font-serif-display text-lg sm:text-xl font-medium text-[#1C1E1B] leading-relaxed min-h-[3rem]"></p>
       </div>
 
       <!-- Live Feedback Callout -->
       <div id="feedback"></div>
+      <p id="assessment-notice" class="text-xs" role="status"></p>
+      <button type="button" onclick="endInterviewEarly()" class="text-xs underline">End early and view assessed skills</button>
 
       <!-- M18.1: adaptive follow-up probe callout (hidden until generated) -->
       <div id="followup-probe" hidden class="text-sm text-[#1B5E43] bg-[#E3F2EA] border border-[#C8E4D5] rounded-2xl px-4 py-3"></div>
@@ -220,11 +224,12 @@
 
       <div class="py-6 border-b border-[#ECEAE2] grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
         <div>
-          <p class="text-xs uppercase tracking-wider text-[#6E6C64] font-semibold mb-1">Overall Readiness Score</p>
+          <p id="assessment-score-label" class="text-xs uppercase tracking-wider text-[#6E6C64] font-semibold mb-1">Overall Assessment Score</p>
           <div id="score" class="font-serif-display text-5xl font-semibold text-[#1D5C42] tabular-nums tracking-tight"></div>
         </div>
         <div class="md:col-span-2">
           <p class="text-xs uppercase tracking-wider text-[#6E6C64] font-semibold mb-1">Evaluator Feedback</p>
+          <p id="summary-coverage" class="text-sm mb-3"></p>
           <p id="summary-feedback" class="text-sm text-[#4A483F] leading-relaxed"></p>
         </div>
       </div>

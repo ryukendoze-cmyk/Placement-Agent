@@ -246,10 +246,28 @@ def _synthesize(llm, goal, facts, refs) -> dict:
     return parsed
 
 
+def _should_replan(goal: str, tool_name: str, output: dict) -> bool:
+    """Return True only when an observation warrants dynamic follow-up planning."""
+    if not isinstance(output, dict):
+        return False
+    if output.get("error") or output.get("fallback"):
+        return True
+    canonical = TOOL_ALIASES.get(tool_name, tool_name)
+    g = str(goal or "").lower()
+    wants_drive = any(mk in g for mk in _ELIGIBILITY_MARKERS)
+    if canonical == "rank_and_explain_jobs" and wants_drive:
+        return True
+    if canonical == "check_drive_eligibility" and output.get("eligible") is False:
+        return True
+    return False
+
+
 def _replan_from_observation(llm, goal: str, student_id: str | None,
                              tool_name: str, output: dict,
                              queued_tools: set[str]) -> list[dict]:
     """Use REPLAN_SYSTEM + deterministic SOP guardrails to inject follow-up steps."""
+    if not _should_replan(goal, tool_name, output):
+        return []
     injected_steps: list[dict] = []
     if llm is not None:
         try:
@@ -330,6 +348,72 @@ def _repair_failed_step(llm, tool_name: str, args: dict, student_id: str | None,
     return _resolve(raw_retry_args if raw_retry_args is not None else args, memory)
 
 
+def _any_step_succeeded(memory: dict) -> bool:
+    """Return True if at least one executed step produced a non-error, non-fallback dict."""
+    for v in (memory or {}).values():
+        if isinstance(v, dict) and bool(v) and not v.get("error") and not v.get("fallback"):
+            return True
+    return False
+
+
+def _execute_step_with_recovery(
+    ctx,
+    session,
+    *,
+    run,
+    tool_name: str,
+    args: dict,
+    student_id: str | None,
+    actor_role: str,
+    memory: dict,
+    inject_sim_failure: bool = False,
+) -> tuple[dict, str, bool]:
+    """Run ``call_tool`` with fast-fail for unknown tools and LLM repair for bad args."""
+    canonical = TOOL_ALIASES.get(tool_name, tool_name)
+    if canonical not in TOOL_REGISTRY:
+        run.fallback_triggered = True
+        msg = f"unknown tool: {tool_name}"
+        return {"error": msg, "tool": tool_name, "fallback": True}, msg, False
+
+    call_args = _inject_role_args(tool_name, args, actor_role)
+    recovered = ""
+    try:
+        if inject_sim_failure:
+            raise RuntimeError("Simulated primary LLM/tool timeout -> testing adaptive recovery")
+        output = call_tool(tool_name, ctx, session, **call_args)
+    except PermissionError as perm_err:
+        # Never retry or self-repair authorization rejections
+        run.fallback_triggered = True
+        recovered = f"permission denied: {perm_err}"
+        output = {"error": str(perm_err), "tool": tool_name, "fallback": True}
+    except Exception as e:
+        # Retry once with a repair prompt, else deterministic fallback
+        try:
+            retry_args = _repair_failed_step(
+                getattr(ctx, "llm", None), tool_name, args, student_id, str(e), memory
+            )
+            retry_args = _inject_role_args(tool_name, retry_args, actor_role)
+            output = call_tool(tool_name, ctx, session, **retry_args)
+            run.fallback_triggered = True
+            recovered = f"recovered after repair: {e}"
+        except Exception as e2:
+            run.fallback_triggered = True
+            recovered = f"tool failed after repair: {e2}"
+            output = {"error": str(e2), "tool": tool_name, "fallback": True}
+
+    awaiting_approval = False
+    if isinstance(output, dict) and output.get("requires_hitl"):
+        awaiting_approval = True
+        appr_id = output.get("approval_id")
+        if appr_id:
+            from ..models import ApprovalRequest as _AR
+            _ap = session.get(_AR, appr_id)
+            if _ap is not None:
+                _ap.run_id = run.id
+                session.add(_ap)
+    return output, recovered, awaiting_approval
+
+
 def _execute_loop_iter(ctx, session, *, run, goal, student_id: str | None,
                        plan_steps: list, memory: dict,
                        started: float, actor_role: str, initial_error_recovered: str,
@@ -354,6 +438,7 @@ def _execute_loop_iter(ctx, session, *, run, goal, student_id: str | None,
         step_idx += 1
         executed += 1
         tool_name = raw_step.get("tool") or ""
+        canonical = TOOL_ALIASES.get(tool_name, tool_name)
         args = _resolve(raw_step.get("args") or {}, memory)
         thought = raw_step.get("thought") or f"Call {tool_name}."
         step_start = time.time()
@@ -367,46 +452,21 @@ def _execute_loop_iter(ctx, session, *, run, goal, student_id: str | None,
         recovered = ""
 
         # short-circuit: missing student for a tool that requires one
-        if student_id is None and "student_id" in (TOOL_REGISTRY.get(tool_name).required() if tool_name in TOOL_REGISTRY else []):
+        if student_id is None and "student_id" in (TOOL_REGISTRY.get(canonical).required() if canonical in TOOL_REGISTRY else []):
             recovered = f"skipped {tool_name}: no student in context"
             step.error_recovered = recovered
 
         if not recovered:
-            call_args = _inject_role_args(tool_name, args, actor_role)
-            try:
-                if simulate_failure and not sim_injected_once:
-                    sim_injected_once = True
-                    raise RuntimeError("Simulated primary LLM/tool timeout -> testing adaptive recovery")
-                output = call_tool(tool_name, ctx, session, **call_args)
-            except PermissionError as perm_err:
-                # Never retry or self-repair authorization rejections
-                run.fallback_triggered = True
-                recovered = f"permission denied: {perm_err}"
-                output = {"error": str(perm_err), "tool": tool_name, "fallback": True}
-            except Exception as e:
-                # retry once with a repair prompt, else deterministic fallback
-                try:
-                    retry_args = _repair_failed_step(
-                        getattr(ctx, "llm", None), tool_name, args, student_id, str(e), memory
-                    )
-                    retry_args = _inject_role_args(tool_name, retry_args, actor_role)
-                    output = call_tool(tool_name, ctx, session, **retry_args)
-                    run.fallback_triggered = True
-                    recovered = f"recovered after repair: {e}"
-                except Exception as e2:
-                    run.fallback_triggered = True
-                    recovered = f"tool failed after repair: {e2}"
-                    output = {"error": str(e2), "tool": tool_name, "fallback": True}
-            # sandbox tools must set requires_hitl -> mark run awaiting approval
-            if isinstance(output, dict) and output.get("requires_hitl"):
+            inject_sim = bool(simulate_failure and not sim_injected_once)
+            if inject_sim:
+                sim_injected_once = True
+            output, recovered, step_hitl = _execute_step_with_recovery(
+                ctx, session, run=run, tool_name=tool_name, args=args,
+                student_id=student_id, actor_role=actor_role, memory=memory,
+                inject_sim_failure=inject_sim,
+            )
+            if step_hitl:
                 awaiting_approval = True
-                appr_id = output.get("approval_id")
-                if appr_id:
-                    from ..models import ApprovalRequest as _AR
-                    _ap = session.get(_AR, appr_id)
-                    if _ap is not None:
-                        _ap.run_id = run.id
-                        session.add(_ap)
             step.tool_output = output
             step.error_recovered = recovered
             step.verification_passed = (
@@ -497,7 +557,7 @@ def _execute_loop_iter(ctx, session, *, run, goal, student_id: str | None,
     if error_recovered:
         run.fallback_triggered = run.fallback_triggered or bool(error_recovered)
     run.status = "awaiting_approval" if awaiting_approval else (
-        "failed" if run.fallback_triggered and not memory else "completed")
+        "failed" if run.fallback_triggered and not _any_step_succeeded(memory) else "completed")
     session.add(run)
     session.flush()
     yield ("verification_done", {"citations": run.citations})
@@ -726,6 +786,7 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
         executed += 1
         step_order += 1
         tool_name = raw_step.get("tool") or ""
+        canonical = TOOL_ALIASES.get(tool_name, tool_name)
         args = _resolve(raw_step.get("args") or {}, memory)
         thought = raw_step.get("thought") or f"Call {tool_name}."
         step_start = time.time()
@@ -736,38 +797,16 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
         output: dict = {}
         recovered = ""
         if run.student_id is None and "student_id" in (
-                TOOL_REGISTRY.get(tool_name).required() if tool_name in TOOL_REGISTRY else []):
+                TOOL_REGISTRY.get(canonical).required() if canonical in TOOL_REGISTRY else []):
             recovered = f"skipped {tool_name}: no student in context"
             step.error_recovered = recovered
         if not recovered:
-            call_args = _inject_role_args(tool_name, args, run.actor_role)
-            try:
-                output = call_tool(tool_name, ctx, session, **call_args)
-            except PermissionError as perm_err:
-                run.fallback_triggered = True
-                recovered = f"permission denied: {perm_err}"
-                output = {"error": str(perm_err), "tool": tool_name, "fallback": True}
-            except Exception as e:
-                try:
-                    retry_args = _repair_failed_step(
-                        getattr(ctx, "llm", None), tool_name, args, run.student_id, str(e), memory
-                    )
-                    retry_args = _inject_role_args(tool_name, retry_args, run.actor_role)
-                    output = call_tool(tool_name, ctx, session, **retry_args)
-                    recovered = f"recovered after repair: {e}"
-                except Exception as e2:
-                    run.fallback_triggered = True
-                    recovered = f"tool failed after repair: {e2}"
-                    output = {"error": str(e2), "tool": tool_name, "fallback": True}
-            if isinstance(output, dict) and output.get("requires_hitl"):
+            output, recovered, step_hitl = _execute_step_with_recovery(
+                ctx, session, run=run, tool_name=tool_name, args=args,
+                student_id=run.student_id, actor_role=run.actor_role, memory=memory,
+            )
+            if step_hitl:
                 awaiting_approval = True
-                appr_id = output.get("approval_id")
-                if appr_id:
-                    from ..models import ApprovalRequest as _AR
-                    _ap = session.get(_AR, appr_id)
-                    if _ap is not None:
-                        _ap.run_id = run.id
-                        session.add(_ap)
             step.tool_output = output
             step.error_recovered = recovered
             step.verification_passed = (
@@ -845,7 +884,7 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
     if error_recovered:
         run.fallback_triggered = True
     run.status = "awaiting_approval" if awaiting_approval else (
-        "failed" if run.fallback_triggered and not memory else "completed")
+        "failed" if run.fallback_triggered and not _any_step_succeeded(memory) else "completed")
     session.add(run)
     session.flush()
     _audit_run(session, run, run.actor_role, len(plan_steps), plan_steps)

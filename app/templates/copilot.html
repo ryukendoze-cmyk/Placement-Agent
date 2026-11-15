@@ -164,6 +164,12 @@
   var log = document.getElementById("chat-log");
   var input = document.getElementById("copilot-input");
   var traceBox = document.getElementById("copilot-trace");
+  var studentSelect = document.getElementById("copilot-student");
+  var chatHistory = [];
+
+  if (studentSelect && studentSelect.tagName === "SELECT") {
+    studentSelect.addEventListener("change", function () { chatHistory = []; });
+  }
 
   function pillify(text) {
     var esc = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -204,6 +210,7 @@
     input.value = "";
     var bubble = addBubble("bot", "Checking policy database...");
     var sid = document.getElementById("copilot-student").value;
+    var recentHistory = chatHistory.slice(-6);
     // M17: stream the answer progressively via SSE, fall back to the JSON endpoint.
     if (window.ReadableStream && window.TextDecoder) {
       var text = "";
@@ -211,7 +218,7 @@
       fetch("/api/copilot/ask/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q, student_id: sid || null })
+        body: JSON.stringify({ question: q, student_id: sid || null, history: recentHistory })
       }).then(function (resp) {
         if (!resp.ok || !resp.body) throw new Error("stream unavailable");
         var reader = resp.body.getReader();
@@ -242,11 +249,14 @@
                 log.scrollTop = log.scrollHeight;
               } else if (name === "complete") {
                 verified = (data.citations && data.citations.verified) || [];
-                bubble.innerHTML = pillify(data.answer || text || "(no answer)") +
+                var finalAns = data.answer || text || "(no answer)";
+                bubble.innerHTML = pillify(finalAns) +
                   (verified.length
                     ? '<div class="mt-2.5 pt-2 border-t border-[#E5E3DC] text-xs font-mono text-[#5C5A52]">Cited: ' + verified.join(", ") + "</div>"
                     : "");
                 if (data.trace) renderTrace(data.trace);
+                chatHistory.push({ role: "user", content: q }, { role: "assistant", content: finalAns });
+                if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
                 log.scrollTop = log.scrollHeight;
               }
             });
@@ -264,15 +274,18 @@
     fetch("/api/copilot/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question: q, student_id: sid || null })
+      body: JSON.stringify({ question: q, student_id: sid || null, history: chatHistory.slice(-6) })
     }).then(function (r) {
       return r.json();
     }).then(function (d) {
-      bubble.innerHTML = pillify(d.answer || "(no answer)") +
+      var finalAns = d.answer || "(no answer)";
+      bubble.innerHTML = pillify(finalAns) +
         (d.citations && d.citations.verified && d.citations.verified.length
           ? '<div class="mt-2.5 pt-2 border-t border-[#E5E3DC] text-xs font-mono text-[#5C5A52]">Cited: ' + d.citations.verified.join(", ") + "</div>"
           : "");
       renderTrace(d.trace);
+      chatHistory.push({ role: "user", content: q }, { role: "assistant", content: finalAns });
+      if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
     }).catch(function (e) {
       bubble.textContent = "Copilot unavailable: " + e.message;
       bubble.className = "max-w-[85%] rounded-2xl px-4 py-3 text-sm bg-[#FDF0ED] border border-[#F5D0C8] text-[#9E2A20]";

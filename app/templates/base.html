@@ -440,6 +440,10 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/></svg>
           Scraper Controls
         </a>
+        <a href="/know-more" class="nav-link {% if active == 'know_more' %}active{% endif %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="M9 10h6"/><path d="M9 6h6"/></svg>
+          Know More
+        </a>
         {% endif %}
         {% endif %}
       </div>
@@ -616,7 +620,9 @@
         }).then(function (r) {
           if (!r.ok) throw new Error("HTTP " + r.status);
           var path = window.location.pathname;
-          if (role === "student" && path.indexOf("/admin") === 0) {
+          if (role !== "tpo_admin" && path.indexOf("/know-more") === 0) {
+            window.location.href = "/";
+          } else if (role === "student" && path.indexOf("/admin") === 0) {
             window.location.href = "/";
           } else if (role === "faculty_mentor" && path.indexOf("/admin/audit") === 0) {
             window.location.href = "/admin";
@@ -697,6 +703,13 @@
             return;
           }
           location.href = "/admin"; return;
+        }
+        if (v.indexOf("know more") >= 0 || v.indexOf("knowmore") >= 0 || v.indexOf("guide") >= 0 || v.indexOf("manual") >= 0 || v.indexOf("docs") >= 0) {
+          if (activeRole !== "tpo_admin") {
+            if (window.toast) window.toast("Know More engineering manual is restricted to TPO Admin.", "error");
+            return;
+          }
+          location.href = "/know-more"; return;
         }
         if (v.indexOf("home") >= 0) { location.href = "/"; return; }
         var opt = Array.prototype.slice.call(sw ? sw.options : []).filter(function (o) {

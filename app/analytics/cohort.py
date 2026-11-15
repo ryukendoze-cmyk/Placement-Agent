@@ -8,6 +8,7 @@ from collections import Counter, defaultdict
 
 from sqlmodel import Session, select
 
+from ..db import sort_students_alphabetically
 from ..matching.engine import VERIFICATION_WEIGHTS, band_for, job_tier
 from ..models import (
     Course,
@@ -46,7 +47,7 @@ def _filter_students(db: Session, student_ids: set[str] | None, department: str 
             s for s in rows
             if (normalize_branch(s.branch or "") or (s.branch or "")).strip().upper() == dept_norm
         ]
-    return rows
+    return sort_students_alphabetically(rows)
 
 
 def skill_gap_report(
@@ -173,7 +174,14 @@ def unverified_claims_report(
             "confidence": round(float(getattr(ss, "confidence", 0.5) or 0.5), 2),
             "last_verified_score": getattr(ss, "last_verified_score", None),
         })
-    out.sort(key=lambda r: (0 if r["verification_status"] == "unverified" else 1, r["student_name"], r["skill_id"]))
+    out.sort(
+        key=lambda r: (
+            0 if r["verification_status"] == "unverified" else 1,
+            str(r["student_name"] or "").strip().lower(),
+            str(r["student_id"] or ""),
+            r["skill_id"],
+        )
+    )
     return out
 
 
@@ -251,7 +259,6 @@ def _cohort_ctx(
     department: str | None = None,
 ) -> dict:
     students = _filter_students(db, student_ids, department)
-    students.sort(key=lambda s: (str(s.name or "").lower(), str(s.id)))
     sids = {s.id for s in students}
 
     all_matches = (
@@ -286,8 +293,9 @@ def _cohort_ctx(
             .where(Interview.finished == True)  # noqa: E712
             .order_by(Interview.started_at.desc(), Interview.id.desc())
         ).all()
+        from app.interview.status import is_completed_assessment
         for iv in iv_rows:
-            if iv.student_id in sids and iv.score is not None and iv.student_id not in latest_iv_by_student:
+            if is_completed_assessment(iv) and iv.student_id in sids and iv.score is not None and iv.student_id not in latest_iv_by_student:
                 latest_iv_by_student[iv.student_id] = iv
 
     plans_by_student: dict[str, list[str]] = defaultdict(list)

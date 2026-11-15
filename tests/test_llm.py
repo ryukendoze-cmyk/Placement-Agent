@@ -176,3 +176,30 @@ def test_factory_passes_openai_base_url():
     assert isinstance(llm, OpenAILLM)
     assert llm._base_url == "https://bharatcode.ai/api/model/v1"
     assert llm._m == "qwen-3.8-27b"
+
+
+def test_openai_complete_does_not_double_call_direct_on_stream_failure(monkeypatch):
+    import pytest
+
+    import app.llm.openai as openai_mod
+
+    direct_calls = []
+
+    class FakeCompletions:
+        def create(self, **kwargs):
+            if kwargs.get("stream"):
+                raise RuntimeError("stream failed")
+            direct_calls.append(kwargs)
+            raise RuntimeError("direct failed")
+
+    class FakeChat:
+        completions = FakeCompletions()
+
+    class FakeClient:
+        chat = FakeChat()
+
+    monkeypatch.setattr(openai_mod, "_client_factory", lambda key, **kw: FakeClient())
+    llm = OpenAILLM("sk-test", "gpt-4o-mini")
+    with pytest.raises(RuntimeError, match="direct failed"):
+        llm.complete(system="s", user="u")
+    assert len(direct_calls) == 1

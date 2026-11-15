@@ -23,6 +23,7 @@ from app.analytics.cohort import (
 from app.analytics.drive_simulator import simulate_placement_drive
 from app.api.deps import get_ctx, get_session
 from app.config import settings
+from app.db import sort_students_alphabetically
 from app.eval.benchmark import run_evaluation_benchmark
 from app.interview.bank import load_bank
 from app.models import (
@@ -245,7 +246,7 @@ def _p95(values: list[int | float]):
 def _agent_metrics(session: Session) -> dict:
     runs = session.exec(select(AgentRun)).all()
     total = len(runs)
-    completed = sum(1 for r in runs if r.status in ("completed", "awaiting_approval"))
+    completed = sum(1 for r in runs if r.status in ("completed", "awaiting_approval", "awaiting_input"))
     failed = sum(1 for r in runs if r.status == "failed")
     latencies = [r.total_latency_ms for r in runs]
     grounding = [r.citations.get("grounding_score")
@@ -339,9 +340,11 @@ def admin_page(request: Request, session: Session = Depends(get_session),
     if user is not None and user.role == "faculty_mentor":
         mentee_ids = _faculty_mentee_ids(session, user.department)
     data = _collect(session, mentee_ids)
-    students = ([s for s in session.exec(select(Student)).all() if s.id in mentee_ids]
-                if mentee_ids is not None
-                else session.exec(select(Student)).all())
+    students = sort_students_alphabetically(
+        [s for s in session.exec(select(Student)).all() if s.id in mentee_ids]
+        if mentee_ids is not None
+        else session.exec(select(Student)).all()
+    )
     jobs = session.exec(select(Job)).all()
     courses = session.exec(select(Course)).all()
     if mentee_ids is not None:
@@ -528,7 +531,7 @@ def policies_page(
     role: str = Depends(require_role("faculty_mentor", "tpo_admin")),
 ):
     """Dedicated TPO Admin Policy Studio page (read-only for Faculty Mentor)."""
-    students = session.exec(select(Student)).all()
+    students = sort_students_alphabetically(session.exec(select(Student)).all())
     user = get_current_user_optional(request)
     if user is not None and user.role == "faculty_mentor" and user.department:
         dept = (normalize_branch(user.department) or user.department).strip().lower()
@@ -685,7 +688,7 @@ def reset_policies(
 @router.get("/admin/approvals")
 def approvals_page(request: Request, session: Session = Depends(get_session),
                    role: str = Depends(require_role("faculty_mentor", "tpo_admin"))):
-    students = session.exec(select(Student)).all()
+    students = sort_students_alphabetically(session.exec(select(Student)).all())
     user = get_current_user_optional(request)
     # §17.2.C.2: a faculty mentor's switcher is scoped to their own department.
     if user is not None and user.role == "faculty_mentor" and user.department:
@@ -705,7 +708,7 @@ def approvals_page(request: Request, session: Session = Depends(get_session),
 @router.get("/admin/audit")
 def audit_page(request: Request, session: Session = Depends(get_session),
                role: str = Depends(require_role("tpo_admin"))):
-    students = session.exec(select(Student)).all()
+    students = sort_students_alphabetically(session.exec(select(Student)).all())
     user = get_current_user_optional(request)
     return request.app.state.templates.TemplateResponse(
         request, "admin/audit.html",

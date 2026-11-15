@@ -199,3 +199,36 @@ def test_cli_eval_benchmark(monkeypatch):
     monkeypatch.setattr(app_cli, "_make_store", lambda db, url: None)
     rc = app_cli.main(["eval-benchmark"])
     assert rc == 0
+
+
+def test_eval_benchmark_includes_runtime_and_timestamp(client):
+    body = client.get("/api/admin/eval-benchmark").json()
+    assert isinstance(body.get("benchmark_duration_ms"), (int, float))
+    assert body["benchmark_duration_ms"] >= 0
+    assert isinstance(body.get("evaluated_at"), str) and body["evaluated_at"]
+
+
+def test_sanitize_legacy_agent_runs_purges_unknown_tool_outliers(client):
+    from app.db import _sanitize_legacy_agent_runs
+
+    eng = client.app.state.ctx.engine
+    with Session(eng) as db:
+        db.add(AgentRun(id="run-legacy01", student_id=None, goal="Rank",
+                        status="completed", total_latency_ms=313634,
+                        fallback_triggered=True))
+        db.add(AgentStep(id="step-legacy01", run_id="run-legacy01", step_order=1,
+                         tool_name="search_jobs", verification_passed=False,
+                         error_recovered="tool failed after repair: unknown tool: search_jobs"))
+        db.add(AgentRun(id="run-healthy1", student_id=None, goal="Rank",
+                        status="completed", total_latency_ms=412,
+                        fallback_triggered=False))
+        db.add(AgentStep(id="step-healthy1", run_id="run-healthy1", step_order=1,
+                         tool_name="inspect_student_profile", verification_passed=True,
+                         error_recovered=""))
+        db.commit()
+
+    purged = _sanitize_legacy_agent_runs(eng)
+    assert purged == 1
+    with Session(eng) as db:
+        assert db.get(AgentRun, "run-legacy01") is None
+        assert db.get(AgentRun, "run-healthy1") is not None

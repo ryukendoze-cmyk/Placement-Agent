@@ -1,0 +1,381 @@
+<section id="km-plan-interview" class="km-section space-y-4" data-section="plan-interview">
+  <!-- Section Header -->
+  <div class="editorial-card p-6">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[#1B5E43] text-xs font-semibold mb-2">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
+          Domain 4 &middot; Upskilling, Telemetry &amp; Adaptive Assessment
+        </div>
+        <h2 class="font-serif-display text-2xl font-semibold text-[#1C1E1B]">
+          Upskill Planner, Progress Analytics &amp; Mock Interviews
+        </h2>
+        <p class="text-sm text-[#4A483F] mt-1 leading-relaxed max-w-3xl">
+          Closed-loop skill remediation combining prerequisite-DAG &amp; CPM/RCPSP sprint scheduling, Bayesian Knowledge Tracing (BKT),
+          theme-synced readiness analytics, and voice/text adaptive mock interviews with strict anti-bluff grading.
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-1.5 text-[11px] font-mono">
+        <span class="pill-sage px-2.5 py-1 rounded-full">student/plan.html</span>
+        <span class="pill-sage px-2.5 py-1 rounded-full">student/progress.html</span>
+        <span class="pill-sage px-2.5 py-1 rounded-full">student/interview(s).html</span>
+      </div>
+    </div>
+
+    <!-- Process Flow Pill Bar -->
+    <div class="mt-4 pt-4 border-t border-[#ECEAE2] flex flex-wrap items-center gap-2 text-xs">
+      <span class="font-mono text-[11px] font-semibold uppercase tracking-wider text-[#6E6C64] mr-1">Closed Loop:</span>
+      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] font-medium text-[#1C1E1B]">1. Gap + BKT + CPM-DAG Solve</span>
+      <span class="text-[#7A776E]">&rarr;</span>
+      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] font-medium text-[#1C1E1B]">2. Weekly Cap Sprints / Swap / Waiver</span>
+      <span class="text-[#7A776E]">&rarr;</span>
+      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] font-medium text-[#1C1E1B]">3. Micro-Quiz or Mock Verification</span>
+      <span class="text-[#7A776E]">&rarr;</span>
+      <span class="px-2.5 py-1 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] font-semibold text-[#1B5E43]">4. Skill Promotion &amp; Match Re-Rank</span>
+      <span class="text-[#7A776E]">&rarr;</span>
+      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] font-medium text-[#1C1E1B]">5. Progress &amp; Remedial Sync</span>
+    </div>
+  </div>
+
+  <!-- Card 1: Upskill Plan Generator & CP-SAT/BKT Solver -->
+  <details class="km-card editorial-card overflow-hidden" open
+           data-roles="student faculty_mentor tpo_admin"
+           data-keywords="upskill plan solver bkt bayesian cpm dag rcpsp sprint swimlanes critical path slack roi course swap quiz verify waiver hitl what-if simulator syllabus">
+    <summary class="px-6 py-4 bg-[#FAF9F5] border-b border-[#E5E3DC] cursor-pointer flex flex-wrap items-center justify-between gap-3 select-none">
+      <div class="flex items-center gap-3">
+        <span class="mono text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">4.1</span>
+        <div>
+          <h3 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Upskill Plan Generator, BKT Mastery &amp; CPM/RCPSP Solver</h3>
+          <p class="text-xs text-[#5C5A52]"><code>/students/{sid}/plan</code> &middot; <code>app/api/routes/plans.py</code> &middot; <code>app/plan/{planner,prereq,solver,verification}.py</code></p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 text-[11px] font-mono">
+        <span class="pill-stone px-2 py-0.5 rounded-full">student</span>
+        <span class="pill-stone px-2 py-0.5 rounded-full">faculty_mentor</span>
+        <span class="pill-stone px-2 py-0.5 rounded-full">tpo_admin</span>
+      </div>
+    </summary>
+
+    <div class="p-6 space-y-5 text-xs sm:text-[13px] text-[#353732]">
+      <!-- Controls & Inputs Table -->
+      <div>
+        <h4 class="text-xs font-bold uppercase tracking-wider text-[#4A483F] mb-2">UI Controls, Toggles, Tabs &amp; Modals (<code>student/plan.html</code>)</h4>
+        <div class="overflow-x-auto rounded-xl border border-[#E5E3DC]">
+          <table class="km-table w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-[#FAF9F5] border-b border-[#E5E3DC] text-[11px] uppercase tracking-wider font-mono text-[#6E6C64]">
+                <th class="py-2.5 px-3">Control / Element</th>
+                <th class="py-2.5 px-3">ID / Selector / Trigger</th>
+                <th class="py-2.5 px-3">Options &amp; Exact Behavior</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#ECEAE2]">
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Active Plan Switcher</td>
+                <td class="py-2.5 px-3 font-mono"><code>#plan-switcher</code></td>
+                <td class="py-2.5 px-3">Shown when &gt;1 plan exists (<code>hydratePlanMetadata()</code> via <code>GET /api/students/{sid}/plans</code>). <code>switchPlan(planId)</code> calls <code>GET /api/plans/{planId}</code> and updates narrative/target job label.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Depth &amp; Verification Toggle</td>
+                <td class="py-2.5 px-3 font-mono"><code>#include-upgrades-toggle</code></td>
+                <td class="py-2.5 px-3">Checkbox passing <code>include_upgrades: true/false</code> so claimed, unverified, needs-reverification, or basic skills on senior drives are included as upgrade targets.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Re-Solve / Apply Buttons</td>
+                <td class="py-2.5 px-3 font-mono"><code>#regen-btn</code>, Apply</td>
+                <td class="py-2.5 px-3">Calls <code>regenPlan()</code> &rarr; <code>POST /api/students/{sid}/plans</code> with all constraint controls; reloads page on 201 or shows toast banner on error.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Target Portfolio Mode</td>
+                <td class="py-2.5 px-3 font-mono"><code>.ctrl-mode-btn</code>, <code>#ctrl-target-mode</code></td>
+                <td class="py-2.5 px-3">Segmented toggle via <code>setTargetMode(mode)</code>: <code>single</code> (Single Role), <code>portfolio</code> (Top-3 Drives), <code>crunch</code> (Crunch). Switches solver tier label between <code>CPM-DAG + RCPSP</code> and <code>Portfolio MILP-DAG</code>.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Weekly Effort Cap Slider</td>
+                <td class="py-2.5 px-3 font-mono"><code>#ctrl-weekly-cap</code></td>
+                <td class="py-2.5 px-3">Range <code>5</code>&ndash;<code>25</code>h/wk (default <code>10h/wk</code>), updates <code>#ctrl-cap-val</code> live and enforces module-level sprint packing capacity.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Horizon &amp; Cost Tier</td>
+                <td class="py-2.5 px-3 font-mono"><code>#ctrl-horizon</code>, <code>#ctrl-cost</code></td>
+                <td class="py-2.5 px-3">Horizon: <code>2 / 4 / 6 / 8 Weeks</code> (backend accepts 2..12). Cost Tier: <code>all</code> (All Verified) vs <code>free</code> (Free Only with Cost Fallback ledger alert if no free resource exists).</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Objective Function</td>
+                <td class="py-2.5 px-3 font-mono"><code>#ctrl-strategy-mode</code></td>
+                <td class="py-2.5 px-3"><code>balanced</code> (Balanced Trajectory), <code>max_roi</code> (Max Match ROI +pts/hr), <code>fastest_unblock</code> (Fastest Eligibility Unblock), <code>deep_mastery</code> (Deep Mastery / Senior Prep).</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">SOP-03 Pivot Toggle</td>
+                <td class="py-2.5 px-3 font-mono"><code>#ctrl-exclude-unreachable</code></td>
+                <td class="py-2.5 px-3">Checkbox (<code>exclude_unreachable</code>): automatically pivots primary target away from CGPA/backlog- or SOP-09-blocked drives and renders <code>#pivot-alert-banner</code>.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Workspace View Tabs</td>
+                <td class="py-2.5 px-3 font-mono"><code>#tab-btn-sprints</code>, <code>#tab-btn-dag</code>, <code>#tab-btn-simulator</code></td>
+                <td class="py-2.5 px-3"><code>switchWorkspaceTab(tab)</code> toggles: (A) Cap-Compliant Sprint Swimlanes &amp; Curriculum Table, (B) Interactive Critical-Path SVG DAG + CPM Inspector, (C) Counterfactual What-If Simulator.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Inline Course Swapper</td>
+                <td class="py-2.5 px-3 font-mono"><code>#swap-{item.id}</code></td>
+                <td class="py-2.5 px-3">Dropdown of up to 3 alternative courses (<code>swapCourse(itemId, newCourseId)</code> &rarr; <code>POST /api/plans/{plan_id}/swap-course</code>); re-packs weekly sprints and logs <code>Course Swap</code> in Recovery Ledger.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Offline Study Guide Expander</td>
+                <td class="py-2.5 px-3 font-mono"><code>toggleGuide(item.id)</code>, <code>#guide-{id}</code></td>
+                <td class="py-2.5 px-3">Toggles <code>[+]</code> / <code>[-]</code> panel displaying <code>key_topics</code> &amp; <code>syllabus</code> modules (hydrated lazily from <code>GET .../quiz</code> if not already SSR-rendered).</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Micro-Quiz Verification Modal</td>
+                <td class="py-2.5 px-3 font-mono"><code>#plan-quiz-modal</code>, <code>Verify &amp; Complete</code> / <code>Verify</code></td>
+                <td class="py-2.5 px-3"><code>openVerifyModal(itemId)</code> loads <code>GET .../quiz</code>; <code>submitVerifyQuiz()</code> posts answers to <code>POST .../verify</code>. Passing (&ge;70%) upgrades skill to <code>verified</code>; failing shows per-question feedback &amp; remediation topics.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Proficiency Waiver Modal</td>
+                <td class="py-2.5 px-3 font-mono"><code>#plan-waiver-modal</code>, <code>Request Waiver</code></td>
+                <td class="py-2.5 px-3"><code>openWaiverModal(itemId, skillId)</code> collects <code>#waiver-level-select</code> (Intermediate / Advanced) &amp; <code>#waiver-reason-input</code>; <code>submitWaiverRequest()</code> queues HITL <code>proficiency_waiver</code> via <code>POST .../waiver</code>.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">DAG Node Inspector</td>
+                <td class="py-2.5 px-3 font-mono"><code>#dag-svg</code>, <code>.dag-node-group</code>, <code>#dag-inspector</code></td>
+                <td class="py-2.5 px-3"><code>inspectDagNode(nodeId)</code> reveals Priority Tier, Early Start &rarr; Finish (h), Schedule Slack (<code>0h Critical Path</code> vs <code>+Xh buffer</code>), and Counterfactual ROI. Includes <code>SOP-04-GATE</code> node when mock &lt;65.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">What-If Pace Simulator</td>
+                <td class="py-2.5 px-3 font-mono"><code>.sim-skill-chk</code>, <code>#sim-weekly-cap</code>, <code>#sim-mock-chk</code>, <code>#sim-run-btn</code></td>
+                <td class="py-2.5 px-3"><code>runWhatIfSimulation()</code> posts checked skills, pace (5&ndash;25h/wk), and assumed SOP-04 mock pass (&ge;65) to <code>POST /api/plans/{plan_id}/simulate</code>, returning projected drive score deltas &amp; eligibility unlocks.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Routes & Backend Functions -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="p-4 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-2">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-[#4A483F]">API Routes &amp; Telemetry</h4>
+          <ul class="space-y-1.5 text-xs">
+            <li><code class="font-semibold">POST /api/students/{sid}/plans</code> &mdash; Solves &amp; persists plan (requires <code>ctx.llm</code>, 503 if unset; defaults to top <code>JobMatch</code>). Audits <code>plan.generated</code>.</li>
+            <li><code class="font-semibold">GET /api/students/{sid}/plans</code> &amp; <code class="font-semibold">GET /api/plans/{plan_id}</code> &mdash; Returns <code>_serialize_plan()</code> with BKT, ROI, alternatives, CPM DAG, sprint swimlanes, and SOP gates.</li>
+            <li><code class="font-semibold">POST /api/plans/{plan_id}/items/{item_id}/complete</code> &mdash; Direct completion via <code>apply_plan_item_completion()</code> (sets <code>claimed</code> or <code>needs_reverification</code>, never <code>verified</code> without quiz).</li>
+            <li><code class="font-semibold">GET .../quiz</code> &amp; <code class="font-semibold">POST .../verify</code> &mdash; Zero-leak 2-question check; records <code>plan_quiz:{skill_id}</code> telemetry; on pass (&ge;70%) promotes <code>verification_status="verified"</code> &amp; audits <code>plan.quiz_verified</code>.</li>
+            <li><code class="font-semibold">POST .../swap-course</code>, <code class="font-semibold">POST .../waiver</code>, <code class="font-semibold">POST .../simulate</code> &mdash; Swaps verified course &amp; re-packs weeks, queues HITL waiver, or runs counterfactual simulation.</li>
+          </ul>
+        </div>
+        <div class="p-4 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-2">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-[#4A483F]">Python Solver &amp; Verification Primitives</h4>
+          <ul class="space-y-1.5 text-xs">
+            <li><code class="font-semibold">prereq.py</code>: <code>PREREQUISITE_GRAPH</code> + <code>topological_order()</code> (Kahn's algorithm with required-before-preferred priority &amp; cycle guard).</li>
+            <li><code class="font-semibold">solver.py</code>: <code>compute_bkt_mastery()</code> (priors <code>verified=0.88</code>, <code>claimed=0.62</code>, <code>needs_reverification=0.38</code>, <code>unverified=0.22</code> updated via <code>_bayes_update(slip=0.08, guess=0.18, transit=0.12)</code> &rarr; bands <code>High</code>/<code>Moderate</code>/<code>Low</code>/<code>Critical Gap</code>), <code>solve_optimal_course_selection()</code> (bridge consolidation + Pareto budget fit), <code>compute_cpm_dag()</code> (ES/EF/LS/LF/slack), <code>build_sprint_swimlanes()</code> (module-level RCPSP packing).</li>
+            <li><code class="font-semibold">planner.py</code>: <code>build_plan()</code>, <code>_build_grounded_narrative()</code> (<code>verify_text()</code> grounding check + deterministic fallback), <code>apply_plan_item_completion()</code>, <code>ensure_remedial_plan_items()</code>.</li>
+            <li><code class="font-semibold">verification.py</code>: <code>generate_quiz()</code> (<code>exact &rarr; _PARENT_MAP &rarr; generic</code> cascade over <code>data/questions.json</code> + <code>_SUPPLEMENTAL_SKILL_QUESTIONS</code>), <code>check_answers()</code> (word-boundary, negation-aware <code>_keyword_present</code> with <code>HIT_RATIO=0.5</code>, <code>PASSING_SCORE=70</code>).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- Card 2: Student Progress & Readiness Analytics -->
+  <details class="km-card editorial-card overflow-hidden" open
+           data-roles="student faculty_mentor tpo_admin"
+           data-keywords="progress analytics readiness trajectory chartjs theme synced milestone progress_event skill breakdown cohort standing sop-04 gap matrix">
+    <summary class="px-6 py-4 bg-[#FAF9F5] border-b border-[#E5E3DC] cursor-pointer flex flex-wrap items-center justify-between gap-3 select-none">
+      <div class="flex items-center gap-3">
+        <span class="mono text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">4.2</span>
+        <div>
+          <h3 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Student Progress &amp; Readiness Analytics</h3>
+          <p class="text-xs text-[#5C5A52]"><code>/students/{sid}/progress</code> &middot; <code>GET /api/students/{sid}/progress</code> &middot; <code>app/analytics/student_progress.py</code></p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 text-[11px] font-mono">
+        <span class="pill-stone px-2 py-0.5 rounded-full">student</span>
+        <span class="pill-stone px-2 py-0.5 rounded-full">faculty_mentor</span>
+        <span class="pill-stone px-2 py-0.5 rounded-full">tpo_admin</span>
+      </div>
+    </summary>
+
+    <div class="p-6 space-y-5 text-xs sm:text-[13px] text-[#353732]">
+      <div>
+        <h4 class="text-xs font-bold uppercase tracking-wider text-[#4A483F] mb-2">Dashboard Sections, Charts &amp; Live Controls (<code>student/progress.html</code>)</h4>
+        <div class="overflow-x-auto rounded-xl border border-[#E5E3DC]">
+          <table class="km-table w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-[#FAF9F5] border-b border-[#E5E3DC] text-[11px] uppercase tracking-wider font-mono text-[#6E6C64]">
+                <th class="py-2.5 px-3">Surface / Element</th>
+                <th class="py-2.5 px-3">ID / Chart</th>
+                <th class="py-2.5 px-3">Data Source &amp; Behavior</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#ECEAE2]">
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Header Quick-Action Links</td>
+                <td class="py-2.5 px-3 font-mono">3 CTA pills</td>
+                <td class="py-2.5 px-3"><code>Role Matches</code> (<code>/students/{sid}/matches</code>), <code>30-Day Upskilling Plan</code> (<code>/students/{sid}/plan</code>), <code>Mock Interview</code> (<code>/students/{sid}/interviews</code>), plus branch/year/CGPA badges.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">6-Card Executive KPI Strip</td>
+                <td class="py-2.5 px-3 font-mono"><code>#student-progress-kpi-strip</code></td>
+                <td class="py-2.5 px-3">Displays Readiness (<code>0..100</code>, band, delta vs baseline, projected target), Best Match (<code>score%</code>, tier, band), 30-Day Plan (<code>%</code>, <code>#kpi-plan-bar</code>, modules/hours), Competencies (verified vs claimed/flagged), Mock Interview (best score, STAR %, Fillers %), and SOP-04 Status (eligible drives, Dream/Super-Dream Ready/Hold).</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Readiness Progression Chart</td>
+                <td class="py-2.5 px-3 font-mono"><code>#readinessChart</code> (Line)</td>
+                <td class="py-2.5 px-3">Plots verified <code>ProgressEvent</code> milestones vs dashed <code>Projected Target</code> from <code>milestone_series</code> (0&ndash;100). Synced via <code>CareerOSTheme.syncCharts()</code>.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Target Roles Gap Lift Chart</td>
+                <td class="py-2.5 px-3 font-mono"><code>#targetRolesChart</code> (H-Bar)</td>
+                <td class="py-2.5 px-3">Horizontal bar comparing <code>Current Match %</code> vs <code>Projected Match %</code> across top 6 visible target roles.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">4-Week Upskilling Load Chart</td>
+                <td class="py-2.5 px-3 font-mono"><code>#weeklyPlanChart</code> (Stacked Bar)</td>
+                <td class="py-2.5 px-3">Weeks 1&ndash;4 stacked <code>Done Hours</code> vs <code>Pending Hours</code> from active <code>UpskillPlan</code>.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Skill Verification Doughnut</td>
+                <td class="py-2.5 px-3 font-mono"><code>#skillProficiencyChart</code></td>
+                <td class="py-2.5 px-3">Breakdown of <code>Verified</code>, <code>Claimed</code>, <code>Needs Re-verification</code>, <code>Unverified</code> plus <code>#skill-level-pills</code> (<code>Adv</code>, <code>Int</code>, <code>Basic</code>). Doughnut borders adapt to Light (<code>#FFFFFF</code>) / Dark (<code>#12171F</code>).</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Role Gap &amp; SOP-04 Matrix</td>
+                <td class="py-2.5 px-3 font-mono"><code>#student-role-gap-matrix</code></td>
+                <td class="py-2.5 px-3">Evaluates top 6 visible drives for required skill coverage %, matched/gap chips, and <code>CGPA</code> (SOP-03) / <code>Branch</code> (SOP-09) / <code>SOP-04</code> / <code>SOP-05</code> eligibility gates.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Inline Module Tracker</td>
+                <td class="py-2.5 px-3 font-mono"><code>completeProgressModule(this)</code></td>
+                <td class="py-2.5 px-3"><code>Mark Done</code> button hits <code>POST /api/plans/{plan_id}/items/{item_id}/complete</code>, then fetches <code>GET /api/students/{sid}/progress</code> and calls <code>updateDomFromReport(report)</code> to update KPIs, tables, ledger, and all 4 Chart.js canvases without reload.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Audited Milestone Ledger</td>
+                <td class="py-2.5 px-3 font-mono"><code>#student-activity-ledger</code></td>
+                <td class="py-2.5 px-3">Newest-first timeline of <code>ProgressEvent</code> checkpoints (<code>resume_parsed</code>, <code>matches_computed</code>, <code>plan_created</code>, <code>plan_item_done</code>, <code>quiz_passed</code>, <code>interview_completed</code>, <code>skill_verified</code>, <code>skill_flagged</code>).</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="p-4 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-1.5 text-xs">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-[#4A483F]">Backend Computation (<code>app/analytics/student_progress.py</code>)</h4>
+        <p><strong>Readiness Formula:</strong> <code>compute_student_readiness()</code> computes <code>round(0.5 * plan_pct + 0.5 * best_role_score)</code> when plan items exist (otherwise bounded <code>best_role_score</code>).</p>
+        <p><strong>Milestone Normalization:</strong> <code>_build_milestone_series()</code> detects legacy synthetic ladders (<code>[20,34,45,58,67,75]</code>), compressed (&le;4h), or non-monotonic events and normalizes them into a clean monotonic baseline-to-current curve plus a <code>Post-Plan Target</code> point.</p>
+        <p><strong>Assessment Filtering:</strong> Only completed assessments passing <code>is_completed_assessment(iv)</code> (excluding <code>ended_early</code>, incomplete coverage, <code>assessment_limited</code>, or <code>offline_fallback</code> turns) count toward SOP-04 readiness and interview KPIs.</p>
+      </div>
+    </div>
+  </details>
+
+  <!-- Card 3: Mock Interview Hub & Adaptive Voice/Text Engine -->
+  <details class="km-card editorial-card overflow-hidden" open
+           data-roles="student faculty_mentor tpo_admin"
+           data-keywords="mock interview voice tts stt speechrecognition mediarecorder whisper faster-whisper mic-status anti-bluff rubric technical_accuracy depth_and_examples communication_clarity resume probe followup print transcript quality refine wpm">
+    <summary class="px-6 py-4 bg-[#FAF9F5] border-b border-[#E5E3DC] cursor-pointer flex flex-wrap items-center justify-between gap-3 select-none">
+      <div class="flex items-center gap-3">
+        <span class="mono text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">4.3</span>
+        <div>
+          <h3 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Mock Interview Hub &amp; Adaptive Voice/Text Engine</h3>
+          <p class="text-xs text-[#5C5A52]"><code>/students/{sid}/interviews</code> &middot; <code>/interviews/{iid}</code> &middot; <code>app/static/app.js</code> &middot; <code>app/api/routes/interviews.py</code> &middot; <code>app/interview/*</code></p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 text-[11px] font-mono">
+        <span class="pill-stone px-2 py-0.5 rounded-full">student</span>
+        <span class="pill-stone px-2 py-0.5 rounded-full">faculty_mentor</span>
+        <span class="pill-stone px-2 py-0.5 rounded-full">tpo_admin</span>
+      </div>
+    </summary>
+
+    <div class="p-6 space-y-5 text-xs sm:text-[13px] text-[#353732]">
+      <!-- Hub & Studio UI Controls -->
+      <div>
+        <h4 class="text-xs font-bold uppercase tracking-wider text-[#4A483F] mb-2">Studio Controls, Voice/Text Input &amp; Scorecard Actions (<code>interviews.html</code>, <code>interview.html</code>, <code>app.js</code>)</h4>
+        <div class="overflow-x-auto rounded-xl border border-[#E5E3DC]">
+          <table class="km-table w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-[#FAF9F5] border-b border-[#E5E3DC] text-[11px] uppercase tracking-wider font-mono text-[#6E6C64]">
+                <th class="py-2.5 px-3">Control / Element</th>
+                <th class="py-2.5 px-3">ID / Page</th>
+                <th class="py-2.5 px-3">Behavior &amp; Endpoints</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#ECEAE2]">
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Start Mock Interview</td>
+                <td class="py-2.5 px-3 font-mono"><code>#startInterviewBtn</code> (<code>interviews.html</code>)</td>
+                <td class="py-2.5 px-3">Calls <code>startInterview(sid, top_job_id, this)</code> &rarr; <code>POST /api/students/{sid}/interviews</code> and navigates to <code>/interviews/{interview_id}</code>. Past sessions table links to <code>View scorecard</code> / <code>Resume interview</code>.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Role Track Selector</td>
+                <td class="py-2.5 px-3 font-mono"><code>#interview-role-select</code></td>
+                <td class="py-2.5 px-3">Choose <code>Top Matched Role</code> (uses <code>job_id</code>) or explicit role track: <code>backend</code>, <code>frontend</code>, <code>data</code>, <code>devops</code>.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Resume Deep-Dive &amp; Adaptive Follow-ups</td>
+                <td class="py-2.5 px-3 font-mono"><code>#include-resume-probes</code>, <code>#adaptive-followup</code></td>
+                <td class="py-2.5 px-3"><code>include_resume_probes</code> (unchecked by default) enables SOP-08 project probes (<code>resume_probe.py</code> / context flag). <code>adaptive_followup</code> (checked by default) triggers missed-concept follow-up probes.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Voice Out (TTS)</td>
+                <td class="py-2.5 px-3 font-mono"><code>#listen</code> (<code>listenAgain()</code>)</td>
+                <td class="py-2.5 px-3">Auto-speaks new questions and replays on click via <code>speak(text)</code>: requests <code>POST /api/speech/tts</code> (OpenAI <code>tts-1</code> MP3 when configured), falling back seamlessly to browser <code>window.speechSynthesis</code>.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Voice In (STT) Mic Toggle</td>
+                <td class="py-2.5 px-3 font-mono"><code>#mic</code>, <code>#mic-status</code>, <code>#pulse</code>, <code>#timer</code></td>
+                <td class="py-2.5 px-3"><code>startListening()</code> toggles <code>Record</code> / <code>Stop</code>. Uses browser <code>SpeechRecognition</code> / <code>webkitSpeechRecognition</code> (<code>en-US</code>) when available, else <code>MediaRecorder</code> &rarr; <code>POST /api/speech/transcribe</code> (Whisper / faster-whisper / fallback). Updates <code>#mic-status</code> &amp; appends text into <code>#answer</code>. Gracefully disables if <code>!HAS_STT</code>.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Text Fallback &amp; Submit</td>
+                <td class="py-2.5 px-3 font-mono"><code>#answer</code>, <code>#send</code></td>
+                <td class="py-2.5 px-3">Always-available textarea (<code>Enter</code> submits, <code>Shift+Enter</code> newline). <code>submitAnswer()</code> posts to <code>POST /api/interviews/{iid}/answers</code> (also aliased at <code>.../answer</code>), passing <code>duration_seconds</code> only when measured from mic recording.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">End Early Button</td>
+                <td class="py-2.5 px-3 font-mono"><code>endInterviewEarly()</code></td>
+                <td class="py-2.5 px-3">Posts <code>POST /api/interviews/{iid}/finish</code>; finalizes with <code>completion_reason="ended_early"</code>, displays <code>Partial Practice Score</code>, and leaves unassessed claims unchanged.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Per-Turn Rubric &amp; Ideal Hint</td>
+                <td class="py-2.5 px-3 font-mono"><code>#rubric</code>, <code>#toggle-ideal</code>, <code>#ideal-answer</code></td>
+                <td class="py-2.5 px-3">Renders 3-axis bars (<code>technical_accuracy</code>, <code>depth_and_examples</code>, <code>communication_clarity</code>), matched/missed keywords (<code>#keywords</code>), and toggleable ideal answer hint.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Speech Telemetry &amp; Follow-Up Callout</td>
+                <td class="py-2.5 px-3 font-mono"><code>#speech-telemetry</code>, <code>#followup-probe</code></td>
+                <td class="py-2.5 px-3">Shows <code>Delivery X/100</code>, <code>STAR X/100</code>, <code>Fillers N</code>, and <code>_cleanCoachingTip()</code>. <strong>Note:</strong> WPM UI display &amp; pacing tips were removed (neutral pacing credit 25/25) to avoid bogus browser STT timing spikes.</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-[#1C1E1B]">Scorecard &amp; Print Transcript</td>
+                <td class="py-2.5 px-3 font-mono"><code>#summary</code>, <code>#print-btn</code>, <code>#qa-transcript-box</code></td>
+                <td class="py-2.5 px-3">Displays Overall Score, Per-Skill bars, 3-Axis Rubric Rollup, Voice &amp; Delivery Summary, Skill Verification Outcome pills (with links to Profile &amp; Remedial Plan), and turn-by-turn Q&amp;A cards (<code>.qa-turn-card</code>). <code>printScorecard()</code> triggers <code>window.print()</code> with <code>@media print</code> light-paper layout.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Adaptive Engine, Anti-Bluff Rubric & Question Quality -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="p-4 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-2">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-[#4A483F]">Adaptive Engine, Anti-Bluff Grading &amp; Closed Loop</h4>
+          <ul class="space-y-1.5 text-xs">
+            <li><strong>Immutable Verification Snapshot (<code>_verification_plan</code>):</strong> Prioritizes <code>unverified &rarr; needs_reverification &rarr; claimed</code> skills; extends beyond <code>MAX_TURNS = 8</code> if target claims remain.</li>
+            <li><strong>Live AI Authoring &amp; Resume Probes:</strong> <code>generation.py::author_question()</code> uses <code>complete_live()</code> (no silent circuit-breaker mock swap) and marks offline fallbacks with <code>question_source</code> + <code>assessment_limited</code>. <code>resume_probe.py</code> synthesizes up to 2 probes (<code>q-resume-01/02</code>) from resume evidence.</li>
+            <li><strong>Strict Anti-Bluff 3-Axis Rubric (<code>engine.py::_reconcile_evaluation</code>):</strong> Verdicts <code>wrong_or_baseless</code> (&le;15), <code>vague_superficial</code> (&le;32), <code>partial</code>, <code>solid</code>, <code>strong</code>. Caps question-parroting, gibberish, and word-salad bluffs; enforces composite ceiling <code>0.60*tech + 0.25*depth + 0.15*comm</code> plus tech-tier caps so communication fluency cannot rescue false technical claims.</li>
+            <li><strong>Adaptive Follow-ups &amp; Difficulty:</strong> Adjusts difficulty (0/1/2) at &ge;70 / &lt;40; triggers follow-up probe when <code>missed_keywords</code> exist and <code>score &lt; 75</code> or <code>depth_and_examples &lt; 60</code>.</li>
+            <li><strong>Closed-Loop Promotion (<code>_finalize</code> &amp; <code>_promote_skills_from_summary</code>):</strong> &ge;80 promotes skill level &amp; marks <code>verified</code>; &ge;70 re-verifies flagged/basic skills; 45&ndash;69 marks <code>needs_reverification</code>; &lt;45 marks <code>unverified</code>; &lt;70 triggers <code>ensure_remedial_plan_items()</code>. Re-ranks <code>JobMatch</code> and syncs active <code>JobApplication.match_score</code>.</li>
+          </ul>
+        </div>
+        <div class="p-4 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-2">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-[#4A483F]">Speech Pipeline, Quality Audit &amp; Refinement</h4>
+          <ul class="space-y-1.5 text-xs">
+            <li><code class="font-semibold">POST /api/speech/transcribe</code> &amp; <code class="font-semibold">POST /api/speech/analyze</code>: 15 MB audio cap; tries OpenAI <code>whisper-1</code> &rarr; local <code>faster-whisper</code> (<code>tiny</code>) &rarr; browser Web Speech fallback. <code>speech_analytics.py::analyze_speech_delivery()</code> scores STAR components (45 pts), filler discipline (30 pts), and neutral pacing (25 pts).</li>
+            <li><code class="font-semibold">GET /api/interview/questions/quality</code> (<code>faculty_mentor</code> / <code>tpo_admin</code>): Runs <code>quality.py::audit_question_bank()</code> (checks &ge;35 chars, no trivial <em>"What is X?"</em> patterns, &ge;3 keywords, &ge;2 outline points, valid role &amp; taxonomy skill) + <code>QuestionTelemetryManager().analyze_feedback_loop()</code>.</li>
+            <li><code class="font-semibold">POST /api/interview/questions/refine</code> (<code>faculty_mentor</code> / <code>tpo_admin</code>): Calls <code>QuestionTelemetryManager().apply_calibration()</code> on questions with &ge;3 attempts flagging <code>avg_score &ge; 90</code> (raise difficulty), <code>avg_score &le; 35</code> (lower difficulty), or <code>avg_keyword_hit_ratio &lt; 0.25</code> (<code>keyword_review_flagged</code>).</li>
+            <li><strong>Prompt-Injection &amp; PII Guard:</strong> Scrubs candidate text via <code>scrub_for_llm()</code> and <code>sanitize_untrusted_text()</code>; neutralized answer injections log <code>security.prompt_injection_blocked</code> in <code>AuditLog</code>.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </details>
+</section>

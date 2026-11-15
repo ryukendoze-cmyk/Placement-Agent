@@ -70,6 +70,15 @@ def _answer(client, iid, text=ANSWER):
     return r.json()
 
 
+def _complete(client, iid):
+    for _ in range(64):
+        body = _answer(client, iid, ANSWER)
+        if body["finished"]:
+            assert body["summary"]["coverage"]["complete"]
+            return body
+    raise AssertionError("Interview did not complete its skill queue")
+
+
 # --- (1) question bank: 85+ questions across five tracks ---------------------
 
 def test_question_bank_has_85_plus_questions_across_all_tracks():
@@ -182,8 +191,7 @@ def test_final_turn_records_progress_event_and_audit_log():
     with client:
         sid = _make_student(client)
         iid = _start(client, sid, "job-001")
-        for i in range(MAX_TURNS):
-            body = _answer(client, iid, ANSWER)
+        body = _complete(client, iid)
         assert body["finished"] is True
         with Session(eng) as db:
             evs = db.exec(select(ProgressEvent).where(
@@ -221,8 +229,7 @@ def test_replaying_finalize_is_idempotent_for_event_and_audit():
     with client:
         sid = _make_student(client, name="Idem Iv")
         iid = _start(client, sid, "job-001")
-        for _ in range(MAX_TURNS):
-            body = _answer(client, iid, ANSWER)
+        body = _complete(client, iid)
         assert body["finished"] is True
         # answering a finished interview is 409 - no second event/audit
         r = client.post(f"/api/interviews/{iid}/answers", json={"text": ANSWER})
@@ -273,8 +280,7 @@ def test_summary_exposes_per_turn_rubric_rollup():
     with client:
         sid = _make_student(client, name="Rollup")
         iid = _start(client, sid, "job-001")
-        for _ in range(MAX_TURNS):
-            body = _answer(client, iid, ANSWER)
+        body = _complete(client, iid)
         summary = body["summary"]
         assert 0 <= summary["score"] <= 100
         assert summary["per_skill"]

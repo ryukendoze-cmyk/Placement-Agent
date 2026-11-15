@@ -86,7 +86,8 @@ class OpenAILLM:
         try:
             chunks = []
             for delta in self.stream(
-                system, user, json_mode=json_mode, temperature=temperature, timeout=timeout
+                system, user, json_mode=json_mode, temperature=temperature,
+                timeout=timeout, fallback_to_direct=False,
             ):
                 chunks.append(delta)
             if chunks:
@@ -103,6 +104,7 @@ class OpenAILLM:
         json_mode: bool = False,
         temperature: float = 0.0,
         timeout: float | None = None,
+        fallback_to_direct: bool = True,
     ):
         """Stream the completion token-by-token via the OpenAI streaming API.
 
@@ -134,6 +136,8 @@ class OpenAILLM:
                 if delta:
                     yield delta
         except Exception as e:
+            if not fallback_to_direct:
+                raise
             logger.warning("OpenAI streaming failed (%s); falling back to direct complete.", e)
             full = self._direct_complete(
                 system, user, json_mode=json_mode, temperature=temperature, timeout=timeout

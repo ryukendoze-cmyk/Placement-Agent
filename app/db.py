@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import math
 import re
 
 from sqlalchemy import Engine, create_engine, text
@@ -33,8 +34,166 @@ def init_db(engine: Engine) -> None:
     _sanitize_legacy_experience(engine)
     _sanitize_legacy_skills(engine)
     _recalibrate_legacy_progress_events(engine)
+    _sanitize_legacy_plans(engine)
+    _sanitize_legacy_agent_runs(engine)
     _scrub_legacy_audit_emails(engine)
     install_audit_guard(engine)
+
+
+def _sanitize_legacy_plans(engine: Engine) -> None:
+    """Align legacy DB courses/plans with data/courses.json and remove duplicate bridge courses."""
+    from sqlmodel import Session, select
+
+    from .models import Course, Job, PlanItem, UpskillPlan
+    from .plan.solver import load_catalog_metadata
+
+    catalog = load_catalog_metadata()
+    if not catalog:
+        return
+
+    with Session(engine) as db:
+        courses = {c.id: c for c in db.exec(select(Course)).all()}
+        changed_courses: set[str] = set()
+        for cid, c in courses.items():
+            meta = catalog.get(cid)
+            if not meta:
+                continue
+            new_title = str(meta.get("title") or c.title)
+            new_url = str(meta.get("url") or c.url)
+            new_prov = str(meta.get("provider") or c.provider)
+            new_hours = int(meta.get("hours") or c.hours)
+            new_cost = str(meta.get("cost") or c.cost)
+            new_level = str(meta.get("level") or c.level)
+            if (
+                c.title != new_title
+                or c.hours != new_hours
+                or c.cost != new_cost
+                or c.url != new_url
+                or c.provider != new_prov
+                or c.level != new_level
+            ):
+                c.title = new_title
+                c.url = new_url
+                c.provider = new_prov
+                c.hours = new_hours
+                c.cost = new_cost
+                c.level = new_level
+                db.add(c)
+                changed_courses.add(cid)
+
+        plans = db.exec(select(UpskillPlan)).all()
+        if not plans:
+            if changed_courses:
+                db.commit()
+            return
+
+        dirty = bool(changed_courses)
+        for plan in plans:
+            items = db.exec(
+                select(PlanItem).where(PlanItem.plan_id == plan.id).order_by(PlanItem.order)
+            ).all()
+            if not items:
+                continue
+            job = db.get(Job, plan.job_id)
+            req_skills = set(job.required_skills or []) if job else set()
+            pref_skills = set(job.preferred_skills or []) if job else set()
+
+            # Sync item hours to updated catalog hours
+            for it in items:
+                if it.course_id in changed_courses and it.course_id in courses:
+                    if it.hours != courses[it.course_id].hours:
+                        it.hours = courses[it.course_id].hours
+                        db.add(it)
+                        dirty = True
+
+            # Deduplicate items pointing to identical course_id inside the same plan
+            by_cid: dict[str, list[PlanItem]] = {}
+            for it in items:
+                by_cid.setdefault(it.course_id, []).append(it)
+
+            strat = dict(getattr(plan, "strategy_json", None) or {})
+            enrich = dict(strat.get("item_enrichment") or {})
+            ledger = list(strat.get("recovery_ledger") or [])
+            dropped_ids: set[str] = set()
+
+            for cid, grp in by_cid.items():
+                if len(grp) <= 1:
+                    continue
+                # Prefer direct required job skill > preferred job skill > latest item
+                keeper = max(
+                    grp,
+                    key=lambda row: (
+                        2 if row.skill_id in req_skills else (1 if row.skill_id in pref_skills else 0),
+                        1 if row.status == "done" else 0,
+                        row.order,
+                    ),
+                )
+                cov = list(dict.fromkeys([r.skill_id for r in grp]))
+                entry = dict(enrich.get(keeper.id) or {})
+                entry["covers_skills"] = cov
+                enrich[keeper.id] = entry
+                c_title = courses[cid].title if cid in courses else cid
+                note = (
+                    f"Sanitized duplicate bridge course '{c_title}': consolidated {', '.join(cov)} "
+                    f"(saved {keeper.hours * (len(grp) - 1)}h)."
+                )
+                if note not in {x.get("detail") for x in ledger}:
+                    ledger.append({"kind": "Legacy Plan Repair", "detail": note})
+                for row in grp:
+                    if row.id != keeper.id:
+                        dropped_ids.add(row.id)
+                        db.delete(row)
+                        dirty = True
+
+            kept = [it for it in items if it.id not in dropped_ids]
+            # Re-pack order and week deterministically at <= 10h/wk
+            week = 1
+            week_load = 0
+            for idx, it in enumerate(kept, start=1):
+                if week_load > 0 and week_load + it.hours > 10:
+                    week += 1
+                    week_load = 0
+                if it.order != idx or it.week != week:
+                    it.order = idx
+                    it.week = week
+                    db.add(it)
+                    dirty = True
+                week_load += it.hours
+
+            new_total = sum(it.hours for it in kept)
+            if plan.total_hours != new_total:
+                plan.total_hours = new_total
+                dirty = True
+
+            if enrich or ledger:
+                strat["item_enrichment"] = enrich
+                strat["recovery_ledger"] = ledger
+                plan.strategy_json = strat
+                dirty = True
+
+            # Fix contradictory stale narrative ("13h x", outdated hour count, or "spread across the week")
+            narr = plan.narrative or ""
+            eff_weeks = max(week, math.ceil(max(1, new_total) / 10))
+            if (
+                "13h x" in narr
+                or "spread across the week" in narr
+                or (f"{new_total} hours" not in narr and f"{new_total}h" not in narr)
+            ):
+                weekly_pace = min(10, max(1, round(new_total / eff_weeks))) if new_total else 0
+                gaps_label = ", ".join(it.skill_id for it in kept) or "core fundamentals"
+                role_label = f"{job.title} at {job.company}" if job else "your target role"
+                plan.narrative = (
+                    f"Target: {role_label}. Prioritize {gaps_label} in dependency order. "
+                    f"Total plan is {new_total} hours across {eff_weeks} weekly sprints "
+                    f"(strict <=10h/wk cap; avg ~{weekly_pace}h/wk via syllabus module splits)."
+                )
+                dirty = True
+
+            if dirty:
+                db.add(plan)
+
+        if dirty:
+            db.commit()
 
 
 # Canonical SQLAlchemy index names (ix_<table>_<column>) for high-traffic FK /
@@ -156,6 +315,7 @@ def _ensure_columns(engine: Engine) -> None:
             "ALTER TABLE agentstep ADD COLUMN IF NOT EXISTS verification_passed BOOLEAN NOT NULL DEFAULT FALSE",
             "ALTER TABLE agentstep ADD COLUMN IF NOT EXISTS error_recovered TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE planitem ADD COLUMN IF NOT EXISTS week INT NOT NULL DEFAULT 1",
+            "ALTER TABLE upskillplan ADD COLUMN IF NOT EXISTS strategy_json JSON NOT NULL DEFAULT '{}'::json",
             "ALTER TABLE interview ADD COLUMN IF NOT EXISTS role TEXT DEFAULT NULL",
             "ALTER TABLE interview ADD COLUMN IF NOT EXISTS include_resume_probes BOOLEAN NOT NULL DEFAULT FALSE",
             "ALTER TABLE interview ADD COLUMN IF NOT EXISTS adaptive_followup BOOLEAN NOT NULL DEFAULT FALSE",
@@ -256,6 +416,15 @@ def _ensure_columns(engine: Engine) -> None:
                     ))
             except Exception as exc:  # noqa: BLE001
                 logger.warning("SQLite studentskill column migration failed: %s", exc)
+            try:
+                plan_cols = [
+                    row[1] for row in
+                    conn.execute(text("PRAGMA table_info(upskillplan)")).fetchall()
+                ]
+                if "strategy_json" not in plan_cols:
+                    conn.execute(text("ALTER TABLE upskillplan ADD COLUMN strategy_json TEXT NOT NULL DEFAULT '{}'"))
+            except Exception:
+                pass
             # Student resume re-upload unlock flag on legacy SQLite DBs.
             try:
                 stu_cols = [
@@ -622,6 +791,51 @@ def _scrub_legacy_audit_emails(engine: Engine) -> int:
         return 0
 
 
+def _sanitize_legacy_agent_runs(engine: Engine) -> int:
+    """Remove pre-alias legacy AgentRuns whose every step failed with 'unknown tool'."""
+    try:
+        from sqlmodel import Session, select
+
+        from .models import AgentRun, AgentStep, ApprovalRequest
+
+        purged = 0
+        with Session(engine) as session:
+            runs = session.exec(select(AgentRun)).all()
+            for run in runs:
+                steps = session.exec(
+                    select(AgentStep).where(AgentStep.run_id == run.id)
+                ).all()
+                if not steps:
+                    continue
+                all_unknown_tool = all(
+                    (not s.verification_passed)
+                    and str(s.error_recovered or "").startswith(
+                        "tool failed after repair: unknown tool:"
+                    )
+                    for s in steps
+                )
+                if not all_unknown_tool:
+                    continue
+                for ap in session.exec(
+                    select(ApprovalRequest).where(ApprovalRequest.run_id == run.id)
+                ).all():
+                    ap.run_id = None
+                    session.add(ap)
+                for st in steps:
+                    session.delete(st)
+                session.flush()
+                session.delete(run)
+                session.flush()
+                purged += 1
+            if purged > 0:
+                session.commit()
+                logger.info("Purged %d legacy unknown-tool AgentRun records", purged)
+        return purged
+    except Exception as exc:  # noqa: BLE001 - boot cleanup must never block startup
+        logger.warning("Legacy AgentRun cleanup failed: %s", exc)
+        return 0
+
+
 def install_audit_guard(engine: Engine) -> None:
     """Make AuditLog rows immutable: refuse UPDATE and DELETE at the ORM layer.
     Call once per engine (idempotent)."""
@@ -641,3 +855,16 @@ def install_audit_guard(engine: Engine) -> None:
         raise RuntimeError("AuditLog rows are immutable; append a new row instead")
 
     engine._audit_guard_installed = True
+
+
+def student_sort_key(student) -> tuple[str, str]:
+    """Return a case-insensitive alphabetical sort key `(name, id)` for a student record."""
+    return (
+        str(getattr(student, "name", "") or "").strip().lower(),
+        str(getattr(student, "id", "") or ""),
+    )
+
+
+def sort_students_alphabetically(students) -> list:
+    """Return students sorted alphabetically (case-insensitive) by name, breaking ties by id."""
+    return sorted(students, key=student_sort_key)

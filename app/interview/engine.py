@@ -463,11 +463,13 @@ class InterviewSummary:
     feedback: str
     transcript: list = field(default_factory=list)
     rubric_overall: dict = field(default_factory=dict)
+    coverage: dict = field(default_factory=dict)
+    assessment_per_skill: dict | None = None
 
 
 class InterviewSession:
     def __init__(self, role: str, bank, llm, prefer_skills, transcript,
-                 enable_followups: bool = False, resume_questions=None):
+                 enable_followups: bool = False, resume_questions=None, interview_plan=None):
         self.role = role
         self.bank = bank
         self.llm = llm
@@ -477,6 +479,27 @@ class InterviewSession:
         self.enable_followups = bool(enable_followups)
         #: M18.2: resume-grounded probes served before static bank questions.
         self.resume_questions = list(resume_questions or [])
+        # None preserves direct callers and historical interview semantics.
+        self.interview_plan = interview_plan
+
+    @property
+    def coverage(self):
+        targets = (self.interview_plan or {}).get("targets", [])
+        result = []
+        for target in targets:
+            turns = [t for t in self.transcript if t.get("verification_target") == target["skill_id"]]
+            answers = [t for t in turns if t.get("score") is not None]
+            result.append({"skill_id": target["skill_id"], "name": target.get("name", target["skill_id"]),
+                           "original_status": target["verification_status"],
+                           "status": "assessed" if answers else "asked" if turns else "pending",
+                           "score": round(sum(t["score"] for t in answers) / len(answers)) if answers else None,
+                           "assessment_limited": any(t.get("assessment_limited") or t.get("evaluation_source") == "offline_fallback" for t in answers)})
+        assessed = sum(r["status"] == "assessed" for r in result)
+        return {"targets": result, "total": len(result), "assessed": assessed,
+                "remaining": len(result) - assessed, "complete": assessed == len(result),
+                "answered_turns": self.turn,
+                "base_question_goal": max(MAX_TURNS, len(result)) if self.interview_plan is not None else MAX_TURNS,
+                "base_questions_answered": sum(not t.get("is_followup") for t in self.answered)}
 
     @property
     def answered(self):
@@ -488,6 +511,9 @@ class InterviewSession:
 
     @property
     def finished(self):
+        if self.interview_plan is not None:
+            return (self.pending is None and self.coverage["complete"]
+                    and self.coverage["base_questions_answered"] >= self.coverage["base_question_goal"])
         return self.turn >= MAX_TURNS
 
     @property
@@ -512,7 +538,7 @@ class InterviewSession:
         """Rebuild a Question for dynamic ids (M18: ``q-*-followup``,
         ``q-resume-*``) that are NOT in the static bank. Returns None for
         static/ghost ids so the caller keeps raising for unknown questions."""
-        if not (pend.get("is_followup") or pend.get("is_resume_probe")):
+        if not (pend.get("is_followup") or pend.get("is_resume_probe") or pend.get("question_source")):
             return None
         return Question(
             id=pend["q_id"],
@@ -532,6 +558,8 @@ class InterviewSession:
             if dyn is not None:
                 return dyn
             return get_question(self.bank, self.pending["q_id"])
+        if self.interview_plan is not None:
+            return self._next_planned_question()
         # M18.2: serve unasked resume probes before the static bank so
         # lexicographic tie-breaking can never starve them. Keywords/outline are
         # persisted on the transcript turn so the next reconstructed request can
@@ -555,6 +583,35 @@ class InterviewSession:
                                 "a": "", "difficulty": d, "score": None, "next_difficulty": d})
         return q
 
+    def _next_planned_question(self):
+        from app.interview.generation import author_question
+        plan = self.interview_plan
+        covered = {t.get("verification_target") for t in self.answered if not t.get("is_followup")}
+        target = next((t for t in plan["targets"] if t["skill_id"] not in covered), None)
+        verification = target is not None
+        if target is None:
+            candidates = plan.get("candidate_skills") or [{"skill_id": s, "verification_status": "verified"} for s in self.prefer_skills]
+            candidates = candidates or [{"skill_id": "generic", "name": self.role, "verification_status": "verified"}]
+            target = candidates[self.coverage["base_questions_answered"] % len(candidates)]
+        difficulty = {"basic": 0, "intermediate": 1, "advanced": 2}.get(target.get("level"), self.current_difficulty) if verification else self.current_difficulty
+        q, provenance = author_question(llm=self.llm, bank=self.bank, role=self.role, target=target,
+            difficulty=difficulty, qid=f"q-ai-{len(self.transcript) + 1}",
+            context=self._generation_context(), used_ids=self.used_ids)
+        self._append_planned(q, provenance, target["skill_id"] if verification else None)
+        return q
+
+    def _generation_context(self):
+        return {**self.interview_plan.get("context", {}),
+                "recent_turns": [{"question": t.get("q"), "answer": t.get("a"),
+                                  "skill_id": t.get("skill_id"), "score": t.get("score")}
+                                 for t in self.answered[-4:]]}
+
+    def _append_planned(self, q, provenance, verification_target=None, is_followup=False):
+        self.transcript.append({"q_id": q.id, "q": q.question, "skill_id": q.skill_id,
+            "a": "", "difficulty": q.difficulty, "score": None, "next_difficulty": q.difficulty,
+            "keywords": list(q.keywords), "outline": list(q.outline),
+            "verification_target": verification_target, "is_followup": is_followup, **provenance})
+
     def answer(self, text: str) -> TurnResult:
         pend = self.pending
         if pend is None:
@@ -577,11 +634,18 @@ class InterviewSession:
         payload = json.dumps({"question": q.question, "answer": text,
                               "keywords": list(q.keywords),
                               "outline": list(q.outline)})
+        from app.interview.generation import complete_live, is_live
+        evaluate = self.llm.complete if self.llm is not None else None
+        if self.interview_plan is not None and is_live(self.llm):
+            evaluate = lambda **kw: complete_live(self.llm, **kw)
         parsed = None
         error_recovered = ""
         try:
-            raw_complete = self.llm.complete(system=EVALUATE_ANSWER_SYSTEM, user=payload, json_mode=True)
+            raw_complete = evaluate(system=EVALUATE_ANSWER_SYSTEM, user=payload, json_mode=True)
             parsed = _safe_json(raw_complete)
+            if self.interview_plan is not None and (not isinstance(parsed, dict)
+                    or not isinstance(parsed.get("rubric"), dict) or "score" not in parsed):
+                parsed = None
         except Exception as exc:
             logger.warning("Interview answer evaluation failed (%s); trying recovery", exc)
             error_recovered = f"llm_error:{type(exc).__name__}"
@@ -594,8 +658,11 @@ class InterviewSession:
                     "score, feedback, rubric, matched_keywords, missed_keywords, ideal_answer_hint.\n"
                     + payload
                 )
-                raw_retry = self.llm.complete(system=EVALUATE_ANSWER_SYSTEM, user=repair_prompt, json_mode=True)
+                raw_retry = evaluate(system=EVALUATE_ANSWER_SYSTEM, user=repair_prompt, json_mode=True)
                 parsed = _safe_json(raw_retry)
+                if self.interview_plan is not None and (not isinstance(parsed, dict)
+                        or not isinstance(parsed.get("rubric"), dict) or "score" not in parsed):
+                    parsed = None
                 if not isinstance(parsed, dict):
                     error_recovered = "invalid_json_fallback"
             except Exception as exc:
@@ -631,6 +698,7 @@ class InterviewSession:
         pend["matched_keywords"] = matched
         pend["missed_keywords"] = missed
         pend["ideal_answer_hint"] = ideal
+        pend["evaluation_source"] = "offline_fallback" if error_recovered else "live_ai" if is_live(self.llm) else "mock"
         if error_recovered:
             pend["error_recovered"] = error_recovered
 
@@ -638,14 +706,27 @@ class InterviewSession:
         followup_probe = ""
         if (self.enable_followups
                 and not pend.get("is_followup")
-                and self.turn < MAX_TURNS
+                and (self.interview_plan is not None or self.turn < MAX_TURNS)
                 and missed
                 and not _is_non_answer(text)
                 and (score < 75 or rubric.get("depth_and_examples", 100) < 60)):
-            followup_probe = generate_followup_probe(
+            if self.interview_plan is not None:
+                from app.interview.generation import author_question
+                target = next((t for t in self.interview_plan["targets"] if t["skill_id"] == q.skill_id),
+                              {"skill_id": q.skill_id, "verification_status": "verified"})
+                probe, provenance = author_question(llm=self.llm, bank=self.bank, role=self.role,
+                    target=target, difficulty=nd, qid=f"{q.id}-followup",
+                    context=self._generation_context(),
+                    previous={"question": q.question, "answer": text, "missed_keywords": missed[:2],
+                              "errors_or_bluffs": reconciled["errors_or_bluffs"]})
+                followup_probe = probe.question
+                pend["followup_probe"] = followup_probe
+                self._append_planned(probe, provenance, pend.get("verification_target"), is_followup=True)
+            else:
+                followup_probe = generate_followup_probe(
                 question=q.question, answer=text, missed_keywords=missed[:2],
                 skill_id=q.skill_id, llm=self.llm)
-            if followup_probe:
+            if followup_probe and self.interview_plan is None:
                 pend["followup_probe"] = followup_probe
                 probe_id = f"{q.id}-followup"
                 targeted_kws = [k for k in missed if k.lower() in followup_probe.lower()] or missed[:1]
@@ -671,6 +752,14 @@ class InterviewSession:
         for t in a:
             per.setdefault(t["skill_id"], []).append(t["score"])
         per_skill = {k: round(sum(v) / len(v)) for k, v in per.items()}
+        assessment_per_skill = None
+        if self.interview_plan is not None:
+            # Never promote from an unavailable evaluator or an unsupported-skill
+            # template with no factual reference. Keep those claims pending review.
+            assessment_per_skill = {
+                skill: value for skill, value in per_skill.items()
+                if not any(t.get("evaluation_source") == "offline_fallback" or t.get("assessment_limited")
+                           for t in a if t["skill_id"] == skill)}
         rubric_overall = {k: 0 for k in RUBRIC_KEYS}
         scored = [t for t in a if isinstance(t.get("rubric"), dict)]
         if scored:
@@ -696,4 +785,5 @@ class InterviewSession:
                 parts.append(f"Revisit and re-verify {', '.join(gaps)}.")
             feedback = " ".join(parts)
         return InterviewSummary(score=overall, per_skill=per_skill, feedback=feedback,
-                                transcript=self.transcript, rubric_overall=rubric_overall)
+                                transcript=self.transcript, rubric_overall=rubric_overall,
+                                coverage=self.coverage, assessment_per_skill=assessment_per_skill)

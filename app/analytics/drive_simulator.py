@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from sqlmodel import Session, select
 
+from ..db import sort_students_alphabetically
 from ..matching.engine import job_tier
 from ..models import Job, Skill, Student
 from ..plan.planner import _load_courses, pick_course_for_skill
@@ -79,7 +80,7 @@ def simulate_placement_drive(
     except Exception:  # pragma: no cover - defensive
         pass
 
-    all_students = session.exec(select(Student)).all()
+    all_students = sort_students_alphabetically(session.exec(select(Student)).all())
     total = len(all_students)
     if total == 0:
         return {

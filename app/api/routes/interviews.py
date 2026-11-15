@@ -15,6 +15,7 @@ from app.api.routes.students import _rank_and_persist
 from app.interview.bank import Question, get_question, load_bank
 from app.interview.engine import InterviewSession, role_for_job
 from app.interview.feedback_loop import QuestionTelemetryManager
+from app.interview.generation import clean_context, is_live
 from app.interview.quality import audit_question_bank, load_vetted_bank
 from app.interview.speech_analytics import aggregate_speech_delivery, analyze_speech_delivery
 from app.models import (
@@ -81,10 +82,68 @@ def _serialize_probes(questions: list[Question]) -> list[dict]:
     ]
 
 
+def _verification_plan(session, student, job, role):
+    """Immutable session snapshot. Later profile edits cannot remove queued claims."""
+    rows = session.exec(select(StudentSkill).where(StudentSkill.student_id == student.id)).all()
+    candidates = []
+    for row in sorted(rows, key=lambda r: r.skill_id):
+        skill = session.get(Skill, row.skill_id)
+        candidates.append({"skill_id": row.skill_id, "name": skill.name if skill else row.skill_id,
+                           "level": row.level, "verification_status": str(row.verification_status or "claimed").lower(),
+                           "evidence": [e for e in row.evidence if not str(e).lower().startswith(("interview ", "[interview "))][:4]})
+    statuses = {"unverified": 0, "needs_reverification": 1, "claimed": 2}
+    targets = sorted([c for c in candidates if c["verification_status"] != "verified"],
+                     key=lambda c: (statuses.get(c["verification_status"], 3), c["skill_id"]))
+    return clean_context({"version": 1, "targets": targets, "candidate_skills": candidates,
+                         "context": {"role": role, "job_title": job.title if job else role,
+                                     "job_description": job.description if job else "",
+                                     "required_skills": job.required_skills if job else [],
+                                     "resume": student.resume_text}})
+
+
+def _public_question(s, q):
+    if q is None:
+        return None
+    turn = s.pending or {}
+    return {"id": q.id, "question": q.question, "skill_id": q.skill_id, "difficulty": q.difficulty,
+            "source": turn.get("question_source", "offline_bank"),
+            "generation_error": turn.get("generation_error", ""),
+            "assessment_limited": bool(turn.get("assessment_limited")),
+            "verification_target": turn.get("verification_target"),
+            "is_followup": bool(turn.get("is_followup"))}
+
+
 def _session(session: Session, interview: Interview, ctx, enable_followups: bool = False) -> InterviewSession:
     job = session.get(Job, interview.job_id) if interview.job_id else None
     persisted_role = str(getattr(interview, "role", None) or "").strip()
     role = persisted_role or (role_for_job(job) if job else "backend")
+    plan = (interview.feedback or {}).get("_verification")
+    if plan is None and not interview.finished and interview.student_id:
+        student = session.get(Student, interview.student_id)
+        if student is not None:
+            plan = _verification_plan(session, student, job, role)
+            plan["context"]["project_deep_dive"] = bool(interview.include_resume_probes)
+            interview.feedback = {**(interview.feedback or {}), "_verification": plan}
+            # An already displayed historical question must be graded as asked.
+            # All subsequent questions use the new live/offline authoring path.
+            transcript = [dict(t) for t in (interview.transcript or [])]
+            if transcript and transcript[-1].get("score") is None and not transcript[-1].get("question_source"):
+                pending = transcript[-1]
+                old = get_question(_load_session_bank(), pending["q_id"])
+                if old is not None:
+                    pending.update(keywords=list(old.keywords), outline=list(old.outline))
+                elif not pending.get("keywords") or not pending.get("outline"):
+                    raise HTTPException(409, "Historical question reference unavailable; start a new interview")
+                pending["question_source"] = "legacy_question"
+                if pending.get("skill_id") in {t["skill_id"] for t in plan["targets"]}:
+                    pending["verification_target"] = pending["skill_id"]
+            interview.transcript = transcript
+    if plan is not None:
+        prefer = [t["skill_id"] for t in plan.get("candidate_skills", [])]
+        bank = _load_session_bank if is_live(ctx.llm) else _load_session_bank()
+        return InterviewSession(role, bank, ctx.llm, prefer, interview.transcript or [],
+                                enable_followups=bool(enable_followups) or bool(interview.adaptive_followup),
+                                interview_plan=plan)
 
     # Query candidate skills
     candidate_skills: list[StudentSkill] = []
@@ -152,7 +211,9 @@ def _promote_skills_from_summary(session: Session, student_id: str | None, summa
     updates: list[dict] = []
     remedial_skills: list[str] = []
 
-    for skill_id, raw_score in summary.per_skill.items():
+    assessed = getattr(summary, "assessment_per_skill", None)
+    assessed = summary.per_skill if assessed is None else assessed
+    for skill_id, raw_score in assessed.items():
         try:
             score = max(0, min(100, round(float(raw_score))))
         except (TypeError, ValueError):
@@ -292,11 +353,20 @@ def _aggregate_speech(transcript: list) -> dict:
 
 
 def _finalize(session: Session, row: Interview, summary, turn=None,
-              ctx=None, student=None) -> JSONResponse:
+              ctx=None, student=None, completion_reason="completed") -> JSONResponse:
+    plan = (row.feedback or {}).get("_verification")
+    early = completion_reason == "ended_early"
+    if early:
+        coverage = summary.coverage
+        summary.feedback = (f"Ended early: assessed {coverage.get('assessed', 0)} of {coverage.get('total', 0)} target skills. "
+                            "Unassessed claims retain their previous status. " + summary.feedback)
     row.transcript = summary.transcript
     row.score = summary.score
     row.feedback = {"overall": summary.feedback, "per_skill": summary.per_skill,
-                    "rubric_overall": summary.rubric_overall}
+                    "rubric_overall": summary.rubric_overall, "coverage": summary.coverage,
+                    "completion_reason": completion_reason}
+    if plan is not None:
+        row.feedback["_verification"] = plan
     # M18.3: aggregate per-turn acoustic telemetry into the finalized feedback.
     speech_summary = _aggregate_speech(summary.transcript)
     if speech_summary:
@@ -308,10 +378,10 @@ def _finalize(session: Session, row: Interview, summary, turn=None,
     # above never calls _finalize, so no duplicate event/audit rows.
     session.add(ProgressEvent(
         id=f"pe-{uuid4().hex[:8]}", student_id=row.student_id,
-        kind="interview_completed", ref_id=row.id, readiness=int(summary.score),
+        kind="interview_ended_early" if early else "interview_completed", ref_id=row.id, readiness=int(summary.score),
         at=datetime.now(timezone.utc)))
     session.add(AuditLog(
-        id=f"aud-{uuid4().hex[:8]}", action="interview.completed",
+        id=f"aud-{uuid4().hex[:8]}", action="interview.ended_early" if early else "interview.completed",
         entity_type="interview", entity_id=row.id, actor_role="student",
         detail={"score": int(summary.score), "job_id": row.job_id,
                 "student_id": row.student_id, "per_skill": summary.per_skill}))
@@ -368,6 +438,8 @@ def _finalize(session: Session, row: Interview, summary, turn=None,
         "rubric_overall": summary.rubric_overall,
         "skill_updates": skill_updates,
         "transcript": summary.transcript,
+        "coverage": summary.coverage,
+        "completion_reason": completion_reason,
     }
     if speech_summary:
         summary_payload["speech_summary"] = speech_summary
@@ -396,13 +468,11 @@ def start_interview(sid: str, request: Request, payload: dict | None = None,
     student = session.get(Student, sid)
     if student is None:
         raise HTTPException(404, "student not found")
-    if ctx.llm is None:
-        raise HTTPException(503, "LLM not configured")
     payload = payload or {}
     job_id = payload.get("job_id")
     role_arg = payload.get("role")
     include_resume_probes = bool(payload.get("include_resume_probes"))
-    adaptive_followup = bool(payload.get("adaptive_followup"))
+    adaptive_followup = bool(payload.get("adaptive_followup", True))
     job = None
     if job_id:
         job = session.get(Job, job_id)
@@ -427,6 +497,8 @@ def start_interview(sid: str, request: Request, payload: dict | None = None,
     iid = f"int-{uuid4().hex[:8]}"
     row = Interview(id=iid, student_id=sid, job_id=job_id_val, transcript=[], score=None,
                     feedback={}, finished=False, role=resolved_role)
+    row.feedback = {"_verification": _verification_plan(session, student, job, resolved_role)}
+    row.feedback["_verification"]["context"]["project_deep_dive"] = include_resume_probes
     # M18.1/18.2: persist per-interview flags so each reconstructed turn keeps them.
     row.include_resume_probes = include_resume_probes
     row.adaptive_followup = adaptive_followup
@@ -445,8 +517,8 @@ def start_interview(sid: str, request: Request, payload: dict | None = None,
     return JSONResponse(status_code=201, content={
         "id": iid, "interview_id": iid, "job_id": job_id_val, "role": s.role,
         "difficulty": s.current_difficulty,
-        "question": {"id": q.id, "question": q.question, "skill_id": q.skill_id,
-                     "difficulty": q.difficulty} if q else None,
+        "question": _public_question(s, q),
+        "coverage": s.coverage,
     })
 
 
@@ -461,8 +533,6 @@ def answer_interview(iid: str, request: Request, payload: dict,
         enforce_student_scope(request, row.student_id)
     if row.finished:
         raise HTTPException(409, "interview already finished")
-    if ctx.llm is None:
-        raise HTTPException(503, "LLM not configured")
     from app.security.pii import scrub_for_llm
     raw_text = (payload or {}).get("text") or (payload or {}).get("answer", "")
     text, _ = scrub_for_llm(str(raw_text))
@@ -494,10 +564,11 @@ def answer_interview(iid: str, request: Request, payload: dict,
                           "question_id": turn.question_id},
                   commit=True)
     try:
-        q_obj = get_question(load_bank(), turn.question_id)
+        q_obj = (get_question(load_bank(), turn.question_id)
+                 if answered_turns and answered_turns[-1].get("question_source", "offline_bank") == "offline_bank" else None)
         # Only record calibration telemetry for STATIC bank questions; transient
         # dynamic ids (q-*-followup, q-resume-*) must never pollute the ledger.
-        if q_obj is not None:
+        if q_obj is not None and answered_turns[-1].get("question_source", "offline_bank") == "offline_bank":
             QuestionTelemetryManager().record_answer_turn(
                 q_id=turn.question_id,
                 score=turn.score,
@@ -531,9 +602,10 @@ def answer_interview(iid: str, request: Request, payload: dict,
         "injection_flags": turn.injection_flags,
         "followup_probe": turn.followup_probe,
         "error_recovered": turn.error_recovered,
+        "evaluation_source": answered_turns[-1].get("evaluation_source") if answered_turns else None,
+        "coverage": s.coverage,
         "speech_analytics": speech,
-        "question": {"id": nq.id, "question": nq.question, "skill_id": nq.skill_id,
-                     "difficulty": nq.difficulty},
+        "question": _public_question(s, nq),
     })
 
 
@@ -546,6 +618,9 @@ def get_interview(iid: str, request: Request, session: Session = Depends(get_ses
         enforce_student_scope(request, row.student_id)
     fb = dict(row.feedback or {}) if isinstance(row.feedback, dict) else {}
     fb.pop("_resume_probes", None)
+    plan = fb.pop("_verification", None)
+    coverage = InterviewSession(row.role or "backend", (), None, [], row.transcript,
+                                interview_plan=plan).coverage if plan is not None else fb.get("coverage", {})
     student = session.get(Student, row.student_id) if row.student_id else None
     job_obj = session.get(Job, row.job_id) if row.job_id else None
     return {
@@ -556,6 +631,8 @@ def get_interview(iid: str, request: Request, session: Session = Depends(get_ses
         "job_title": getattr(job_obj, "title", "") or getattr(row, "role", None) or "Technical Mock Interview",
         "role": getattr(row, "role", None),
         "finished": row.finished,
+        "coverage": coverage,
+        "completion_reason": fb.get("completion_reason"),
         "score": row.score,
         "feedback": fb,
         "transcript": row.transcript,
@@ -563,6 +640,20 @@ def get_interview(iid: str, request: Request, session: Session = Depends(get_ses
         "skill_updates": fb.get("skill_updates", []),
         "started_at": row.started_at.isoformat(),
     }
+
+
+@router.post("/api/interviews/{iid}/finish")
+def finish_interview(iid: str, request: Request, session: Session = Depends(get_session), ctx=Depends(get_ctx)):
+    """Explicit early exit: preserve unasked claims and report incomplete coverage."""
+    row = session.get(Interview, iid)
+    if row is None:
+        raise HTTPException(404, "interview not found")
+    if row.student_id:
+        enforce_student_scope(request, row.student_id)
+    if row.finished:
+        raise HTTPException(409, "interview already finished")
+    s = _session(session, row, ctx)
+    return _finalize(session, row, s.finish(), ctx=ctx, completion_reason="ended_early")
 
 
 @router.get("/interviews/{iid}")

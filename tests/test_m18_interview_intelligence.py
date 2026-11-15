@@ -163,7 +163,7 @@ def test_generate_resume_project_questions_empty_resume():
     assert qs == [], "empty resume with no skills must yield no probes"
 
 
-def test_interview_start_with_resume_probes_serves_them_first(client_engine=None):
+def test_interview_starts_with_claim_verification_when_resume_probes_requested(client_engine=None):
     client = _make_client()
     with client:
         sid = _seed_student(client)
@@ -173,8 +173,9 @@ def test_interview_start_with_resume_probes_serves_them_first(client_engine=None
         assert r.status_code in (200, 201), r.text
         body = r.json()
         iid = body["interview_id"]
-        qid = body["question"]["id"]
-        assert qid.startswith("q-resume-"), f"expected resume probe first, got {qid}"
+        assert body["question"]["verification_target"]
+        assert body["coverage"]["total"] > 0
+        assert body["question"]["source"] == "offline_resume_template"
         # Anti-vacuity: the resume probe must be ANSWERABLE (not 400 not-in-bank).
         ans = client.post(f"/api/interviews/{iid}/answers",
                           json={"text": ("The architecture used Python and FastAPI with "
@@ -290,7 +291,7 @@ def test_finalize_aggregates_speech_summary():
         text = ("Situation we faced latency. Task reduce p99. Action add cache. "
                 "Result latency dropped 60 percent with throughput doubled plus metrics.")
         finished = False
-        for _ in range(8):
+        for _ in range(64):
             r = client.post(f"/api/interviews/{iid}/answers",
                             json={"text": text, "duration_seconds": 30.0})
             assert r.status_code == 200, r.text
@@ -324,25 +325,26 @@ def test_speech_analyze_endpoint_requires_text():
 
 
 # ------------------------------------------- backward-compat (18.4 guard)
-def test_legacy_eight_turn_flow_unchanged():
-    """The default flow must still reach 8 turns with bank question ids."""
+def test_explicitly_disabled_followups_keep_eight_base_questions():
+    """Small skill queues need eight base questions when follow-ups are disabled."""
     client = _make_client()
     with client:
         sid = _seed_student(client, "Legacy")
         client.get(f"/api/students/{sid}/matches")
         iid = client.post(f"/api/students/{sid}/interviews",
-                          json={"job_id": "job-001"}).json()["interview_id"]
+                          json={"job_id": "job-001", "adaptive_followup": False}).json()["interview_id"]
         finished = False
-        for _ in range(8):
+        for _ in range(64):
             r = client.post(f"/api/interviews/{iid}/answers",
                             json={"text": "I explain lists dicts generators joins indexing here."})
             assert r.status_code == 200, r.text
             if r.json().get("finished"):
                 finished = True
+                break
         assert finished, "8-turn default flow must finish"
         g = client.get(f"/api/interviews/{iid}").json()
         assert len(g["transcript"]) == 8
-        # default (no adaptive_followup) must never inject a follow-up id
+        # Explicit opt-out must never inject a follow-up id
         assert not any(t["q_id"].endswith("-followup") for t in g["transcript"])
 
 

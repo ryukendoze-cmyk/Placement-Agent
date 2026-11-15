@@ -511,12 +511,15 @@ def verify_policy_citations(text: str, known: set[str] | None = None) -> dict:
 def _latest_mock_score(session, student_id: str, job_id: str | None = None) -> int | None:
     from sqlmodel import select
 
+    from app.interview.status import is_completed_assessment
+
     from ..models import Interview
     rows = session.exec(
         select(Interview).where(Interview.student_id == student_id,
                                 Interview.finished == True)  # noqa: E712
         .order_by(Interview.started_at.desc(), Interview.id.desc())
     ).all()
+    rows = [r for r in rows if is_completed_assessment(r)]
     if not rows:
         return None
     if job_id:

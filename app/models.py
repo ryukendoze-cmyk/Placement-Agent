@@ -118,6 +118,7 @@ class UpskillPlan(SQLModel, table=True):
     job_id: str = Field(foreign_key="job.id", index=True)
     total_hours: int
     narrative: str = ""
+    strategy_json: dict = Field(default_factory=dict, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

@@ -16,7 +16,7 @@ changes.
 | **Explainable matching** | Ranks 24 real job descriptions against a resume with a transparent score (`0.6 required-coverage + 0.2 preferred + 0.2 semantic`) and shows exactly *which* required skills matched (with the resume line as evidence) and which are missing. |
 | **Upskilling plans** | Skill gaps become an ordered, hour-costed course plan ordered by a **prerequisite DAG** (prerequisites before consumers), capped at 10 h/week, with an LLM narrative. |
 | **Closed-loop readiness** | Mark a plan item done (optionally verified by a keyword-graded micro-quiz) -> skills are promoted, matches re-ranked, active `JobApplication` match scores updated, and a readiness event (`0.5 plan-completion + 0.5 best-match`) climbs over time. |
-| **Adaptive mock interviews** | 8-turn voice-in/voice-out studio (Web Speech API, text fallback) over a **220+ question bank with reference outlines**; difficulty adapts to answer quality; each turn is scored on a **3-axis rubric** (technical accuracy, depth & examples, communication) with matched/missed keywords and an ideal-answer panel; completion writes a `ProgressEvent` + immutable `AuditLog`. |
+| **Adaptive mock interviews** | Skill-complete voice-in/voice-out studio (Web Speech API, text fallback): live AI authors questions from candidate claims and evidence; **708 offline questions with reference outlines** support mock/offline practice; difficulty adapts to answer quality; each turn is scored on a **3-axis rubric** (technical accuracy, depth & examples, communication) with matched/missed keywords and an ideal-answer panel; completion writes a `ProgressEvent` + immutable `AuditLog`. |
 | **Autonomous agent** | Iterative ReAct loop (`Goal -> Plan -> Execute -> Observe -> Replan/Repair -> Verify`) over **18 registered tools** (inspect, rank, plan, apply, simulate drive, search SOPs, audit resume, STAR rewrite), with a live interactive reasoning trace in the **Agent Brain** drawer. |
 | **Grounded copilot** | RAG over institutional placement SOPs; every answer cites `[SOP-XX]` clauses with a grounding score; clickable citation pills. |
 | **Human-in-the-loop** | Two-tier Approvals Center (`faculty_mentor` Tier-1 endorsement -> `tpo_admin` Tier-2 final sign-off) enforcing strict separation of duties for nominations, bootcamp launches, resume re-upload unlocks, and proficiency waivers; every decision is immutably audited. |
@@ -200,7 +200,7 @@ in `.env`:
    watch the progress bar; a micro-quiz can verify the skill first.
 4. **Progress** - readiness chart climbs; events show resume parse, match,
    plan, completion and interview milestones; export the dossier.
-5. **Interview** - start a mock interview: 8-turn stepper, difficulty badge,
+5. **Interview** - start a mock interview: complete claim coverage, adaptive follow-ups, difficulty badge,
    per-turn rubric bars, matched/missed keywords, collapsible ideal answer,
    voice pulse + timer, and a **printable scorecard** with the overall rubric.
 6. **Copilot** - ask *"What score do I need for Dream drives?"*: the answer
@@ -268,7 +268,7 @@ app/
   analytics/      cohort.py (pure cohort aggregations), drive_simulator.py (TPO drive sim + ROI)
   embeddings/     embedder.py (Hashing/Local), store.py (Memory/PgVector, upsert_many, two-stage ANN)
   eval/           benchmark.py - SOP RAG recall@k/MRR + planner DAG + grounding audit
-  interview/      bank.py (220+ Q bank + outlines + select), engine.py (adaptive + rubric),
+  interview/      bank.py (708 offline questions + outlines + select), engine.py (adaptive + rubric),
                   speech_analytics.py (WPM/filler/STAR telemetry + aggregation)
   llm/            base.py (factory), mock.py (rubric-aware), bedrock.py, openai.py,
                   telemetry.py (token/cost accounting + circuit breaker)
@@ -368,3 +368,5 @@ npm install
 npx cap sync android
 npx cap open android
 ```
+
+Interview verification now covers all claimed, unverified and needs-reverification skills before general practice, extending the session as needed. See [interview verification behavior](docs/INTERVIEW-VERIFICATION.md) for live AI, offline provenance, coverage, scoring and early-exit rules.

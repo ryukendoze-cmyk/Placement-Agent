@@ -300,7 +300,8 @@
     <div class="px-6 py-5 border-b border-[#E5E3DA] flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 class="text-lg font-bold text-[#1A211D] font-serif">Quantitative Evaluation Benchmark &amp; System Telemetry</h2>
-        <p class="text-xs text-[#57605A] mt-0.5">Live golden-dataset metrics for RAG Recall@3, Mean Reciprocal Rank (MRR), Prerequisite DAG Invariant Pass Rate, Citation Grounding, and Agent p95 Latency.</p>
+        <p class="text-xs text-[#57605A] mt-0.5">Live golden-dataset metrics for RAG Recall@3, Mean Reciprocal Rank (MRR), Prerequisite DAG Invariant Pass Rate, Citation Grounding, and persisted Agent Run p95 Latency.</p>
+        <p id="eval-benchmark-status" class="text-[11px] font-mono text-[#68716B] mt-1"></p>
       </div>
       <button id="run-eval-benchmark-btn" type="button" class="btn-secondary-pill text-xs px-4 py-2 cursor-pointer">
         <span>Run Live Benchmark</span>
@@ -331,6 +332,7 @@
         <div class="p-3.5 rounded-2xl bg-[#F9F8F4] border border-[#E5E3DA]">
           <p class="text-[10px] font-mono uppercase tracking-wider text-[#57605A]">Agent p95 Latency</p>
           <p id="metric-agent-p95" class="text-xl font-bold font-serif text-[#1A211D] mt-1">--</p>
+          <p id="metric-agent-p95-sub" class="text-[10px] font-mono text-[#68716B] mt-0.5"></p>
         </div>
       </div>
       <div id="system-telemetry-bar" class="hidden rounded-xl bg-[#F9F8F4] border border-[#E5E3DA] px-4 py-3 text-xs font-mono text-[#4A4943] flex flex-wrap items-center justify-between gap-2"></div>
@@ -789,15 +791,21 @@ const DATA = {{ analytics|tojson }};
   if (simRun) simRun.addEventListener("click", function () { runSim(false); });
   if (simRun) runSim(true);
 
-  function loadEvalAndTelemetry() {
+  function loadEvalAndTelemetry(manualTrigger) {
     var btn = document.getElementById("run-eval-benchmark-btn");
+    var btnLabel = btn ? btn.querySelector("span") : null;
+    var statusEl = document.getElementById("eval-benchmark-status");
     var userRole = "{{ role }}";
     if (btn) btn.disabled = true;
-    fetch("/api/admin/eval-benchmark")
-      .then(function (r) { return r.ok ? r.json() : null; })
+    if (btnLabel) btnLabel.textContent = "Running Benchmark...";
+
+    var benchPromise = fetch("/api/admin/eval-benchmark", { cache: "no-store" })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
       .then(function (b) {
-        if (btn) btn.disabled = false;
-        if (!b) return;
+        if (!b) return null;
         var rag = b.sop_rag || {};
         var dag = b.planner_dag || {};
         var grd = b.agent_grounding || {};
@@ -822,58 +830,89 @@ const DATA = {{ analytics|tojson }};
         setTxt("metric-grounding", grdRate);
         setTxt("metric-agent-success", agSuccess);
         setTxt("metric-agent-p95", agm.p95_latency_ms != null ? (agm.p95_latency_ms + " ms") : "--");
-      })
-      .catch(function () { if (btn) btn.disabled = false; });
+        setTxt(
+          "metric-agent-p95-sub",
+          agm.total_runs
+            ? ("avg " + Math.round(agm.avg_latency_ms || 0) + " ms · " + agm.total_runs + " runs")
+            : "no persisted runs"
+        );
+        if (statusEl) {
+          var dur = b.benchmark_duration_ms != null ? (b.benchmark_duration_ms + " ms") : "--";
+          var ts = b.evaluated_at ? new Date(b.evaluated_at).toLocaleTimeString() : new Date().toLocaleTimeString();
+          statusEl.textContent = "Eval Suite Runtime: " + dur + " · Last Evaluated: " + ts;
+        }
+        return b;
+      });
 
     var bar = document.getElementById("system-telemetry-bar");
+    var telemetryPromise;
     if (userRole !== "tpo_admin") {
       if (bar) {
         bar.classList.remove("hidden");
         bar.textContent = "Scope: Faculty Mentor (Department Analytics). Full system LLM/DB telemetry restricted to TPO Admin.";
       }
-      return;
+      telemetryPromise = Promise.resolve(null);
+    } else {
+      telemetryPromise = fetch("/api/admin/system-telemetry", { cache: "no-store" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (t) {
+          if (!t || !bar) return;
+          var llm = t.llm || {};
+          var totals = llm.totals || {};
+          var db = t.database_counts || t.entities || {};
+          var agm = t.agent_metrics || {};
+          var callsTotal = llm.calls_total != null ? llm.calls_total : (totals.total_calls || 0);
+          var tokensTotal = llm.tokens_total != null ? llm.tokens_total : (totals.total_tokens || 0);
+          var costUsd = llm.estimated_cost_usd != null ? Number(llm.estimated_cost_usd) : Number(totals.estimated_cost_usd || 0);
+          var fallbacksTotal = llm.fallbacks_triggered != null ? llm.fallbacks_triggered : (totals.total_fallbacks || 0);
+          var agentRuns = db.agent_runs != null ? db.agent_runs : (agm.total_runs || 0);
+          bar.classList.remove("hidden");
+          bar.innerHTML = "";
+          var leftSpan = document.createElement("span");
+          leftSpan.textContent =
+            "Provider: " + (llm.provider || "mock") +
+            " | Calls: " + callsTotal +
+            " | Tokens: " + tokensTotal +
+            " | Est. Cost: $" + costUsd.toFixed(4) +
+            " | Fallbacks: " + fallbacksTotal +
+            " | Agent Avg: " + Math.round(agm.avg_latency_ms || 0) + " ms";
+          var rightSpan = document.createElement("span");
+          rightSpan.textContent =
+            "DB Rows - Students: " + (db.students || 0) +
+            " | Jobs: " + (db.jobs || 0) +
+            " | Agent Runs: " + agentRuns +
+            " | Audit Logs: " + (db.audit_logs || 0);
+          bar.appendChild(leftSpan);
+          bar.appendChild(rightSpan);
+          return t;
+        })
+        .catch(function () { return null; });
     }
 
-    fetch("/api/admin/system-telemetry")
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (t) {
-        if (!t || !bar) return;
-        var llm = t.llm || {};
-        var totals = llm.totals || {};
-        var db = t.database_counts || t.entities || {};
-        var agm = t.agent_metrics || {};
-        var callsTotal = llm.calls_total != null ? llm.calls_total : (totals.total_calls || 0);
-        var tokensTotal = llm.tokens_total != null ? llm.tokens_total : (totals.total_tokens || 0);
-        var costUsd = llm.estimated_cost_usd != null ? Number(llm.estimated_cost_usd) : Number(totals.estimated_cost_usd || 0);
-        var fallbacksTotal = llm.fallbacks_triggered != null ? llm.fallbacks_triggered : (totals.total_fallbacks || 0);
-        var agentRuns = db.agent_runs != null ? db.agent_runs : (agm.total_runs || 0);
-        bar.classList.remove("hidden");
-        bar.innerHTML = "";
-        var leftSpan = document.createElement("span");
-        leftSpan.textContent =
-          "Provider: " + (llm.provider || "mock") +
-          " | Calls: " + callsTotal +
-          " | Tokens: " + tokensTotal +
-          " | Est. Cost: $" + costUsd.toFixed(4) +
-          " | Fallbacks: " + fallbacksTotal;
-        var rightSpan = document.createElement("span");
-        rightSpan.textContent =
-          "DB Rows - Students: " + (db.students || 0) +
-          " | Jobs: " + (db.jobs || 0) +
-          " | Agent Runs: " + agentRuns +
-          " | Audit Logs: " + (db.audit_logs || 0);
-        bar.appendChild(leftSpan);
-        bar.appendChild(rightSpan);
+    Promise.all([benchPromise, telemetryPromise])
+      .then(function (results) {
+        if (btn) btn.disabled = false;
+        if (btnLabel) btnLabel.textContent = "Run Live Benchmark";
+        var b = results[0];
+        if (manualTrigger && window.toast && b) {
+          var dur = b.benchmark_duration_ms != null ? (" in " + b.benchmark_duration_ms + " ms") : "";
+          window.toast("Live benchmark completed" + dur + ".", "success");
+        }
       })
-      .catch(function () {});
+      .catch(function (err) {
+        if (btn) btn.disabled = false;
+        if (btnLabel) btnLabel.textContent = "Run Live Benchmark";
+        if (manualTrigger && window.toast) {
+          window.toast("Benchmark failed: " + (err && err.message ? err.message : "unknown error"), "error");
+        }
+      });
   }
 
   var evalBtn = document.getElementById("run-eval-benchmark-btn");
   if (evalBtn) evalBtn.addEventListener("click", function () {
-    loadEvalAndTelemetry();
-    if (window.toast) window.toast("Quantitative evaluation benchmark refreshed.", "success");
+    loadEvalAndTelemetry(true);
   });
-  loadEvalAndTelemetry();
+  loadEvalAndTelemetry(false);
 })();
 </script>
 {% endblock %}

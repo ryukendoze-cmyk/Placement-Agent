@@ -538,6 +538,125 @@ html.dark tbody tr:hover {
   background-color: #171E28;
 }
 
+/* Know More Engineering Manual (#km-toolbar, details.km-card, .km-table, TOC) */
+details.km-card > summary {
+  list-style: none;
+  cursor: pointer;
+}
+details.km-card > summary::-webkit-details-marker {
+  display: none;
+}
+details.km-card > summary .km-chevron {
+  transition: transform 0.18s ease;
+}
+details.km-card[open] > summary .km-chevron {
+  transform: rotate(180deg);
+}
+.km-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.8125rem;
+}
+.km-table thead th {
+  background-color: #FAF9F5;
+  color: #4A483F;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid #E5E3DC;
+}
+.km-table tbody td {
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid #EDEBE3;
+  vertical-align: top;
+  color: #1C1E1B;
+}
+.km-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.km-table tbody tr:hover {
+  background-color: #FAF9F5;
+}
+.km-role-btn.km-role-active {
+  background-color: #1D5C42;
+  border-color: #1D5C42;
+  color: #FFFFFF;
+}
+.km-toc-link.km-toc-active {
+  background-color: #E3F2EA;
+  border-color: #C8E4D5;
+  color: #1B5E43;
+  font-weight: 600;
+}
+
+html.dark #km-toolbar {
+  background-color: rgba(18, 23, 31, 0.94);
+  border-color: #252E3D;
+  color: #F0F6FC;
+}
+html.dark details.km-card {
+  background-color: #12171F;
+  border-color: #252E3D;
+  color: #E6EDF3;
+}
+html.dark details.km-card > summary {
+  background-color: #151C26;
+  color: #F0F6FC;
+}
+html.dark details.km-card > summary:hover {
+  background-color: #1A2230;
+}
+html.dark details.km-card[open] > summary {
+  border-bottom: 1px solid #252E3D;
+}
+html.dark .km-table thead th {
+  background-color: #181F29;
+  color: #D0D7DE;
+  border-color: #252E3D;
+}
+html.dark .km-table tbody td {
+  color: #E6EDF3;
+  border-color: #202836;
+}
+html.dark .km-table tbody tr:hover {
+  background-color: #171E28;
+}
+html.dark details.km-card code,
+html.dark .km-table code {
+  background-color: #1E2532;
+  color: #6EE7B7;
+  border-color: #2E3A4D;
+}
+html.dark .km-role-btn {
+  background-color: #1B222D;
+  border-color: #313C4E;
+  color: #D0D7DE;
+}
+html.dark .km-role-btn:hover {
+  background-color: #252E3D;
+  color: #FFFFFF;
+}
+html.dark .km-role-btn.km-role-active {
+  background-color: #059669;
+  border-color: #10B981;
+  color: #FFFFFF;
+}
+html.dark .km-toc-link {
+  color: #B4C0CE;
+}
+html.dark .km-toc-link:hover {
+  background-color: #181F29;
+  color: #FFFFFF;
+}
+html.dark .km-toc-link.km-toc-active {
+  background-color: #0E2920;
+  border-color: #1D5944;
+  color: #6EE7B7;
+}
+
 /* Dark Scrollbars */
 html.dark ::-webkit-scrollbar {
   width: 8px;

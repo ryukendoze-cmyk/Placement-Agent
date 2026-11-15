@@ -1,0 +1,361 @@
+<section id="km-shell-auth" class="km-section space-y-4" data-section="shell-auth">
+  <div class="editorial-card p-6 space-y-4">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div class="space-y-1">
+        <span class="pill-sage mono text-[10px] uppercase tracking-wider">Domain 01 &middot; Core Platform</span>
+        <h2 class="font-serif-display text-xl sm:text-2xl font-semibold text-[#1C1E1B]">
+          Global Shell, Auth &amp; RBAC, Security Guardrails, Agent Brain &amp; Multi-Platform Packaging
+        </h2>
+        <p class="text-xs sm:text-sm text-[#5C5A52] max-w-3xl leading-relaxed">
+          Covers the persistent sidebar/topbar chrome, <kbd class="mono px-1.5 py-0.5 rounded bg-[#EFECE4] text-[11px]">Ctrl+K</kbd> command bar, Obsidian Dark Mode, JKLU Offline SSO, strict/demo RBAC middleware, ReAct Agent Brain SSE drawer, zero-hallucination citation verifier, enterprise security modules, and PWA/Electron/Capacitor shells.
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-1.5">
+        <span class="pill-stone mono text-[10px]">base.html</span>
+        <span class="pill-stone mono text-[10px]">auth.py</span>
+        <span class="pill-stone mono text-[10px]">agent/</span>
+        <span class="pill-stone mono text-[10px]">security/</span>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-[#E5E3DC] text-[11px]">
+      <span class="font-semibold text-[#5C5A52] mr-1">Process Flow:</span>
+      <span class="pill-sage">1. Request &rarr; Strict/Demo Middleware</span>
+      <span class="text-[#7A776E]">&rarr;</span>
+      <span class="pill-stone">2. HMAC Session &amp; Role Scope</span>
+      <span class="text-[#7A776E]">&rarr;</span>
+      <span class="pill-stone">3. Shell Render &amp; Theme Sync</span>
+      <span class="text-[#7A776E]">&rarr;</span>
+      <span class="pill-stone">4. PII/Injection Sanitization</span>
+      <span class="text-[#7A776E]">&rarr;</span>
+      <span class="pill-sage">5. ReAct Plan &rarr; Execute &rarr; Verify &rarr; Audit</span>
+    </div>
+  </div>
+
+  <!-- Card 1: Left Sidebar & Topbar Shell -->
+  <details class="km-card editorial-card overflow-hidden" open
+           data-roles="student,faculty_mentor,tpo_admin,public"
+           data-keywords="sidebar topbar shell menu-btn switch-student student-identity-badge command-input ctrl+k purge copilot approval audit admin home know more role-pill demo-role-bar theme-toggle obsidian dark mode chart.js CareerOSTheme open-drawer toast-root confirmAction">
+    <summary class="px-6 py-4 cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 bg-[#FAF9F5] border-b border-[#E5E3DC] hover:bg-[#F4F3EC] transition-colors">
+      <div class="flex items-center gap-2.5">
+        <span class="mono text-xs font-bold px-2 py-0.5 rounded-md bg-[#E3F2EA] text-[#1B5E43]">1.1</span>
+        <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Left Sidebar, Topbar Shell, Command Bar &amp; Obsidian Theme</h3>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="pill-stone text-[10px]">All Roles</span>
+        <span class="mono text-[10px] text-[#5C5A52]">base.html &middot; theme.js &middot; theme.css</span>
+      </div>
+    </summary>
+    <div class="p-6 space-y-5 text-xs sm:text-sm text-[#1C1E1B]">
+      <div>
+        <h4 class="text-[11px] font-bold uppercase tracking-wider text-[#5C5A52] mb-2">Shell Controls, Navigation Links &amp; Modals</h4>
+        <div class="overflow-x-auto">
+          <table class="km-table w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-[#E5E3DC] text-[#5C5A52] uppercase text-[10px]">
+                <th class="py-2 pr-3">Control / Element</th>
+                <th class="py-2 pr-3">Role Visibility</th>
+                <th class="py-2">Behavior &amp; Implementation</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#EFECE4]">
+              <tr>
+                <td class="py-2 pr-3 mono font-semibold">#menu-btn &amp; #sidebar-backdrop</td>
+                <td class="py-2 pr-3">All (&le;900px)</td>
+                <td class="py-2">Toggles mobile slide-over <code>#sidebar.open</code> and backdrop; focuses first link on open; <code>Escape</code> key closes sidebar or Agent Brain drawer.</td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-3 mono font-semibold">#student-identity-badge</td>
+                <td class="py-2 pr-3"><code>student</code></td>
+                <td class="py-2">Displays authenticated student name, branch pill, and active emerald indicator in sidebar header.</td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-3 mono font-semibold">#switch-student</td>
+                <td class="py-2 pr-3"><code>faculty_mentor</code>, <code>tpo_admin</code></td>
+                <td class="py-2">Dropdown navigating to <code>/students/{id}</code> or <code>/</code>. Faculty mentors see only mentees matching their <code>department</code> (<code>fdept</code>).</td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-3 mono font-semibold">Student Workspace Nav</td>
+                <td class="py-2 pr-3">Student (or active <code>sid</code>)</td>
+                <td class="py-2"><code>Home</code> (<code>/</code>, hidden for <code>student</code> in <code>strict</code> mode), <code>Profile</code> (<code>/students/{sid}</code>), <code>Matches</code> (<code>.../matches</code>), <code>Plan</code> (<code>.../plan</code>), <code>Progress</code> (<code>.../progress</code>), <code>Mock Interview</code> (<code>.../interviews</code>).</td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-3 mono font-semibold">Platform Nav Links</td>
+                <td class="py-2 pr-3">Role-gated</td>
+                <td class="py-2"><code>Placement Copilot</code> (<code>/copilot</code>, all roles); <code>Analytics</code> / <code>Department Analytics</code> (<code>/admin</code>), <code>Approvals</code> (<code>/admin/approvals</code>), <code>Placement Policies</code> (<code>/admin/policies</code>) for faculty &amp; TPO; <code>Audit trail</code> (<code>/admin/audit</code>), <code>Scraper Controls</code> (<code>#nav-scraper-controls</code> &rarr; <code>#scrape</code> / <code>#open-scrape-modal</code>), and <code>Know More</code> (<code>/know-more</code>) for <code>tpo_admin</code> only.</td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-3 mono font-semibold">Footer Auth Links</td>
+                <td class="py-2 pr-3">All</td>
+                <td class="py-2"><code>JKLU Portal</code> (<code>GET /login</code>) and <code>Sign Out</code> form (<code>POST /auth/logout</code>).</td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-3 mono font-semibold">#topbar-user-identity</td>
+                <td class="py-2 pr-3">All (md+)</td>
+                <td class="py-2">Topbar pill showing signed-in <code>name</code> (or active role) and institutional <code>email</code>.</td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-3 mono font-semibold">#role-pill &amp; #demo-role-bar</td>
+                <td class="py-2 pr-3">When <code>demo_role_switch</code> &amp; not <code>copilot</code></td>
+                <td class="py-2">Calls <code>switchDemoRole(role)</code> &rarr; <code>POST /api/auth/switch-role</code>. Redirects <code>student</code> away from <code>/admin</code>, <code>faculty_mentor</code> away from <code>/admin/audit</code>, and non-<code>tpo_admin</code> away from <code>/know-more</code>.</td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-3 mono font-semibold">#theme-toggle</td>
+                <td class="py-2 pr-3">All</td>
+                <td class="py-2">Toggles Obsidian Dark Mode (<code>html.dark</code> + <code>data-theme="dark"</code>), persists <code>localStorage["careeros-theme"]</code>, updates <code>meta[name="theme-color"]</code> (<code>#090C10</code> / <code>#1D5C42</code>), dispatches <code>careeros:themechange</code>, syncs across tabs via <code>storage</code> event, and re-colors all Chart.js instances via <code>CareerOSTheme.syncCharts()</code> (<code>theme.js</code>, <code>theme.css</code>).</td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-3 mono font-semibold">#open-drawer</td>
+                <td class="py-2 pr-3">All</td>
+                <td class="py-2">Opens slide-over <code>#agent-drawer</code> with pulsing emerald indicator (<code>.pulse-dot</code>) and loads <code>AgentBrain.load()</code>.</td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-3 mono font-semibold">#toast-root &amp; confirmAction</td>
+                <td class="py-2 pr-3">All</td>
+                <td class="py-2"><code>window.toast(msg, kind, ttlMs)</code> renders non-blocking <code>success</code>/<code>error</code>/<code>info</code> toasts (<code>app.js</code>); <code>window.confirmAction(msg, onConfirm)</code> renders <code>#career-os-confirm-modal</code> replacing native browser dialogs.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="text-[11px] font-bold uppercase tracking-wider text-[#5C5A52] mb-2">Command Bar (<code class="mono">#command-input</code> &middot; <kbd class="mono px-1.5 py-0.5 rounded bg-[#EFECE4]">Ctrl+K</kbd> / <kbd class="mono px-1.5 py-0.5 rounded bg-[#EFECE4]">Cmd+K</kbd>)</h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
+          <div class="p-3 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC]">
+            <p class="font-semibold mb-1">Navigation Keywords</p>
+            <ul class="space-y-1 text-[#5C5A52]">
+              <li><code class="mono font-semibold text-[#1C1E1B]">copilot</code> &rarr; <code>/copilot</code> (all roles)</li>
+              <li><code class="mono font-semibold text-[#1C1E1B]">home</code> &rarr; <code>/</code> (all roles)</li>
+              <li><code class="mono font-semibold text-[#1C1E1B]">approval</code> &rarr; <code>/admin/approvals</code> (faculty/TPO only)</li>
+              <li><code class="mono font-semibold text-[#1C1E1B]">admin</code>, <code class="mono font-semibold text-[#1C1E1B]">analytic</code> &rarr; <code>/admin</code> (faculty/TPO only)</li>
+              <li><code class="mono font-semibold text-[#1C1E1B]">audit</code> &rarr; <code>/admin/audit</code> (<code>tpo_admin</code> only)</li>
+              <li><code class="mono font-semibold text-[#1C1E1B]">know more</code>, <code class="mono font-semibold text-[#1C1E1B]">knowmore</code>, <code class="mono font-semibold text-[#1C1E1B]">guide</code>, <code class="mono font-semibold text-[#1C1E1B]">manual</code>, <code class="mono font-semibold text-[#1C1E1B]">docs</code> &rarr; <code>/know-more</code> (<code>tpo_admin</code> only)</li>
+            </ul>
+          </div>
+          <div class="p-3 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC]">
+            <p class="font-semibold mb-1">Actions &amp; Student Jump</p>
+            <ul class="space-y-1 text-[#5C5A52]">
+              <li><code class="mono font-semibold text-[#1C1E1B]">purge</code>, <code class="mono font-semibold text-[#1C1E1B]">clear live</code>, <code class="mono font-semibold text-[#1C1E1B]">remove live</code> &rarr; <code>tpo_admin</code> only; invokes <code>window.purgeAllLiveJobs()</code> or <code>confirmAction</code> + <code>DELETE /api/jobs/live</code>.</li>
+              <li><span class="font-semibold text-[#1C1E1B]">Student Name Substring</span> &rarr; matches options in <code>#switch-student</code> and navigates directly to <code>/students/{id}</code>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- Card 2: JKLU Institutional Portal & Auth Modes -->
+  <details class="km-card editorial-card overflow-hidden" open
+           data-roles="student,faculty_mentor,tpo_admin,public"
+           data-keywords="login auth logout switch-role personas.json pbkdf2 sha256 pin demo strict auth_mode rbac_strict_and_audit_middleware _PUBLIC_EXACT _PUBLIC_PREFIXES signed cookie ps06_session ps06_role auth.denied">
+    <summary class="px-6 py-4 cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 bg-[#FAF9F5] border-b border-[#E5E3DC] hover:bg-[#F4F3EC] transition-colors">
+      <div class="flex items-center gap-2.5">
+        <span class="mono text-xs font-bold px-2 py-0.5 rounded-md bg-[#E3F2EA] text-[#1B5E43]">1.2</span>
+        <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">JKLU Institutional Portal, Auth Modes &amp; Strict Middleware</h3>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="pill-stone text-[10px]">Public + Auth</span>
+        <span class="mono text-[10px] text-[#5C5A52]">login.html &middot; auth.py &middot; main.py</span>
+      </div>
+    </summary>
+    <div class="p-6 space-y-5 text-xs sm:text-sm text-[#1C1E1B]">
+      <div class="overflow-x-auto">
+        <table class="km-table w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-[#E5E3DC] text-[#5C5A52] uppercase text-[10px]">
+              <th class="py-2 pr-3">Route / Component</th>
+              <th class="py-2 pr-3">Handler / Source</th>
+              <th class="py-2">Behavior &amp; Validation Rules</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#EFECE4]">
+            <tr>
+              <td class="py-2 pr-3 mono font-semibold">GET /login</td>
+              <td class="py-2 pr-3 mono">auth.login_page</td>
+              <td class="py-2">Renders <code>auth/login.html</code> with <code>#jklu-login</code> (<code>#email</code>, <code>#pin</code>) and <code>#theme-toggle</code>. When <code>show_demo_controls</code> (<code>demo_role_switch &amp;&amp; auth_mode != "strict"</code>), exposes <code>#judge-personas</code> (<code>.judge-persona-btn</code>), <code>#student-personas</code> (<code>.student-fast-btn</code>), and <code>#fast-login</code> (<code>.fast-role-btn</code>).</td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-3 mono font-semibold">POST /auth/login</td>
+              <td class="py-2 pr-3 mono">auth.auth_login</td>
+              <td class="py-2">Enforces <code>@jklu.edu.in</code> domain (403 otherwise). Verifies PIN via <code>_verify_pin()</code> using <code>pbkdf2_sha256$&lt;iters&gt;$&lt;salt&gt;$&lt;hash&gt;</code> + <code>hmac.compare_digest</code> against <code>data/personas.json</code> (or <code>demo_pin</code> <code>"2026"</code>). Auto-provisions Rohit Shetty via <code>_ensure_rohit_shetty()</code> if absent. Sets signed <code>ps06_session</code> + legacy <code>ps06_role</code> cookies (<code>httponly=True</code> in <code>strict</code> mode, <code>samesite="lax"</code>) and logs <code>auth.login</code>.</td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-3 mono font-semibold">POST /auth/logout</td>
+              <td class="py-2 pr-3 mono">auth.auth_logout</td>
+              <td class="py-2">Logs <code>auth.logout</code> (pseudonymized via <code>mask_email</code>), deletes <code>ps06_session</code> and <code>ps06_role</code> cookies, and returns <code>303</code> redirect to <code>/login</code>.</td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-3 mono font-semibold">POST /api/auth/switch-role</td>
+              <td class="py-2 pr-3 mono">auth.switch_role</td>
+              <td class="py-2">Switches active role &amp; claims; returns <code>403</code> in <code>strict</code> mode when <code>demo_role_switch=False</code>. Logs <code>auth.role_switched</code> (or <code>auth.denied</code>).</td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-3 mono font-semibold">GET /api/auth/role</td>
+              <td class="py-2 pr-3 mono">auth.get_role</td>
+              <td class="py-2">Returns resolved <code>role</code>, valid <code>roles</code> tuple, and serialized <code>CurrentUser</code> (or <code>null</code> in open demo mode).</td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-3 mono font-semibold">rbac_strict_and_audit_middleware</td>
+              <td class="py-2 pr-3 mono">main.py</td>
+              <td class="py-2">In <code>auth_mode="strict"</code>, blocks unauthenticated non-public routes (<code>401 JSON</code> for <code>/api/*</code>, <code>303 &rarr; /login</code> for HTML). Public allowlist: <code>_PUBLIC_EXACT</code> (<code>/login</code>, <code>/healthz</code>, <code>/readyz</code>, <code>/manifest.webmanifest</code>, <code>/sw.js</code>, <code>/api/campus-drives/public-jnf</code>) and <code>_PUBLIC_PREFIXES</code> (<code>/auth/</code>, <code>/static/</code>, <code>/jnf/</code>, <code>/api/campus-drives/public-jnf/</code>). Audits 401/403 responses via <code>_audit_auth_denied_rate_limited()</code> (10s window per actor/path/status).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+
+  <!-- Card 3: Agent Brain & Reasoning Trace Drawer -->
+  <details class="km-card editorial-card overflow-hidden" open
+           data-roles="student,faculty_mentor,tpo_admin"
+           data-keywords="agent brain reasoning trace drawer sse stream telemetry orchestrator tools verifier react plan execute verify recover grounding citations hitl awaiting_input">
+    <summary class="px-6 py-4 cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 bg-[#FAF9F5] border-b border-[#E5E3DC] hover:bg-[#F4F3EC] transition-colors">
+      <div class="flex items-center gap-2.5">
+        <span class="mono text-xs font-bold px-2 py-0.5 rounded-md bg-[#E3F2EA] text-[#1B5E43]">1.3</span>
+        <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Agent Brain Drawer, SSE Streaming &amp; ReAct Orchestrator</h3>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="pill-stone text-[10px]">All Authenticated</span>
+        <span class="mono text-[10px] text-[#5C5A52]">agent_brain.js &middot; agent.py &middot; orchestrator.py</span>
+      </div>
+    </summary>
+    <div class="p-6 space-y-5 text-xs sm:text-sm text-[#1C1E1B]">
+      <div>
+        <h4 class="text-[11px] font-bold uppercase tracking-wider text-[#5C5A52] mb-2">Drawer UI Controls (<code class="mono">_agent_drawer_body.html</code> &amp; <code class="mono">agent_brain.js</code>)</h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
+          <div class="p-3 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-1">
+            <p class="font-semibold">Telemetry Strip &amp; Trace Selector</p>
+            <p class="text-[#5C5A52]"><code>#drawer-telemetry-strip</code> displays <code>#ab-stat-provider</code>, <code>#ab-stat-grounding</code>, <code>#ab-stat-latency</code>, and <code>#ab-stat-tokens</code>, plus <code>#drawer-workflow-badge</code> and <code>tpo_admin</code>-only <code>#drawer-audit-link</code>. <code>#drawer-run-select</code> &amp; <code>#drawer-refresh</code> load up to 30 recent runs.</p>
+          </div>
+          <div class="p-3 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-1">
+            <p class="font-semibold">Goal Runner, Grounding &amp; HITL Clarification</p>
+            <p class="text-[#5C5A52]"><code>#drawer-goal</code> + <code>#drawer-run</code> + role-aware <code>#drawer-quick-goals</code> (including <em>Simulate Error &rarr; Fallback Recovery</em> for staff). <code>#drawer-grounding-box</code> shows <code>#drawer-grounding-pill</code>, <code>#drawer-fallback-pill</code>, <code>#drawer-verified-pills</code>, and <code>#drawer-unverified-pills</code>. <code>#drawer-clarify-box</code> handles <code>awaiting_input</code> runs via <code>#drawer-clarify-input</code> + <code>#drawer-clarify-send</code>.</p>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="text-[11px] font-bold uppercase tracking-wider text-[#5C5A52] mb-2">Agent API Endpoints (<code class="mono">app/api/routes/agent.py</code>)</h4>
+        <div class="overflow-x-auto">
+          <table class="km-table w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-[#E5E3DC] text-[#5C5A52] uppercase text-[10px]">
+                <th class="py-2 pr-3">Endpoint</th>
+                <th class="py-2 pr-3">Rate Limit / Scope</th>
+                <th class="py-2">Behavior</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#EFECE4]">
+              <tr>
+                <td class="py-2 pr-3 mono font-semibold">POST /api/agent/run</td>
+                <td class="py-2 pr-3"><code>agent_run</code> (30/60s) &middot; Student-scoped</td>
+                <td class="py-2">Runs <code>run_agent()</code> synchronously, returning HTTP <code>201</code> with <code>AgentRun</code> + ordered <code>AgentStep</code> trace.</td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-3 mono font-semibold">POST /api/agent/run/stream</td>
+                <td class="py-2 pr-3"><code>agent_run</code> (30/60s) &middot; SSE</td>
+                <td class="py-2">Streams <code>run_agent_stream()</code> events in real time: <code>run_started</code>, <code>plan_created</code>, <code>step_started</code>, <code>step_completed</code>, <code>verification_done</code>, <code>awaiting_input</code>, <code>complete</code>, <code>error</code>.</td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-3 mono font-semibold">GET /api/agent/runs &amp; /{run_id}</td>
+                <td class="py-2 pr-3">Student-scoped (403 on mismatch)</td>
+                <td class="py-2">Lists up to 100 recent runs (<code>limit=30</code> default) or fetches a single trace with steps and <code>audit_trace_url</code>.</td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-3 mono font-semibold">POST /api/agent/runs/{run_id}/reply</td>
+                <td class="py-2 pr-3"><code>enforce_student_scope</code></td>
+                <td class="py-2">Resumes an <code>awaiting_input</code> run via <code>resume_agent_run()</code>, recording a <code>user_reply</code> step and re-planning.</td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-3 mono font-semibold">GET /api/agent/telemetry</td>
+                <td class="py-2 pr-3">Student-scoped</td>
+                <td class="py-2">Aggregates <code>total_runs</code>, <code>avg_grounding_score</code>, <code>fallback_count</code>, <code>avg_latency_ms</code>, and LLM provider token/cost totals.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="p-3.5 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-2 text-xs">
+        <p class="font-semibold text-[#1C1E1B]">ReAct Engine, 18-Tool Registry &amp; Zero-Hallucination Verifier (<code class="mono">orchestrator.py</code>, <code class="mono">tools.py</code>, <code class="mono">verifier.py</code>)</p>
+        <ul class="list-disc pl-5 space-y-1 text-[#5C5A52]">
+          <li><strong>Plan &rarr; Execute &rarr; Verify &rarr; Recover:</strong> <code>_sanitize_goal_text()</code> scrubs PII and blocks prompt injections; <code>_plan()</code> generates 2&ndash;5 steps (with <code>_fallback_plan()</code> safety net). <code>_execute_loop_iter()</code> resolves <code>$first</code>/<code>$last</code>/<code>$prev</code>/<code>$&lt;tool&gt;.&lt;key&gt;</code> refs, enforces server-side <code>_inject_role_args()</code>, caps execution at <code>MAX_EXECUTED_STEPS=8</code> and dynamic replanning at <code>MAX_INJECTED_STEPS=3</code>, and retries failed calls once via <code>_repair_failed_step()</code> (<code>TASK: repair_step</code>; never retries <code>PermissionError</code>).</li>
+          <li><strong>18 Registered Tools (<code>TOOL_REGISTRY</code> + <code>TOOL_ALIASES</code>):</strong> <code>inspect_student_profile</code>, <code>rank_and_explain_jobs</code>, <code>simulate_skill_acquisition</code>, <code>search_placement_policy_rag</code>, <code>search_course_catalog</code>, <code>generate_prerequisite_roadmap</code>, <code>audit_resume_bullets</code>, <code>query_cohort_bottlenecks</code>, <code>draft_cohort_intervention</code>, <code>propose_hitl_approval</code>, <code>check_drive_eligibility</code>, <code>persist_upskilling_plan</code>, <code>inspect_interview_history</code>, <code>search_live_market_jobs</code>, <code>purge_live_market_jobs</code> (TPO/Faculty only), <code>ask_clarifying_question</code>, <code>submit_drive_application</code>, <code>simulate_placement_drive</code>.</li>
+          <li><strong>Grounding Verifier (<code>verifier.py</code>):</strong> <code>build_known_entities()</code> + <code>verify_text()</code> / <code>verify_json()</code> validate every <code>job-</code>, <code>course-</code>, <code>SOP-</code>, <code>run-</code>, <code>appr-</code>, <code>stu-</code>, <code>int-</code>, and <code>plan-</code> ID plus URLs and <code>verify_sop_numeric_claims()</code> (SOP-01/03/04/05/10/14 thresholds). Unverified tokens are annotated inline as <code>[UNVERIFIED: x]</code> and scored via <code>grounding_score</code>.</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+
+  <!-- Card 4: Enterprise Security & Multi-Platform Packaging -->
+  <details class="km-card editorial-card overflow-hidden" open
+           data-roles="student,faculty_mentor,tpo_admin,public"
+           data-keywords="rbac pii redaction guardrails prompt injection ratelimit audit pwa sw.js manifest.webmanifest desktop electron mobile capacitor cors backfill_memory_vectors">
+    <summary class="px-6 py-4 cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 bg-[#FAF9F5] border-b border-[#E5E3DC] hover:bg-[#F4F3EC] transition-colors">
+      <div class="flex items-center gap-2.5">
+        <span class="mono text-xs font-bold px-2 py-0.5 rounded-md bg-[#E3F2EA] text-[#1B5E43]">1.4</span>
+        <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Enterprise Security Modules &amp; PWA / Desktop / Mobile Packaging</h3>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="pill-stone text-[10px]">Security &amp; Packaging</span>
+        <span class="mono text-[10px] text-[#5C5A52]">app/security/* &middot; sw.js &middot; desktop/ &middot; mobile/</span>
+      </div>
+    </summary>
+    <div class="p-6 space-y-5 text-xs sm:text-sm text-[#1C1E1B]">
+      <div class="overflow-x-auto">
+        <table class="km-table w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-[#E5E3DC] text-[#5C5A52] uppercase text-[10px]">
+              <th class="py-2 pr-3">Module / Platform</th>
+              <th class="py-2 pr-3">Key Symbols / Files</th>
+              <th class="py-2">Capabilities &amp; Enforcement</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#EFECE4]">
+            <tr>
+              <td class="py-2 pr-3 font-semibold">RBAC &amp; Row-Level Security</td>
+              <td class="py-2 pr-3 mono">app/security/rbac.py</td>
+              <td class="py-2"><code>ROLES</code> hierarchy (<code>student &lt; faculty_mentor &lt; tpo_admin</code> via <code>_IMPLIES</code>). <code>CurrentUser</code> binds <code>student_id</code> strictly to <code>student</code>. <code>encode_session</code> / <code>decode_session</code> sign cookies with HMAC-SHA256 + <code>iat</code>/<code>exp</code>. <code>require_role()</code> &amp; <code>enforce_student_scope(request, sid)</code> block cross-student and cross-department access (403).</td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-3 font-semibold">PII Redaction &amp; Pseudonymization</td>
+              <td class="py-2 pr-3 mono">app/security/pii.py</td>
+              <td class="py-2"><code>detect_pii</code>, <code>redact_pii</code>, <code>scrub_for_llm</code> strip <code>EMAIL</code>, <code>AADHAAR</code>, <code>PAN</code>, <code>PHONE</code>, and <code>ADDRESS</code> into <code>[REDACTED_&lt;KIND&gt;]</code> before storage or LLM calls. <code>mask_email</code>, <code>audit_actor_ref</code>, <code>sanitize_audit_entry</code> hash emails into irreversible <code>id-&lt;8hex&gt;</code> refs.</td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-3 font-semibold">Prompt-Injection Guardrails</td>
+              <td class="py-2 pr-3 mono">app/security/guardrails.py</td>
+              <td class="py-2"><code>sanitize_untrusted_text()</code> neutralizes 11 regex injection patterns (<code>[REDACTED_INJECTION_ATTEMPT]</code>) and triggers <code>security.prompt_injection_blocked</code> audits. <code>wrap_untrusted_xml()</code> escapes closing tags; <code>verify_extracted_skill_grounding()</code> enforces SOP-08 resume skill grounding.</td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-3 font-semibold">Sliding-Window Rate Limiter</td>
+              <td class="py-2 pr-3 mono">app/security/ratelimit.py</td>
+              <td class="py-2">Thread-safe <code>RateLimiter</code> keyed by <code>(identity, bucket)</code> with <code>DEFAULT_LIMITS</code>: <code>jobs_scrape</code> (10/60s), <code>agent_run</code> (30/60s), <code>copilot_ask</code> (60/60s). <code>check_rate_limit()</code> returns HTTP <code>429</code> + <code>Retry-After</code> when <code>rate_limit_enabled=True</code>.</td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-3 font-semibold">Append-Only Audit &amp; Startup</td>
+              <td class="py-2 pr-3 mono">audit.py &middot; main.py</td>
+              <td class="py-2"><code>log_audit()</code> stages immutable <code>AuditLog</code> rows guarded by <code>install_audit_guard</code> SQLAlchemy listeners. <code>main.py</code> configures <code>CORSMiddleware</code> (localhost + <code>capacitor://localhost</code>) and runs <code>backfill_memory_vectors(ctx)</code> on startup.</td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-3 font-semibold">PWA Offline Shell</td>
+              <td class="py-2 pr-3 mono">sw.js &middot; manifest.webmanifest</td>
+              <td class="py-2"><code>jklu-careeros-v2</code> precaches vendored JS/CSS/icons (cache-first), never caches <code>/api/</code> or <code>/auth/</code>, and uses network-only (<code>no-store</code>) for navigation with an offline HTML fallback so role HTML never leaks across sign-outs.</td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-3 font-semibold">Desktop (Electron v45)</td>
+              <td class="py-2 pr-3 mono">desktop/main.js &middot; preload.js</td>
+              <td class="py-2"><code>jklu-careeros-desktop</code> (<code>in.edu.jklu.careeros.desktop</code>) auto-spawns <code>uv run uvicorn app.api.__main__:app</code> on port <code>8010</code>, persists URL in <code>careeros-settings.json</code>, exposes <code>window.careerosDesktop</code> IPC bridge, and builds Windows portable/NSIS installers.</td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-3 font-semibold">Mobile (Capacitor v6.2 Android)</td>
+              <td class="py-2 pr-3 mono">mobile/capacitor.config.json</td>
+              <td class="py-2"><code>jklu-careeros-mobile</code> (<code>in.edu.jklu.careeros</code>) wraps <code>www/</code> for Android with <code>cleartext: true</code>, <code>allowMixedContent: true</code>, and <code>cap:sync</code> / <code>cap:open</code> scripts.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+</section>

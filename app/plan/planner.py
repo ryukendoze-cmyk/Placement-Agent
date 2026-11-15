@@ -439,6 +439,137 @@ def _build_grounded_narrative(
     return candidate.strip()
 
 
+def _build_plan_via_solver(
+    db: Session,
+    student_id: str,
+    job,
+    job_score: JobScore,
+    *,
+    llm,
+    levels: dict[str, str] | None = None,
+    include_upgrades: bool = False,
+    weekly_cap: int = TARGET_WEEKLY_HOURS,
+    target_mode: str = "single",
+    horizon_weeks: int = 4,
+    cost_filter: str = "all",
+    strategy_mode: str = "balanced",
+    exclude_unreachable: bool = False,
+    portfolio_jobs: list | None = None,
+    ctx=None,
+) -> tuple[UpskillPlan, list[PlanItem]]:
+    """Persist an UpskillPlan and PlanItems using the multi-objective solver."""
+    import math
+    from uuid import uuid4
+
+    from .solver import solve_optimal_course_selection
+
+    cap = max(2, int(weekly_cap or TARGET_WEEKLY_HOURS))
+    sol = solve_optimal_course_selection(
+        db,
+        student_id,
+        job,
+        job_score,
+        ctx=ctx,
+        levels=levels,
+        include_upgrades=include_upgrades,
+        target_mode=target_mode,
+        weekly_cap=cap,
+        horizon_weeks=horizon_weeks,
+        cost_filter=cost_filter,
+        strategy_mode=strategy_mode,
+        exclude_unreachable=exclude_unreachable,
+        portfolio_jobs=portfolio_jobs,
+    )
+    active_job = sol["active_primary_job"] or job
+    specs = sol["item_specs"]
+
+    # Ensure every chosen course exists in DB before inserting FK-constrained PlanItem rows
+    courses_by_id: dict[str, dict] = {}
+    for spec in specs:
+        c = spec["course"]
+        courses_by_id[c["id"]] = c
+        if db.get(Course, c["id"]) is None:
+            db.add(Course(
+                id=c["id"],
+                skill_ids=list(c.get("skill_ids") or [c["skill_id"]]),
+                title=c["title"],
+                provider=c["provider"],
+                url=c["url"],
+                hours=c["hours"],
+                cost=c["cost"],
+                level=c["level"],
+            ))
+    db.flush()
+
+    pack_input = [
+        (spec["skill_id"], spec["course_id"], int(spec["hours"]), bool(spec["is_upgrade"]))
+        for spec in specs
+    ]
+    packed_items, total_weeks = _pack_weeks(pack_input, cap)
+    total_hours = sum(p[3] for p in packed_items)
+    eff_weeks = max(total_weeks, math.ceil(total_hours / cap)) if total_hours else 1
+    narrative = _build_grounded_narrative(
+        db, active_job, packed_items, courses_by_id, total_hours, eff_weeks, llm
+    )
+
+    plan_id = f"plan-{uuid4().hex[:8]}"
+    item_enrich_seed: dict[str, dict] = {}
+    spec_by_pair = {(s["skill_id"], s["course_id"]): s for s in specs}
+
+    plan_items_to_add: list[PlanItem] = []
+    for order, skill_id, course_id, hrs, _upg, week in packed_items:
+        item_id = f"pi-{uuid4().hex[:8]}"
+        spec = spec_by_pair.get((skill_id, course_id), {})
+        item_enrich_seed[item_id] = {
+            "covers_skills": spec.get("covers_skills") or [skill_id],
+            "priority_tier": spec.get("priority_tier") or "Required",
+        }
+        plan_items_to_add.append(PlanItem(
+            id=item_id,
+            plan_id=plan_id,
+            order=order,
+            skill_id=skill_id,
+            course_id=course_id,
+            hours=hrs,
+            status="pending",
+            week=week,
+        ))
+
+    strategy_seed = {
+        "constraints": {
+            "target_mode": target_mode,
+            "weekly_cap": cap,
+            "horizon_weeks": horizon_weeks,
+            "cost_filter": cost_filter,
+            "strategy_mode": strategy_mode,
+            "exclude_unreachable": exclude_unreachable,
+        },
+        "item_enrichment": item_enrich_seed,
+        "recovery_ledger": sol.get("recovery_events") or [],
+        "pareto_alert": sol.get("pareto_alert"),
+        "pivot_alert": sol.get("pivot_alert"),
+    }
+
+    plan = UpskillPlan(
+        id=plan_id,
+        student_id=student_id,
+        job_id=active_job.id,
+        total_hours=total_hours,
+        narrative=narrative,
+        strategy_json=strategy_seed,
+    )
+    db.add(plan)
+    db.flush()
+    for row in plan_items_to_add:
+        db.add(row)
+    db.commit()
+    db.refresh(plan)
+    items = db.exec(
+        select(PlanItem).where(PlanItem.plan_id == plan.id).order_by(PlanItem.order)
+    ).all()
+    return plan, items
+
+
 def build_plan(
     db: Session,
     student_id: str,
@@ -448,7 +579,32 @@ def build_plan(
     llm,
     levels: dict[str, str] | None = None,
     include_upgrades: bool = False,
+    weekly_cap: int = TARGET_WEEKLY_HOURS,
+    target_mode: str = "single",
+    horizon_weeks: int = 4,
+    cost_filter: str = "all",
+    strategy_mode: str = "balanced",
+    exclude_unreachable: bool = False,
+    portfolio_jobs: list | None = None,
+    ctx=None,
 ) -> tuple[UpskillPlan, list[PlanItem]]:
+    use_advanced_solver = (
+        target_mode != "single"
+        or weekly_cap != TARGET_WEEKLY_HOURS
+        or cost_filter != "all"
+        or strategy_mode != "balanced"
+        or exclude_unreachable
+        or portfolio_jobs is not None
+    )
+    if use_advanced_solver:
+        return _build_plan_via_solver(
+            db, student_id, job, job_score, llm=llm, levels=levels,
+            include_upgrades=include_upgrades, weekly_cap=weekly_cap,
+            target_mode=target_mode, horizon_weeks=horizon_weeks,
+            cost_filter=cost_filter, strategy_mode=strategy_mode,
+            exclude_unreachable=exclude_unreachable, portfolio_jobs=portfolio_jobs,
+            ctx=ctx,
+        )
     """Create UpskillPlan + PlanItems for gaps and remedial/upgrade skills.
 
     Ordering: prerequisite DAG (app.plan.prereq) puts each prerequisite's course

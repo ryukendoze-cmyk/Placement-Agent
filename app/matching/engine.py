@@ -441,3 +441,24 @@ def score_job(
         needs_reverification_skills=needs_rev_skills,
         verification_statuses=matched_statuses,
     )
+
+
+def is_on_campus_job(job) -> bool:
+    """Return True when ``job`` represents an institutional JKLU on-campus placement drive."""
+    if job is None:
+        return False
+    if str(getattr(job, "id", "") or "").startswith("job-ext-"):
+        return False
+    src = (getattr(job, "source", None) or "local").strip().lower()
+    return src in ("", "local", "campus", "campus_drive", "jnf")
+
+
+def is_job_visible_to_student(job, student_id: str) -> bool:
+    """Return True when ``job`` is owned by ``student_id`` or is cohort-wide on-campus."""
+    if job is None:
+        return False
+    owner = getattr(job, "owner_student_id", None)
+    is_live_job = bool(getattr(job, "is_live", False)) or not is_on_campus_job(job)
+    if is_live_job:
+        return owner == student_id
+    return owner in (None, student_id)

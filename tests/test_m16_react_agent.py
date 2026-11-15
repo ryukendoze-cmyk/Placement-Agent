@@ -523,3 +523,34 @@ def test_step_repair_recovers_missing_student_id():
         out = call_tool("inspect_student_profile", ctx, session, **repaired_args)
         assert out.get("student_id") == sid
 
+
+def test_unknown_tool_fast_fails_without_repair_llm_and_marks_failed():
+    """Unknown tools must not trigger an LLM repair round-trip and all-failed runs mark status=failed."""
+    import json
+
+    class _CountingPlannerLLM:
+        def __init__(self):
+            self.calls = []
+
+        def complete(self, system: str, user: str, json_mode: bool = False, **kwargs) -> str:
+            self.calls.append(system.splitlines()[0])
+            if "TASK: plan_steps" in system:
+                return json.dumps({
+                    "steps": [{"thought": "try bogus", "tool": "nonexistent_tool_xyz", "args": {}}]
+                })
+            if "TASK: synthesize" in system:
+                return json.dumps({"summary": "Done", "sections": []})
+            raise AssertionError(f"Unexpected LLM call: {system.splitlines()[0]}")
+
+    session, ctx = _session_env()
+    llm = _CountingPlannerLLM()
+    ctx.llm = llm
+    with session:
+        run = run_agent(ctx, session, goal="Test unknown tool fast fail")
+        assert run.status == "failed"
+        assert run.fallback_triggered is True
+        assert not any("repair_step" in c for c in llm.calls)
+        steps = session.exec(select(AgentStep).where(AgentStep.run_id == run.id)).all()
+        assert len(steps) == 1
+        assert steps[0].error_recovered == "unknown tool: nonexistent_tool_xyz"
+

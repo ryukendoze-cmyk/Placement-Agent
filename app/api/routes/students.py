@@ -11,10 +11,15 @@ from sqlalchemy import delete
 from sqlmodel import Session, select
 
 from app.api.deps import get_ctx, get_session
-from app.api.routes.jobs import is_on_campus_job
 from app.config import settings as _settings
+from app.db import sort_students_alphabetically
 from app.embeddings.store import cosine
-from app.matching.engine import job_eligibility, job_tier
+from app.matching.engine import (
+    is_job_visible_to_student,
+    is_on_campus_job,
+    job_eligibility,
+    job_tier,
+)
 from app.matching.rank import rank_jobs
 from app.matching.simulator import simulate_counterfactual
 from app.models import (
@@ -77,17 +82,6 @@ def _skill_payload(ss: StudentSkill, ctx) -> dict:
         "last_verified_score": getattr(ss, "last_verified_score", None),
         "source": getattr(ss, "source", None) or "resume",
     }
-
-
-def is_job_visible_to_student(job: Job | None, student_id: str) -> bool:
-    """Return True when *job* is owned by *student_id* or is cohort-wide on-campus."""
-    if job is None:
-        return False
-    owner = getattr(job, "owner_student_id", None)
-    is_live_job = bool(getattr(job, "is_live", False)) or not is_on_campus_job(job)
-    if is_live_job:
-        return owner == student_id
-    return owner in (None, student_id)
 
 
 def _match_payload(job, js, student, *, is_favorite: bool = False) -> dict:
@@ -595,7 +589,7 @@ def list_students(
             continue
         filtered.append(s)
 
-    filtered.sort(key=lambda s: (str(s.name or "").strip().lower(), str(s.id or "")))
+    filtered = sort_students_alphabetically(filtered)
     return [
         {
             "id": s.id,

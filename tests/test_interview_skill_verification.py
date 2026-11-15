@@ -330,7 +330,7 @@ def test_interview_session_recovers_from_llm_crash_and_invalid_json():
     assert not t2.followup_probe  # non-answers skip follow-up generation
 
 
-def test_api_interview_persists_role_caches_probes_and_attaches_speech_on_answered_turn(client_engine):
+def test_api_interview_persists_role_and_skill_snapshot_and_attaches_speech_on_answered_turn(client_engine):
     client, eng = client_engine
     sid = _seed_student(
         client,
@@ -353,7 +353,8 @@ def test_api_interview_persists_role_caches_probes_and_attaches_speech_on_answer
     with Session(eng) as db:
         row = db.get(Interview, iid)
         assert row.role == "devops"
-        assert isinstance(row.feedback.get("_resume_probes"), list)
+        assert isinstance(row.feedback["_verification"]["targets"], list)
+        assert any(t["evidence"] for t in row.feedback["_verification"]["targets"])
 
     get_res = client.get(f"/api/interviews/{iid}", headers={"X-Demo-Role": "student", "X-Demo-Student-ID": sid})
     assert get_res.status_code == 200

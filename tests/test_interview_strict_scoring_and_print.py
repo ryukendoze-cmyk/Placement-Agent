@@ -250,15 +250,18 @@ def test_finalized_interview_returns_complete_qa_transcript_and_print_dom():
         iid = start.json()["interview_id"]
 
         final_body = None
-        for idx in range(8):
+        for idx in range(64):
             ans = f"Technical answer turn {idx + 1} covering indexes, yield, latency, and rollback recovery."
             r = client.post(f"/api/interviews/{iid}/answer", json={"answer": ans, "duration_seconds": 12.0})
             assert r.status_code == 200, r.text
             final_body = r.json()
+            if final_body["finished"]:
+                break
 
         assert final_body is not None and final_body["finished"] is True
         summary = final_body["summary"]
-        assert len(summary["transcript"]) == 8
+        assert len(summary["transcript"]) >= 8
+        assert summary["coverage"]["complete"]
         assert summary["student_name"] == "Print Tester"
         assert summary["job_title"]
         assert summary["interview_id"] == iid
@@ -272,7 +275,7 @@ def test_finalized_interview_returns_complete_qa_transcript_and_print_dom():
         assert get_res.status_code == 200
         fetched = get_res.json()
         assert fetched["student_name"] == "Print Tester"
-        assert len(fetched["transcript"]) == 8
+        assert len(fetched["transcript"]) == len(summary["transcript"])
         assert all(t.get("q") and t.get("a") and t.get("feedback") for t in fetched["transcript"])
 
     interview_html = (ROOT / "app" / "templates" / "student" / "interview.html").read_text(encoding="utf-8")

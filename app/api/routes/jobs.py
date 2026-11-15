@@ -14,6 +14,7 @@ from sqlalchemy import delete, func
 from sqlmodel import Session, select
 
 from app.api.deps import get_ctx, get_session
+from app.matching.engine import is_on_campus_job
 from app.models import (
     AuditLog,
     CampusDrive,
@@ -420,16 +421,6 @@ def purge_live_jobs_endpoint(
         "purged_count": count,
         "message": f"Successfully removed {count} live job(s) from database.",
     }
-
-
-def is_on_campus_job(job: Job | None) -> bool:
-    """Return True when ``job`` represents an institutional JKLU on-campus placement drive."""
-    if job is None:
-        return False
-    if str(getattr(job, "id", "") or "").startswith("job-ext-"):
-        return False
-    src = (getattr(job, "source", None) or "local").strip().lower()
-    return src in ("", "local", "campus", "campus_drive", "jnf")
 
 
 @router.delete("/api/jobs/{job_id}")

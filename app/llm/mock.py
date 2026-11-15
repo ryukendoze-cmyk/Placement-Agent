@@ -62,15 +62,17 @@ class MockLLM:
             payload = json.loads(user) if user else {}
             gaps = payload.get("gaps", [])
             hours = float(payload.get("total_hours", 0) or 0)
+            cap = max(1.0, float(payload.get("weekly_hour_cap") or 10))
             weeks_raw = payload.get("weeks") or payload.get("total_weeks")
-            weeks = max(1, int(weeks_raw)) if weeks_raw else max(1, min(8, math.ceil((hours or 1) / 6)))
+            base_weeks = max(1, int(weeks_raw)) if weeks_raw else max(1, min(8, math.ceil((hours or 1) / 6)))
+            effective_weeks = max(base_weeks, math.ceil(hours / cap)) if hours else base_weeks
             hrs_label = int(hours) if hours == int(hours) else round(hours, 1)
-            weekly_hrs = max(1, round(hours / weeks)) if hours else 0
+            weekly_hrs = min(int(cap), max(1, round(hours / effective_weeks))) if hours else 0
             narrative = (
                 f"Focus on {', '.join(gaps) if gaps else 'core fundamentals'} first - "
                 f"these are the highest-leverage gaps for your target role. "
-                f"Your plan totals {hrs_label} hours; spread across {weeks} "
-                f"{'week' if weeks == 1 else 'weeks'} (about {weekly_hrs}h/wk x {weeks} weeks) "
+                f"Your plan totals {hrs_label} hours; spread across {effective_weeks} "
+                f"{'week' if effective_weeks == 1 else 'weeks'} (avg ~{weekly_hrs}h/wk, <={int(cap)}h/wk cap) "
                 "keeps it sustainable. Complete items in order and mark them done to watch your readiness climb."
             )
             if json_mode:
@@ -700,7 +702,31 @@ class MockLLM:
                       f"Try asking: 'Rank my top job matches' or 'What skills of mine are weak?'.")
             return {"answer": answer, "cited_sops": [i.strip("[]") for i in c]}
 
-        if any(k in q for k in ("mock", "interview")):
+        if any(k in q for k in ("favorite", "favourite", "starred", "saved job", "bookmark")):
+            favs = student.get("favorite_jobs") or []
+            c = cite("SOP-01", "SOP-04", "SOP-05")
+            lead_c = c[0] if c else "SOP-01"
+            if not favs:
+                answer = (
+                    f"You have not marked any jobs as favorites yet on the Matches page. "
+                    f"[{lead_c}] governs drive eligibility and tier classification."
+                )
+            else:
+                lines = ["Your favorited jobs are:"]
+                for i, fj in enumerate(favs, 1):
+                    co = f" at {fj['company']}" if fj.get("company") else ""
+                    missing = fj.get("missing_required") or []
+                    gap_txt = f"Missing required skills: {', '.join(missing)}." if missing else "All listed required skills are present."
+                    elig_reasons = fj.get("eligibility_reasons") or []
+                    elig_txt = f" Eligibility blockers: {'; '.join(elig_reasons)}." if fj.get("eligible") is False and elig_reasons else ""
+                    lines.append(
+                        f"{i}. {fj.get('title', 'Role')}{co} "
+                        f"(Score: {fj.get('score', 0)}, Tier: {fj.get('tier', 'standard')}) — "
+                        f"{gap_txt}{elig_txt}"
+                    )
+                lines.append(f"Policy grounding: [{lead_c}].")
+                answer = "\n".join(lines)
+        elif any(k in q for k in ("mock", "interview")):
             c = cite("SOP-04", "SOP-01")
             s4_rule = rule_text_for(
                 "SOP-04",

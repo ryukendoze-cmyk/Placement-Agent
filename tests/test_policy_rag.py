@@ -421,3 +421,71 @@ def test_json_module_used_not_shadowed():
     # guard against accidental local `import json as _json` shadowing bugs
     payload = json.dumps({"question": "x"})
     assert json.loads(payload) == {"question": "x"}
+
+
+
+def test_copilot_favorite_jobs_visibility_and_grounding():
+    """Copilot context must expose exact favorited jobs, hide external other-student jobs,
+    and honor multi-turn history without conflating top_matches with favorites."""
+    from app.models import Job, JobMatch
+
+    client = _make_client()
+    with client:
+        sid = _seed_student(client, gpa=8.0, branch="CSE")
+        # Compute matches first so JobMatch rows exist
+        assert client.get(f"/api/students/{sid}/matches").status_code == 200
+
+        with Session(client.app.state.ctx.engine) as db:
+            # Add an invisible external job scoped to another student ("Accenture")
+            db.add(Job(
+                id="job-ext-other999",
+                title="AI/ML Associate",
+                company="OtherStudentCorp",
+                salary_lpa=[6, 9],
+                required_skills=["python", "fastapi", "postgresql"],
+                preferred_skills=[],
+                description="AI ML backend Python FastAPI PostgreSQL",
+                is_live=False,
+                owner_student_id=None,
+            ))
+            # Mark a lower-ranked visible job (e.g. job-021 or last on-campus match) as favorite
+            matches = db.exec(
+                select(JobMatch).where(JobMatch.student_id == sid).order_by(JobMatch.score.asc())
+            ).all()
+            assert matches
+            low_match = matches[0]
+            low_match.is_favorite = True
+            fav_job = db.get(Job, low_match.job_id)
+            db.add(low_match)
+            db.commit()
+            fav_title = fav_job.title
+
+        # Student with 1 favorited low-ranked job: Copilot sees exact favorite and excludes invisible job-ext-*
+        res_fav = client.post("/api/copilot/ask", json={
+            "question": "Can you tell me exactly which jobs have I marked as favorite?",
+            "student_id": sid,
+            "history": [
+                {"role": "user", "content": "Hi"},
+                {"role": "assistant", "content": "Hello! How can I help?"},
+            ],
+        })
+        assert res_fav.status_code == 200
+        body_fav = res_fav.json()
+        sc = body_fav["student_context"]
+        assert sc["favorite_count"] == 1
+        assert [f["title"] for f in sc["favorite_jobs"]] == [fav_title]
+        assert all(m["company"] != "OtherStudentCorp" for m in sc["top_matches"])
+        assert fav_title in body_fav["answer"]
+        assert any(t.get("tool") == "inspect_favorite_jobs" for t in body_fav["trace"])
+
+        # Student with NO favorited jobs: Copilot does not hallucinate top_matches as favorites
+        sid_empty = _seed_student(client, name="NoFav Probe", gpa=8.1, branch="CSE")
+        res_empty = client.post("/api/copilot/ask", json={
+            "question": "Which jobs have I marked as favorite?",
+            "student_id": sid_empty,
+        })
+        assert res_empty.status_code == 200
+        body_empty = res_empty.json()
+        assert body_empty["student_context"]["favorite_count"] == 0
+        assert body_empty["student_context"]["favorite_jobs"] == []
+        assert "not marked any jobs as favorites" in body_empty["answer"].lower()

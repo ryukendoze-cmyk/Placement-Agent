@@ -300,6 +300,8 @@ def _persist_upskilling_plan(ctx, session, student_id: str, job_id: str | None =
 
 def _inspect_interview_history(ctx, session, student_id: str, **_):
     """Aggregate completed mock interviews: avg score, rubric axes, weak/strong."""
+    from app.interview.status import is_completed_assessment
+
     from ..models import Interview, Student
 
     student = session.get(Student, student_id)
@@ -308,6 +310,7 @@ def _inspect_interview_history(ctx, session, student_id: str, **_):
     rows = session.exec(
         _select(Interview, student_id).where(Interview.finished == True)  # noqa: E712
     ).all()
+    rows = [r for r in rows if is_completed_assessment(r)]
     if not rows:
         return {"student_id": student_id, "interview_count": 0,
                 "average_score": None, "rubric_averages": {},

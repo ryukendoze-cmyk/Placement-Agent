@@ -25,6 +25,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlmodel import Session, select
 
 from app.api.deps import get_session
+from app.db import sort_students_alphabetically
 from app.models import Student, StudentSkill
 from app.security.audit import log_audit
 from app.security.pii import audit_actor_ref, mask_email
@@ -289,7 +290,7 @@ def login_page(request: Request, session: Session = Depends(get_session)) -> HTM
     allow_demo = bool(getattr(_settings, "demo_role_switch", True))
     show_demo_controls = allow_demo and not is_strict
     students = (
-        session.exec(select(Student).order_by(Student.name.asc())).all()
+        sort_students_alphabetically(session.exec(select(Student)).all())
         if show_demo_controls
         else []
     )

@@ -7,6 +7,7 @@ from typing import Any
 from sqlmodel import Session, select
 
 from ..matching.engine import band_for, is_branch_eligible, job_tier
+from ..matching.engine import is_job_visible_to_student as _is_job_visible_to_student
 from ..models import (
     Course,
     Interview,
@@ -41,21 +42,6 @@ _KIND_BADGES = {
 }
 
 _SYNTHETIC_LEGACY_LADDER = [20, 34, 45, 58, 67, 75]
-
-
-def _is_job_visible_to_student(job: Job | None, student_id: str) -> bool:
-    if job is None:
-        return False
-    owner = getattr(job, "owner_student_id", None)
-    src = str(getattr(job, "source", "local") or "local").strip().lower()
-    is_live = (
-        bool(getattr(job, "is_live", False))
-        or str(getattr(job, "id", "") or "").startswith("job-ext-")
-        or src not in ("", "local", "campus", "campus_drive", "jnf")
-    )
-    if is_live:
-        return owner == student_id
-    return owner in (None, student_id)
 
 
 def _as_utc(dt: datetime | None) -> datetime:
@@ -360,7 +346,8 @@ def build_student_progress_report(
     raw_interviews = list(session.exec(
         select(Interview).where(Interview.student_id == sid).order_by(Interview.started_at.asc())
     ).all())
-    finished_interviews = [iv for iv in raw_interviews if iv.finished or iv.score is not None]
+    from app.interview.status import is_completed_assessment
+    finished_interviews = [iv for iv in raw_interviews if is_completed_assessment(iv)]
     jobs_lookup = {j.id: j for j in session.exec(select(Job)).all()}
 
     def _coerce_float(val: object) -> float:

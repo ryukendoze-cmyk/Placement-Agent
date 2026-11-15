@@ -93,13 +93,15 @@ def test_interview_api_full_session(client_engine):
     assert body["question"] and "question" in body["question"]
 
     finished = False
-    for _ in range(8):
+    for _ in range(64):
         a = client.post(f"/api/interviews/{iid}/answers", json={"text": "I discuss lists dicts generators joins indexing and transactions in some depth here."})
         assert a.status_code == 200, a.text
         ab = a.json()
         if ab.get("finished"):
             finished = True
             assert "summary" in ab and 0 <= ab["summary"]["score"] <= 100
+            assert ab["summary"]["coverage"]["complete"]
+            break
         else:
             assert "question" in ab
     assert finished
@@ -111,7 +113,7 @@ def test_interview_api_full_session(client_engine):
         row = db.get(Interview, iid)
         assert row.finished is True
         assert row.score is not None
-        assert len(row.transcript) == 8
+        assert len(row.transcript) >= 8
 
 
 def _make_student(client, name):
@@ -125,9 +127,11 @@ def test_answer_finished_interview_returns_409(client_engine):
     sid = _make_student(client, "Done")
     client.get(f"/api/students/{sid}/matches")
     iid = client.post(f"/api/students/{sid}/interviews", json={"job_id": "job-001"}).json()["interview_id"]
-    for _ in range(8):
-        assert client.post(f"/api/interviews/{iid}/answers",
-                           json={"text": "I explain in reasonable depth here."}).status_code == 200
+    for _ in range(64):
+        response = client.post(f"/api/interviews/{iid}/answers", json={"text": "I explain in reasonable depth here."})
+        assert response.status_code == 200
+        if response.json()["finished"]:
+            break
     assert client.post(f"/api/interviews/{iid}/answers", json={"text": "one more"}).status_code == 409
 
 
@@ -178,7 +182,7 @@ def test_answer_ghost_question_id_raises():
         s.answer("hello")
 
 
-def test_answer_interview_no_available_question_returns_400(client_engine, monkeypatch):
+def test_empty_bank_still_questions_claimed_skills_offline(client_engine, monkeypatch):
     import app.api.routes.interviews as iv
     monkeypatch.setattr(iv, "load_bank", lambda: [])
     client, _ = client_engine
@@ -187,8 +191,9 @@ def test_answer_interview_no_available_question_returns_400(client_engine, monke
     r = client.post(f"/api/students/{sid}/interviews", json={"job_id": "job-001"})
     assert r.status_code in (200, 201)
     iid = r.json()["interview_id"]
-    # no question is pending and none can be supplied -> clean 400, not a 500
-    assert client.post(f"/api/interviews/{iid}/answers", json={"text": "hello"}).status_code == 400
+    assert r.json()["question"]["source"] == "offline_template"
+    assert r.json()["question"]["assessment_limited"]
+    assert client.post(f"/api/interviews/{iid}/answers", json={"text": "hello"}).status_code == 200
 
 
 def test_reupload_resume_is_idempotent(client_engine):

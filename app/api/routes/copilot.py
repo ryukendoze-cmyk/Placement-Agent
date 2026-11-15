@@ -1,11 +1,13 @@
 import logging
 import re
+import time
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
 
 from app.api.deps import get_ctx, get_session
+from app.db import sort_students_alphabetically
 from app.models import Student
 from app.rag.policy_rag import (
     evaluate_student_eligibility,
@@ -30,23 +32,72 @@ QUICK_PROMPTS = [
 COPILOT_SYSTEM = (
     "TASK: copilot_answer\n"
     "You are the JKLU Placement Copilot, an intelligent AI placement assistant. "
-    "You have comprehensive access to the student's complete profile (verified competencies & proficiency levels, "
-    "ranked job matches, upskilling roadmap, application statuses, GPA, backlogs, and mock interview performance) "
+    "You have access to the student's grounded profile (verified competencies & proficiency levels, "
+    "explicitly favorited/starred jobs in `student.favorite_jobs`, visible ranked job matches in `student.top_matches`, "
+    "upskilling roadmaps, application statuses, GPA, backlogs, and mock interview performance) "
     "as well as retrieved institutional placement policies (SOP clauses).\n\n"
-    "CRITICAL PRESENTATION RULES (STUDENT-FACING):\n"
+    "CRITICAL PRESENTATION & GROUNDING RULES (STUDENT-FACING):\n"
     "1. WRITE JOB NAMES, NOT IDS: Always refer to jobs naturally using their clear human-readable title and company name "
-    "(e.g., 'OpenAI Training Program at Sgic Cloud Technologies' or 'Web Development Intern at Cook N Klean'). "
+    "(e.g., 'Backend Engineer (Python) at TechNova'). "
     "NEVER write, mention, or output raw database job IDs (such as 'job-ext-127d15620c', 'job-ext-...', or 'job-001') in your answer. "
     "Normal students do not know what these internal IDs mean—do NOT mention them.\n"
-    "2. When explaining job ranking, matches, or recommendations: explain their top job matches by role title, company, "
-    "salary tier, match score, matched skills, and any missing skills. Tell the student clearly which jobs they match best.\n"
-    "3. When asked to sort, prioritize, or guide next steps: evaluate their eligibility blockers (such as SOP-04 mock interview "
-    "gate, SOP-03 GPA/backlog limits) alongside their highest-compatibility jobs, and give a structured, prioritized action plan.\n"
-    "4. Ground all policy statements in retrieved SOP clauses and cite them explicitly as [SOP-XX] (e.g. [SOP-01], [SOP-04]). "
+    "2. FAVORITE / SAVED / STARRED JOBS ARE STRICTLY `student.favorite_jobs`: ONLY jobs listed in `student.favorite_jobs` "
+    "have been marked as favorites by the student. NEVER treat `student.top_matches` or `student.upskill_plan.target_role` "
+    "as favorited jobs unless they also appear in `student.favorite_jobs`. If the student asks about their favorite jobs "
+    "and `student.favorite_jobs` is empty, state clearly that they have not marked any jobs as favorites on the Matches page yet.\n"
+    "3. ZERO FABRICATION OF SKILLS OR FACTS: ONLY state required skills, preferred skills, missing skills, match scores, tiers, "
+    "or eligibility blockers that explicitly appear in `student.favorite_jobs`, `student.top_matches`, `student.skills`, "
+    "`student.upskill_plan`, `student.upskill_plans`, `eligibility`, or `sources`. NEVER invent, assume, or guess missing skills "
+    "(e.g., TensorFlow, PyTorch, Kubernetes, AWS) from a job title when they are absent from `required_skills`/`missing_required`/`missing_preferred`! "
+    "If `missing_required` is empty, explicitly state that no required skills are missing and focus on proficiency levels, verification status, "
+    "or SOP blockers (such as SOP-03 GPA/backlogs, SOP-04 mock interview, or SOP-09 branch limits).\n"
+    "4. When explaining job ranking, matches, or recommendations: compare compatibility, tier, matched skills, missing skills, and blockers.\n"
+    "5. Ground all policy statements in retrieved SOP clauses and cite them explicitly as [SOP-XX] (e.g. [SOP-01], [SOP-04]). "
     "Do NOT cite job IDs.\n\n"
     "Respond ONLY with JSON: "
     '{"answer": str, "cited_sops": list[str]}.'
 )
+
+
+def _skill_display_name(skill_id: str, ctx=None) -> str:
+    if ctx is not None and getattr(ctx, "taxonomy", None):
+        t_skill = ctx.taxonomy.get_opt(skill_id)
+        if t_skill:
+            return t_skill.name
+    return skill_id
+
+
+def _format_job_for_copilot(
+    *,
+    title: str,
+    company: str = "",
+    tier: str = "standard",
+    score: int = 0,
+    band: str = "early",
+    eligible: bool | None = None,
+    eligibility_reasons: list[str] | None = None,
+    required_skills: list[str] | None = None,
+    matched_required: list[str] | None = None,
+    missing_required: list[str] | None = None,
+    missing_preferred: list[str] | None = None,
+    proficiency_gaps: list[dict] | None = None,
+    is_favorite: bool = False,
+) -> dict:
+    return {
+        "title": title,
+        "company": company or "",
+        "tier": tier,
+        "score": int(score or 0),
+        "band": band,
+        "is_favorite": bool(is_favorite),
+        "eligible": eligible,
+        "eligibility_reasons": list(eligibility_reasons or []),
+        "required_skills": list(required_skills or []),
+        "matched_required": list(matched_required or []),
+        "missing_required": list(missing_required or []),
+        "missing_preferred": list(missing_preferred or []),
+        "proficiency_gaps": list(proficiency_gaps or []),
+    }
 
 
 def _student_context(session, student_id: str | None, ctx=None) -> dict:
@@ -54,6 +105,8 @@ def _student_context(session, student_id: str | None, ctx=None) -> dict:
         return {}
     from sqlmodel import select
 
+    from app.matching.engine import is_job_visible_to_student, job_eligibility, job_tier
+    from app.matching.rank import rank_jobs
     from app.models import (
         Interview,
         Job,
@@ -77,6 +130,9 @@ def _student_context(session, student_id: str | None, ctx=None) -> dict:
     # Candidate Technical Competencies (status reflects StudentSkill.verification_status)
     ss_rows = session.exec(select(StudentSkill).where(StudentSkill.student_id == student_id)).all()
     skills_list = []
+    student_skills_map: dict[str, list[str]] = {}
+    levels_map: dict[str, str] = {}
+    verification_statuses: dict[str, str] = {}
     for ss in ss_rows:
         sk_name = ss.skill_id
         category = "General"
@@ -85,14 +141,18 @@ def _student_context(session, student_id: str | None, ctx=None) -> dict:
             if t_skill:
                 sk_name = t_skill.name
                 category = t_skill.category
+        vstatus = getattr(ss, "verification_status", None) or "claimed"
         skills_list.append({
             "id": ss.skill_id,
             "name": sk_name,
             "level": ss.level,
             "category": category,
             "mentions": ss.mentions,
-            "verification_status": getattr(ss, "verification_status", "claimed"),
+            "verification_status": vstatus,
         })
+        student_skills_map[ss.skill_id] = list(ss.evidence or [])
+        levels_map[ss.skill_id] = ss.level
+        verification_statuses[ss.skill_id] = vstatus
 
     skills_by_level = {
         "advanced": [s["name"] for s in skills_list if s["level"] == "advanced"],
@@ -100,80 +160,206 @@ def _student_context(session, student_id: str | None, ctx=None) -> dict:
         "basic": [s["name"] for s in skills_list if s["level"] == "basic"],
     }
 
-    # Top Ranked Job Matches (titles & companies only, no raw database IDs)
+    # Preload persisted matches & applications to determine exact favorites and dismissed drives
+    saved_match_rows = session.exec(
+        select(JobMatch).where(JobMatch.student_id == student_id)
+    ).all()
+    saved_app_rows = session.exec(
+        select(JobApplication).where(JobApplication.student_id == student_id)
+        .order_by(JobApplication.created_at.desc())
+    ).all()
+
+    dismissed_job_ids = {
+        m.job_id
+        for m in saved_match_rows
+        if getattr(m, "band", None) == "dismissed"
+        or getattr(m, "score", 0) < 0
+        or (isinstance(getattr(m, "breakdown", None), dict) and m.breakdown.get("dismissed"))
+    }
+    favorite_job_ids = (
+        {m.job_id for m in saved_match_rows if getattr(m, "is_favorite", False)}
+        | {a.job_id for a in saved_app_rows if getattr(a, "is_favorite", False)}
+    ) - dismissed_job_ids
+
+    # Top Ranked Visible Job Matches (titles & companies only, no raw database IDs)
     top_matches = []
+    ranked_by_id: dict[str, dict] = {}
     if ctx is not None:
         try:
             from app.agent import _rank_jobs_for
             ranked = _rank_jobs_for(session, ctx, student_id, top=5)
             for r in ranked:
-                top_matches.append({
-                    "title": r.get("title"),
-                    "company": r.get("company", ""),
-                    "tier": r.get("tier"),
-                    "score": r.get("score"),
-                    "band": r.get("band"),
-                    "eligible": r.get("eligible"),
-                    "eligibility_reasons": r.get("eligibility_reasons", []),
-                    "matched_required": [m.get("name", m.get("skill", "")) for m in r.get("matched_required", [])],
-                    "missing_required": [m.get("name", m.get("skill", "")) for m in r.get("missing_required", [])],
-                })
+                formatted = _format_job_for_copilot(
+                    title=r.get("title") or "Role",
+                    company=r.get("company", ""),
+                    tier=r.get("tier") or "standard",
+                    score=r.get("score") or 0,
+                    band=r.get("band") or "early",
+                    eligible=r.get("eligible"),
+                    eligibility_reasons=r.get("eligibility_reasons", []),
+                    required_skills=r.get("required_skills", []),
+                    matched_required=[m.get("name", m.get("skill", "")) for m in r.get("matched_required", [])],
+                    missing_required=[m.get("name", m.get("skill", "")) for m in r.get("missing_required", [])],
+                    missing_preferred=[m.get("name", m.get("skill", "")) for m in r.get("missing_preferred", [])],
+                    proficiency_gaps=r.get("proficiency_gaps", []),
+                    is_favorite=bool(r.get("is_favorite", False)),
+                )
+                top_matches.append(formatted)
+                if r.get("job_id"):
+                    ranked_by_id[r["job_id"]] = formatted
         except Exception:
             pass
 
     if not top_matches:
         try:
-            saved_matches = session.exec(
+            saved_pairs = session.exec(
                 select(JobMatch, Job)
                 .where(JobMatch.student_id == student_id, JobMatch.job_id == Job.id)
-                .order_by(JobMatch.score.desc()).limit(5)
+                .order_by(JobMatch.score.desc())
             ).all()
-            for jm, j in saved_matches:
-                top_matches.append({
-                    "title": j.title,
-                    "company": j.company,
-                    "score": jm.score,
-                    "band": jm.band,
-                    "tier": getattr(j, "tier", "Standard"),
-                })
+            for jm, j in saved_pairs:
+                if j.id in dismissed_job_ids or not is_job_visible_to_student(j, student_id):
+                    continue
+                eligible, reasons = job_eligibility(student, j)
+                formatted = _format_job_for_copilot(
+                    title=j.title,
+                    company=j.company,
+                    tier=job_tier(j),
+                    score=jm.score,
+                    band=jm.band,
+                    eligible=eligible,
+                    eligibility_reasons=reasons,
+                    required_skills=[_skill_display_name(s, ctx) for s in (getattr(j, "required_skills", None) or [])],
+                    is_favorite=(j.id in favorite_job_ids),
+                )
+                top_matches.append(formatted)
+                ranked_by_id[j.id] = formatted
+                if len(top_matches) >= 5:
+                    break
         except Exception:
             pass
 
-    # Upskilling plan
+    # Explicit Favorited Jobs (scored cleanly even when outside top-5 matches)
+    favorite_jobs: list[dict] = []
+    if favorite_job_ids:
+        try:
+            missing_fav_jobs: list[Job] = []
+            ordered_favs: list[Job] = []
+            for jid in sorted(favorite_job_ids):
+                job_obj = session.get(Job, jid)
+                if job_obj is None or not is_job_visible_to_student(job_obj, student_id):
+                    continue
+                ordered_favs.append(job_obj)
+                if jid not in ranked_by_id:
+                    missing_fav_jobs.append(job_obj)
+
+            if missing_fav_jobs and ctx is not None and getattr(ctx, "embedder", None) is not None:
+                sv = ctx.vector_store.get("student", student_id) if getattr(ctx, "vector_store", None) else None
+                fav_scored = rank_jobs(
+                    missing_fav_jobs,
+                    sv or [],
+                    student_skills_map,
+                    ctx.embedder,
+                    ctx.taxonomy,
+                    vector_store=getattr(ctx, "vector_store", None),
+                    job_vec_cache=getattr(ctx, "job_vectors", None),
+                    top=None,
+                    levels=levels_map,
+                    student=student,
+                    verification_statuses=verification_statuses,
+                    session=session,
+                )
+                for fj, fjs in fav_scored:
+                    eligible, reasons = job_eligibility(student, fj)
+                    ranked_by_id[fj.id] = _format_job_for_copilot(
+                        title=fj.title,
+                        company=getattr(fj, "company", "") or "",
+                        tier=job_tier(fj),
+                        score=fjs.score,
+                        band=fjs.band,
+                        eligible=eligible,
+                        eligibility_reasons=reasons,
+                        required_skills=[_skill_display_name(s, ctx) for s in (getattr(fj, "required_skills", None) or [])],
+                        matched_required=[m.get("name", m.get("skill", "")) for m in fjs.matched_required],
+                        missing_required=[m.get("name", m.get("skill", "")) for m in fjs.missing_required],
+                        missing_preferred=[m.get("name", m.get("skill", "")) for m in fjs.missing_preferred],
+                        proficiency_gaps=fjs.proficiency_gaps,
+                        is_favorite=True,
+                    )
+
+            saved_score_by_jid = {m.job_id: m for m in saved_match_rows}
+            for fj in ordered_favs:
+                if fj.id in ranked_by_id:
+                    entry = dict(ranked_by_id[fj.id])
+                    entry["is_favorite"] = True
+                    favorite_jobs.append(entry)
+                else:
+                    jm = saved_score_by_jid.get(fj.id)
+                    eligible, reasons = job_eligibility(student, fj)
+                    favorite_jobs.append(
+                        _format_job_for_copilot(
+                            title=fj.title,
+                            company=getattr(fj, "company", "") or "",
+                            tier=job_tier(fj),
+                            score=jm.score if jm else 0,
+                            band=jm.band if jm else "early",
+                            eligible=eligible,
+                            eligibility_reasons=reasons,
+                            required_skills=[_skill_display_name(s, ctx) for s in (getattr(fj, "required_skills", None) or [])],
+                            is_favorite=True,
+                        )
+                    )
+            favorite_jobs.sort(key=lambda x: x.get("score", 0), reverse=True)
+        except Exception:
+            pass
+
+    # Upskilling plans (latest overall + distinct job plans)
     plan_data = None
+    upskill_plans: list[dict] = []
     try:
-        plan = session.exec(
+        plans = session.exec(
             select(UpskillPlan).where(UpskillPlan.student_id == student_id)
             .order_by(UpskillPlan.created_at.desc())
-        ).first()
-        if plan:
+        ).all()
+        seen_plan_jobs: set[str | None] = set()
+        for plan in plans:
+            if plan.job_id in seen_plan_jobs:
+                continue
+            seen_plan_jobs.add(plan.job_id)
             items = session.exec(select(PlanItem).where(PlanItem.plan_id == plan.id).order_by(PlanItem.order)).all()
             target_job = session.get(Job, plan.job_id) if plan.job_id else None
-            plan_data = {
+            entry = {
                 "target_role": f"{target_job.title} at {target_job.company}" if target_job else "Target Role",
                 "total_hours": plan.total_hours,
                 "items": [
-                    {"skill": it.skill_id, "hours": it.hours, "status": it.status, "week": it.week}
+                    {
+                        "skill": _skill_display_name(it.skill_id, ctx),
+                        "hours": it.hours,
+                        "status": it.status,
+                        "week": it.week,
+                    }
                     for it in items
-                ]
+                ],
             }
+            if plan_data is None:
+                plan_data = entry
+            upskill_plans.append(entry)
+            if len(upskill_plans) >= 4:
+                break
     except Exception:
         pass
 
     # Applications
     app_data = []
     try:
-        apps = session.exec(
-            select(JobApplication).where(JobApplication.student_id == student_id)
-            .order_by(JobApplication.created_at.desc())
-        ).all()
-        for a in apps:
+        for a in saved_app_rows:
             job_obj = session.get(Job, a.job_id) if a.job_id else None
             app_data.append({
                 "role": f"{job_obj.title} at {job_obj.company}" if job_obj else "Campus Opening",
                 "status": a.status,
                 "tier": a.tier,
                 "match_score": a.match_score,
+                "is_favorite": bool(getattr(a, "is_favorite", False)),
             })
     except Exception:
         pass
@@ -189,8 +375,11 @@ def _student_context(session, student_id: str | None, ctx=None) -> dict:
         "mock_interview_passed": bool(scores) and max(scores) >= 65,
         "skills": skills_list,
         "skills_by_level": skills_by_level,
+        "favorite_jobs": favorite_jobs,
+        "favorite_count": len(favorite_jobs),
         "top_matches": top_matches,
         "upskill_plan": plan_data,
+        "upskill_plans": upskill_plans,
         "applications": app_data,
         "interview_count": len(rows),
     }
@@ -256,6 +445,7 @@ def _record_copilot_agent_run(
     answer: str,
     citations: dict,
     trace: list,
+    latency_ms: int = 0,
 ) -> str | None:
     """Persist a compact AgentRun/AgentStep trace so Copilot queries appear in Agent Brain."""
     if not student_id and len((question or "").strip()) < 10:
@@ -291,7 +481,7 @@ def _record_copilot_agent_run(
                 "grounding_score": int(citations.get("grounding_score", 100)),
                 "workflow_kind": "copilot",
             },
-            total_latency_ms=0,
+            total_latency_ms=max(0, int(latency_ms)),
             provider_used=f"copilot:{provider}",
             fallback_triggered=False,
         )
@@ -320,13 +510,83 @@ def _record_copilot_agent_run(
         return None
 
 
+def _sanitize_history(raw_history) -> list[dict[str, str]]:
+    """Return up to 6 recent sanitized chat turns for multi-turn Copilot context."""
+    if not isinstance(raw_history, list):
+        return []
+    from app.security.guardrails import sanitize_untrusted_text
+    from app.security.pii import scrub_for_llm
+
+    cleaned: list[dict[str, str]] = []
+    for item in raw_history[-6:]:
+        if not isinstance(item, dict):
+            continue
+        role = str(item.get("role") or "").strip().lower()
+        if role not in ("user", "assistant"):
+            continue
+        text = str(item.get("content") or "").strip()
+        if not text:
+            continue
+        text, _ = scrub_for_llm(text[:800])
+        if role == "user":
+            text, _ = sanitize_untrusted_text(text, source="copilot_history")
+        cleaned.append({"role": role, "content": text})
+    return cleaned
+
+
+def _build_copilot_trace(search: dict, student_context: dict) -> list[dict]:
+    """Build deterministic step trace reflecting retrieval, profile, favorites, and matches."""
+    trace = [{
+        "thought": "Queried institutional placement policy for grounded clauses.",
+        "tool": "search_placement_policy_rag",
+        "top_sop": search.get("top_sop_id"),
+    }]
+    if not student_context:
+        return trace
+
+    skills = student_context.get("skills", [])
+    skill_cnt = len(skills)
+    ver_cnt = sum(1 for s in skills if s.get("verification_status") == "verified")
+    trace.append({
+        "thought": (
+            f"Inspected student profile for {student_context.get('name', 'student')} "
+            f"({ver_cnt}/{skill_cnt} verified skills, GPA {student_context.get('gpa')})."
+        ),
+        "tool": "inspect_student_profile",
+    })
+    favs = student_context.get("favorite_jobs") or []
+    if favs:
+        fav_summary = ", ".join(
+            f"{f.get('title')} at {f.get('company', 'campus partner')}"
+            for f in favs[:4]
+        )
+        trace.append({
+            "thought": f"Inspected {len(favs)} favorited job(s): {fav_summary}.",
+            "tool": "inspect_favorite_jobs",
+        })
+    if student_context.get("top_matches"):
+        top_m = student_context["top_matches"][0]
+        trace.append({
+            "thought": (
+                f"Evaluated visible job matches (Lead: {top_m.get('title')} at "
+                f"{top_m.get('company', 'campus partner')}, score {top_m.get('score')})."
+            ),
+            "tool": "rank_and_explain_jobs",
+        })
+    return trace
+
+
 def _copilot_synthesis(session, ctx, *, question: str, student_id: str | None,
                        job_id: str | None, actor_role: str,
                        sources: list, student_context: dict,
-                       eligibility: dict, trace: list) -> dict:
+                       eligibility: dict, trace: list,
+                       history: list[dict[str, str]] | None = None) -> dict:
     """Run LLM synthesis with grounded placement context and verify SOP + numeric citations."""
+    started_at = time.perf_counter()
     user = {"question": question, "student": student_context,
             "sources": sources, "eligibility": eligibility}
+    if history:
+        user["history"] = history
     import json as _json
     raw = ""
     if getattr(ctx, "llm", None) is not None:
@@ -404,6 +664,7 @@ def _copilot_synthesis(session, ctx, *, question: str, student_id: str | None,
         answer=annotated,
         citations=citations_out,
         trace=trace,
+        latency_ms=int((time.perf_counter() - started_at) * 1000),
     )
     try:
         log_audit(
@@ -441,7 +702,8 @@ def _copilot_synthesis(session, ctx, *, question: str, student_id: str | None,
 
 
 def _copilot_core(session, ctx, *, question: str, student_id: str | None,
-                  job_id: str | None, actor_role: str) -> dict:
+                  job_id: str | None, actor_role: str,
+                  history: list[dict[str, str]] | None = None) -> dict:
     """Shared retrieval + synthesis + citation-guard pipeline for ask endpoints."""
     question = _sanitize_copilot_question(
         session, question, student_id=student_id, actor_role=actor_role
@@ -461,35 +723,14 @@ def _copilot_core(session, ctx, *, question: str, student_id: str | None,
         except Exception:
             eligibility = {}
 
-    # Build a grounded trace
-    trace = [{
-        "thought": "Queried institutional placement policy for grounded clauses.",
-        "tool": "search_placement_policy_rag",
-        "top_sop": search.get("top_sop_id"),
-    }]
-    if student_context:
-        skills = student_context.get("skills", [])
-        skill_cnt = len(skills)
-        ver_cnt = sum(1 for s in skills if s.get("verification_status") == "verified")
-        trace.append({
-            "thought": (
-                f"Inspected student profile for {student_context.get('name', 'student')} "
-                f"({ver_cnt}/{skill_cnt} verified skills, GPA {student_context.get('gpa')})."
-            ),
-            "tool": "inspect_student_profile",
-        })
-        if student_context.get("top_matches"):
-            top_m = student_context["top_matches"][0]
-            trace.append({
-                "thought": f"Evaluated top job matches (Lead: {top_m.get('title')} at {top_m.get('company', 'campus partner')}, score {top_m.get('score')}).",
-                "tool": "rank_and_explain_jobs",
-            })
+    trace = _build_copilot_trace(search, student_context)
 
     return _copilot_synthesis(session, ctx, question=question,
                               student_id=student_id, job_id=job_id,
                               actor_role=actor_role,
                               sources=sources, student_context=student_context,
-                              eligibility=eligibility, trace=trace)
+                              eligibility=eligibility, trace=trace,
+                              history=history)
 
 
 @router.post("/api/copilot/ask/stream")
@@ -510,6 +751,7 @@ def copilot_ask_stream(payload: dict, request: Request,
     student_id = (payload or {}).get("student_id") or None
     job_id = (payload or {}).get("job_id") or None
     actor_role = (payload or {}).get("actor_role", "student")
+    history = _sanitize_history((payload or {}).get("history"))
     user = get_current_user_optional(request)
     if user is not None:
         actor_role = user.role
@@ -531,28 +773,7 @@ def copilot_ask_stream(payload: dict, request: Request,
                 except Exception:
                     eligibility = {}
 
-            trace = [{
-                "thought": "Queried institutional placement policy for grounded clauses.",
-                "tool": "search_placement_policy_rag",
-                "top_sop": search.get("top_sop_id"),
-            }]
-            if student_context:
-                skills = student_context.get("skills", [])
-                skill_cnt = len(skills)
-                ver_cnt = sum(1 for s in skills if s.get("verification_status") == "verified")
-                trace.append({
-                    "thought": (
-                        f"Inspected student profile for {student_context.get('name', 'student')} "
-                        f"({ver_cnt}/{skill_cnt} verified skills, GPA {student_context.get('gpa')})."
-                    ),
-                    "tool": "inspect_student_profile",
-                })
-                if student_context.get("top_matches"):
-                    top_m = student_context["top_matches"][0]
-                    trace.append({
-                        "thought": f"Evaluated top job matches (Lead: {top_m.get('title')} at {top_m.get('company', 'campus partner')}, score {top_m.get('score')}).",
-                        "tool": "rank_and_explain_jobs",
-                    })
+            trace = _build_copilot_trace(search, student_context)
 
             # Emit retrieval event IMMEDIATELY so the user UI sees Agent Step Trace right away!
             yield _sse_chunk("retrieval", {
@@ -571,6 +792,7 @@ def copilot_ask_stream(payload: dict, request: Request,
                 job_id=job_id, actor_role=actor_role,
                 sources=sources, student_context=student_context,
                 eligibility=eligibility, trace=trace,
+                history=history,
             )
             while not future.done():
                 try:
@@ -628,6 +850,7 @@ def copilot_ask(payload: dict, request: Request,
     student_id = (payload or {}).get("student_id") or None
     job_id = (payload or {}).get("job_id") or None
     actor_role = (payload or {}).get("actor_role", "student")
+    history = _sanitize_history((payload or {}).get("history"))
 
     user = get_current_user_optional(request)
     if user is not None:
@@ -635,7 +858,7 @@ def copilot_ask(payload: dict, request: Request,
     student_id = _enforce_copilot_student_scope(user, student_id)
 
     return _copilot_core(session, ctx, question=question, student_id=student_id,
-                         job_id=job_id, actor_role=actor_role)
+                         job_id=job_id, actor_role=actor_role, history=history)
 
 
 @router.get("/copilot")
@@ -649,7 +872,8 @@ def copilot_page(request: Request, session: Session = Depends(get_session)):
         sid = user.student_id if user and user.student_id and user.student_id != "demo-student" else None
         st = session.get(Student, sid) if sid else None
         if st is None:
-            st = session.exec(select(Student)).first()
+            all_s = sort_students_alphabetically(session.exec(select(Student)).all())
+            st = all_s[0] if all_s else None
         if st is not None:
             students = [st]
             student_name = st.name
@@ -660,10 +884,10 @@ def copilot_page(request: Request, session: Session = Depends(get_session)):
         else:
             students = []
     elif role == "faculty_mentor" and dept:
-        all_s = session.exec(select(Student).order_by(Student.created_at.desc())).all()
+        all_s = sort_students_alphabetically(session.exec(select(Student)).all())
         students = [s for s in all_s if s.branch and s.branch.upper() == dept.upper()]
     else:
-        students = session.exec(select(Student).order_by(Student.created_at.desc())).all()
+        students = sort_students_alphabetically(session.exec(select(Student)).all())
 
     cohort_students = [] if role == "student" else list(students)
 

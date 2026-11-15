@@ -148,8 +148,17 @@ class TelemetryLLM:
         self.mock = MockLLM()
 
     def complete(self, system: str, user: str, json_mode: bool = False, **kwargs) -> str:
+        return self._complete(system, user, json_mode, allow_fallback=True, **kwargs)
+
+    def complete_live(self, system: str, user: str, json_mode: bool = False, **kwargs) -> str:
+        """Never return mock material to callers that require live AI provenance."""
+        return self._complete(system, user, json_mode, allow_fallback=False, **kwargs)
+
+    def _complete(self, system: str, user: str, json_mode: bool, *, allow_fallback: bool, **kwargs) -> str:
         prompt_text = f"{system}\n{user}".strip()
         if self.tracker.should_use_fallback(self.provider):
+            if not allow_fallback:
+                raise RuntimeError("live_provider_circuit_open")
             self.tracker.record_fallback(self.provider)
             return self.mock.complete(system, user, json_mode=json_mode, **kwargs)
         t0 = time.perf_counter()
