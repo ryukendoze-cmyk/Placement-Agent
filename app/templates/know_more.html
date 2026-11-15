@@ -8,25 +8,23 @@
         <div class="flex flex-wrap items-center gap-2">
           <span class="pill-sage">
             <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
-            TPO Admin Engineering Manual
+            TPO Admin Guide
           </span>
-          <span class="pill-stone mono">RBAC: tpo_admin only</span>
-          <span class="pill-stone mono">Route: /know-more</span>
+          <span class="pill-stone">Interactive Screen Manual</span>
         </div>
-        <h1 class="editorial-title text-2xl sm:text-3xl font-bold text-[#1C1E1B]">System Know More &amp; Engineering Manual</h1>
+        <h1 class="editorial-title text-2xl sm:text-3xl font-bold text-[#1C1E1B]">JKLU CareerOS User &amp; Operations Guide</h1>
         <p class="text-sm text-[#5C5A52] leading-relaxed">
-          Complete technical reference for JKLU CareerOS (PS-06 Placement Agent) — covering every UI control, toggle,
-          FastAPI route, RBAC guard, AI pipeline, scoring formula, scraper provider, and operational workflow across all domains.
+          A visual, screen-by-screen guide to every button, toggle, upload box, approval step, and placement rule in JKLU CareerOS — written in plain everyday language for placement officers, faculty mentors, students, and recruiters.
         </p>
       </div>
       <div class="flex flex-col items-end gap-2 shrink-0">
         <div class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white border border-[#E5E3DC] text-xs font-medium text-[#4A483F] shadow-2xs">
-          <span>Visible sections:</span>
-          <span id="km-visible-count" class="mono font-bold text-[#1D5C42] tabular">1</span>
-          <span class="text-[#7A776E]">/</span>
-          <span id="km-total-count" class="mono text-[#5C5A52] tabular">1</span>
+          <span>Showing topics:</span>
+          <span id="km-visible-count" class="font-bold text-[#1D5C42] tabular">1</span>
+          <span class="text-[#7A776E]">of</span>
+          <span id="km-total-count" class="text-[#5C5A52] tabular">1</span>
         </div>
-        <span class="text-[11px] text-[#7A776E] mono">Use Ctrl+K &rarr; "know more" / "manual"</span>
+        <span class="text-[11px] text-[#7A776E]">Tip: Press <kbd class="px-1.5 py-0.5 rounded bg-[#EFECE4] border border-[#E2DEC9] text-[10px] font-semibold">Ctrl + K</kbd> anywhere &rarr; type &ldquo;know more&rdquo; or &ldquo;manual&rdquo;</span>
       </div>
     </div>
   </section>
@@ -38,18 +36,18 @@
         <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#7A776E] pointer-events-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
         </svg>
-        <input id="km-search" type="search" placeholder="Search controls, routes (/api/...), symbols, toggles, formulas..."
-               aria-label="Search engineering manual"
+        <input id="km-search" type="search" placeholder="Search any button, toggle, or screen (e.g. Dark Mode, Resume Upload, Waiver)..."
+               aria-label="Search user guide"
                class="w-full rounded-full border border-[#D5D2C6] bg-white pl-9 pr-4 py-2 text-xs sm:text-sm text-[#1C1E1B] placeholder-[#7A776E] focus:outline-none focus:ring-2 focus:ring-[#1D5C42]/25 focus:border-[#1D5C42]" />
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by role">
-          <button type="button" class="km-role-btn km-role-active px-3 py-1.5 rounded-full border border-[#D5D2C6] text-xs font-semibold transition-colors cursor-pointer" data-role-filter="all" aria-pressed="true">All Roles</button>
+        <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by user role">
+          <button type="button" class="km-role-btn km-role-active px-3 py-1.5 rounded-full border border-[#D5D2C6] text-xs font-semibold transition-colors cursor-pointer" data-role-filter="all" aria-pressed="true">All Users</button>
           <button type="button" class="km-role-btn px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white text-[#4A483F] hover:bg-[#F4F3EC] text-xs font-semibold transition-colors cursor-pointer" data-role-filter="student" aria-pressed="false">Student</button>
           <button type="button" class="km-role-btn px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white text-[#4A483F] hover:bg-[#F4F3EC] text-xs font-semibold transition-colors cursor-pointer" data-role-filter="faculty_mentor" aria-pressed="false">Faculty Mentor</button>
           <button type="button" class="km-role-btn px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white text-[#4A483F] hover:bg-[#F4F3EC] text-xs font-semibold transition-colors cursor-pointer" data-role-filter="tpo_admin" aria-pressed="false">TPO Admin</button>
-          <button type="button" class="km-role-btn px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white text-[#4A483F] hover:bg-[#F4F3EC] text-xs font-semibold transition-colors cursor-pointer" data-role-filter="public" aria-pressed="false">Public</button>
+          <button type="button" class="km-role-btn px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white text-[#4A483F] hover:bg-[#F4F3EC] text-xs font-semibold transition-colors cursor-pointer" data-role-filter="public" aria-pressed="false">Recruiter</button>
         </div>
 
         <span class="hidden sm:inline-block h-5 w-px bg-[#E5E3DC] mx-0.5" aria-hidden="true"></span>
@@ -62,155 +60,263 @@
     </div>
   </div>
 
-  <!-- Two-Column Manual Layout: Sticky TOC + Content -->
-  <div class="grid grid-cols-1 lg:grid-cols-[250px_1fr] gap-6 items-start">
-    <!-- Left Sticky Table of Contents -->
-    <aside class="lg:sticky lg:top-[136px] editorial-card p-4 space-y-2" aria-label="Manual Table of Contents">
-      <p class="text-[11px] font-bold uppercase tracking-wider text-[#7A776E] px-2.5">Table of Contents</p>
+  <!-- Two-Column Guide Layout: Sticky Screen Directory + Content -->
+  <div class="grid grid-cols-1 lg:grid-cols-[265px_1fr] gap-6 items-start">
+    <!-- Left Sticky Screen Directory -->
+    <aside class="lg:sticky lg:top-[136px] editorial-card p-4 space-y-2.5" aria-label="Screen Directory">
+      <div class="px-2 space-y-0.5">
+        <p class="text-[11px] font-bold uppercase tracking-wider text-[#7A776E]">Screen Directory</p>
+        <p class="text-[11px] text-[#7A776E]">Click any chapter to focus on just that screen.</p>
+      </div>
       <nav id="km-toc" class="space-y-1">
-        <a href="#km-architecture" class="km-toc-link km-toc-active block px-3 py-2 rounded-xl border border-transparent text-xs text-[#4A483F] hover:bg-[#FAF9F5] transition-colors">
-          1. End-to-End Architecture
+        <a href="#km-all" data-chapter="all" class="km-toc-link km-toc-active" aria-current="true">
+          <span>All Screens</span>
+          <span class="text-[10px] opacity-75">Full Guide</span>
         </a>
-        <a href="#km-shell-auth" class="km-toc-link block px-3 py-2 rounded-xl border border-transparent text-xs text-[#4A483F] hover:bg-[#FAF9F5] transition-colors">
-          2. Shell, Auth &amp; Agent Brain
+        <a href="#km-architecture" data-chapter="km-architecture" class="km-toc-link">
+          <span>1. How CareerOS Works</span>
         </a>
-        <a href="#km-cohort-profile" class="km-toc-link block px-3 py-2 rounded-xl border border-transparent text-xs text-[#4A483F] hover:bg-[#FAF9F5] transition-colors">
-          3. Cohort &amp; Student Profile
+        <a href="#km-shell-auth" data-chapter="km-shell-auth" class="km-toc-link">
+          <span>2. App Bar, Sidebar &amp; Sign-In</span>
         </a>
-        <a href="#km-matches-drives" class="km-toc-link block px-3 py-2 rounded-xl border border-transparent text-xs text-[#4A483F] hover:bg-[#FAF9F5] transition-colors">
-          4. Matches, Scraper &amp; Drives
+        <a href="#km-cohort-profile" data-chapter="km-cohort-profile" class="km-toc-link">
+          <span>3. Home &amp; Student Profile</span>
         </a>
-        <a href="#km-plan-interview" class="km-toc-link block px-3 py-2 rounded-xl border border-transparent text-xs text-[#4A483F] hover:bg-[#FAF9F5] transition-colors">
-          5. Upskill Plan &amp; Interviews
+        <a href="#km-matches-drives" data-chapter="km-matches-drives" class="km-toc-link">
+          <span>4. Job Matches, Scraper &amp; Drives</span>
         </a>
-        <a href="#km-copilot-admin" class="km-toc-link block px-3 py-2 rounded-xl border border-transparent text-xs text-[#4A483F] hover:bg-[#FAF9F5] transition-colors">
-          6. Copilot, Admin &amp; Ops
+        <a href="#km-plan-interview" data-chapter="km-plan-interview" class="km-toc-link">
+          <span>5. Upskill Plan, Progress &amp; Interviews</span>
+        </a>
+        <a href="#km-copilot-admin" data-chapter="km-copilot-admin" class="km-toc-link">
+          <span>6. Copilot, Analytics, Approvals &amp; Policies</span>
         </a>
       </nav>
     </aside>
 
-    <!-- Main Documentation Sections -->
-    <div id="km-sections" class="space-y-8 min-w-0">
-      <!-- 1. End-to-End Architecture Pipeline -->
-      <section id="km-architecture" class="km-section space-y-4" data-section="architecture">
-        <div class="editorial-card p-6 space-y-3">
+    <!-- Main Guide Chapters -->
+    <div id="km-sections" class="space-y-6 min-w-0">
+      <!-- Focused Chapter Indicator (shown when a single screen chapter is selected) -->
+      <div id="km-focus-banner" class="km-focus-banner hidden">
+        <div class="flex items-center gap-2 text-xs sm:text-sm font-semibold">
+          <span class="w-2 h-2 rounded-full bg-[#1D5C42]"></span>
+          <span>Focused View:</span>
+          <span id="km-focus-label">All Screens</span>
+        </div>
+        <button id="km-show-all-screens" type="button" class="btn-secondary-pill !py-1 !px-3 !text-xs">Show All Screens</button>
+      </div>
+
+      <!-- 1. How CareerOS Works -->
+      <section id="km-architecture" class="km-section space-y-5" data-section="architecture">
+        <div class="editorial-card p-6 space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <span class="pill-sage">Architecture Overview</span>
-              <h2 class="editorial-title text-xl font-bold text-[#1C1E1B] mt-2">End-to-End JKLU CareerOS Pipeline</h2>
+              <span class="pill-sage">Chapter 1 &middot; Big Picture</span>
+              <h2 class="editorial-title text-xl sm:text-2xl font-bold text-[#1C1E1B] mt-2">How CareerOS Works</h2>
             </div>
-            <span class="mono text-xs text-[#5C5A52] px-3 py-1 rounded-full bg-[#FAF9F5] border border-[#E5E3DC]">8-Stage Agentic Flow</span>
+            <span class="pill-stone">8-Step Student Journey</span>
           </div>
-          <p class="text-xs sm:text-sm text-[#5C5A52]">
-            Every student lifecycle event flows deterministically and auditably through eight modular stages, combining local embeddings, OR-Tools optimization, BKT mastery tracking, grounded SOP RAG, and Human-in-the-Loop governance.
+          <p class="text-xs sm:text-sm text-[#5C5A52] leading-relaxed">
+            Every student&rsquo;s placement journey moves through eight clear, connected steps &mdash; from uploading a resume on day one to sitting for campus drives and tracking batch-wide placement readiness.
           </p>
           <div class="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
-            <span class="pill-sage">1. Resume Ingestion</span>
+            <span class="pill-sage">1. Resume Upload</span>
             <span class="text-[#7A776E]">&rarr;</span>
-            <span class="pill-sage">2. Taxonomy Skill Extraction</span>
+            <span class="pill-sage">2. Skill Detection</span>
             <span class="text-[#7A776E]">&rarr;</span>
-            <span class="pill-sage">3. Vector &amp; Hybrid Job Matching</span>
+            <span class="pill-sage">3. Job Matching</span>
             <span class="text-[#7A776E]">&rarr;</span>
-            <span class="pill-sage">4. CP-SAT/BKT Upskill Planner</span>
+            <span class="pill-sage">4. Upskill Plan</span>
             <span class="text-[#7A776E]">&rarr;</span>
-            <span class="pill-sage">5. Adaptive Mock Interview</span>
+            <span class="pill-sage">5. Mock Interview</span>
             <span class="text-[#7A776E]">&rarr;</span>
-            <span class="pill-sage">6. Policy RAG Copilot</span>
+            <span class="pill-sage">6. Placement Copilot</span>
             <span class="text-[#7A776E]">&rarr;</span>
-            <span class="pill-sage">7. HITL Approvals &amp; Campus Drives</span>
+            <span class="pill-sage">7. Approvals &amp; Campus Drives</span>
             <span class="text-[#7A776E]">&rarr;</span>
-            <span class="pill-sage">8. Cohort Analytics &amp; Audit</span>
+            <span class="pill-sage">8. Placement Analytics</span>
           </div>
         </div>
 
+        <!-- Card 1.1: 8-Step Journey Cards -->
         <details class="km-card editorial-card overflow-hidden" open
                  data-roles="tpo_admin faculty_mentor student public"
-                 data-keywords="architecture pipeline resume ingestion taxonomy skill extraction vector hybrid job matching cp-sat bkt upskill planner adaptive mock interview policy rag copilot hitl approvals campus drives cohort analytics audit">
+                 data-keywords="how careereos works journey overview resume upload skill detection job matching upskill plan mock interview placement copilot approvals campus drives placement analytics">
           <summary class="px-6 py-4 flex items-center justify-between gap-4 bg-[#FAF9F5] hover:bg-[#F4F3EC] transition-colors">
             <div class="flex flex-wrap items-center gap-2.5">
-              <span class="mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white">STAGE 1&ndash;8</span>
-              <h3 class="font-semibold text-sm sm:text-base text-[#1C1E1B]">Pipeline Stage Inventory &amp; Core Subsystems</h3>
-              <span class="pill-stone text-[11px]">All Roles</span>
+              <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white">STEP 1&ndash;8</span>
+              <h3 class="font-semibold text-sm sm:text-base text-[#1C1E1B]">The 8-Step Student Placement Journey</h3>
+              <span class="pill-stone text-[11px]">All Users</span>
             </div>
             <svg class="km-chevron w-4 h-4 text-[#5C5A52] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
           </summary>
-          <div class="p-6 overflow-x-auto">
-            <table class="km-table">
-              <thead>
-                <tr>
-                  <th>Stage</th>
-                  <th>Subsystem &amp; Modules</th>
-                  <th>Key Mechanism</th>
-                  <th>Primary Output</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="font-semibold whitespace-nowrap">1. Resume Ingestion</td>
-                  <td><code class="mono text-xs px-1.5 py-0.5 rounded border border-[#E5E3DC] bg-[#FAF9F5]">app/api/routes/students.py</code>, <code class="mono text-xs px-1.5 py-0.5 rounded border border-[#E5E3DC] bg-[#FAF9F5]">pages.py</code></td>
-                  <td>Parses PDF, DOCX, TXT, MD, or Image resumes; validates re-upload unlock gate for students.</td>
-                  <td><code class="mono text-xs">Student</code> row + raw resume text</td>
-                </tr>
-                <tr>
-                  <td class="font-semibold whitespace-nowrap">2. Taxonomy Skill Extraction</td>
-                  <td><code class="mono text-xs px-1.5 py-0.5 rounded border border-[#E5E3DC] bg-[#FAF9F5]">app/skills/extract.py</code>, <code class="mono text-xs px-1.5 py-0.5 rounded border border-[#E5E3DC] bg-[#FAF9F5]">app/taxonomy/</code></td>
-                  <td>Maps raw phrases onto canonical JKLU skill taxonomy &amp; branch codes with confidence/evidence provenance.</td>
-                  <td><code class="mono text-xs">StudentSkill</code> chips + student vector</td>
-                </tr>
-                <tr>
-                  <td class="font-semibold whitespace-nowrap">3. Vector &amp; Hybrid Job Matching</td>
-                  <td><code class="mono text-xs px-1.5 py-0.5 rounded border border-[#E5E3DC] bg-[#FAF9F5]">app/matching/engine.py</code>, <code class="mono text-xs px-1.5 py-0.5 rounded border border-[#E5E3DC] bg-[#FAF9F5]">app/embeddings/</code></td>
-                  <td>Combines skill overlap, cosine embedding similarity, eligibility gates, and Dream/Core/Tier-2 bands.</td>
-                  <td>Ranked <code class="mono text-xs">JobMatch</code> scores &amp; gaps</td>
-                </tr>
-                <tr>
-                  <td class="font-semibold whitespace-nowrap">4. CP-SAT / BKT Upskill Planner</td>
-                  <td><code class="mono text-xs px-1.5 py-0.5 rounded border border-[#E5E3DC] bg-[#FAF9F5]">app/planning/planner.py</code>, <code class="mono text-xs px-1.5 py-0.5 rounded border border-[#E5E3DC] bg-[#FAF9F5]">bkt.py</code></td>
-                  <td>Schedules prerequisite-aware learning roadmaps under weekly hour budgets and updates mastery via BKT quizzes.</td>
-                  <td><code class="mono text-xs">UpskillPlan</code> + <code class="mono text-xs">PlanItem</code> timeline</td>
-                </tr>
-                <tr>
-                  <td class="font-semibold whitespace-nowrap">5. Adaptive Mock Interview</td>
-                  <td><code class="mono text-xs px-1.5 py-0.5 rounded border border-[#E5E3DC] bg-[#FAF9F5]">app/interview/</code>, <code class="mono text-xs px-1.5 py-0.5 rounded border border-[#E5E3DC] bg-[#FAF9F5]">routes/interviews.py</code></td>
-                  <td>5-turn adaptive technical interview with STT/TTS voice mode, anti-bluff rubric, and skill verification upgrades.</td>
-                  <td><code class="mono text-xs">Interview</code> score &amp; verified skills</td>
-                </tr>
-                <tr>
-                  <td class="font-semibold whitespace-nowrap">6. Policy RAG Copilot</td>
-                  <td><code class="mono text-xs px-1.5 py-0.5 rounded border border-[#E5E3DC] bg-[#FAF9F5]">app/rag/policy_rag.py</code>, <code class="mono text-xs px-1.5 py-0.5 rounded border border-[#E5E3DC] bg-[#FAF9F5]">routes/copilot.py</code></td>
-                  <td>Retrieves institutional <code class="mono text-xs">SOP-01..SOP-18+</code> rules with deterministic offline answers and verified citations.</td>
-                  <td>Grounded answer + <code class="mono text-xs">[SOP-XX]</code> pills</td>
-                </tr>
-                <tr>
-                  <td class="font-semibold whitespace-nowrap">7. HITL Approvals &amp; Campus Drives</td>
-                  <td><code class="mono text-xs px-1.5 py-0.5 rounded border border-[#E5E3DC] bg-[#FAF9F5]">routes/approvals.py</code>, <code class="mono text-xs px-1.5 py-0.5 rounded border border-[#E5E3DC] bg-[#FAF9F5]">campus_drives.py</code></td>
-                  <td>Queues sensitive actions (bootcamps, waivers, re-uploads, JNF submissions, drives) for faculty/TPO review.</td>
-                  <td><code class="mono text-xs">ApprovalRequest</code> + Campus Drives</td>
-                </tr>
-                <tr>
-                  <td class="font-semibold whitespace-nowrap">8. Cohort Analytics &amp; Audit</td>
-                  <td><code class="mono text-xs px-1.5 py-0.5 rounded border border-[#E5E3DC] bg-[#FAF9F5]">app/analytics/</code>, <code class="mono text-xs px-1.5 py-0.5 rounded border border-[#E5E3DC] bg-[#FAF9F5]">routes/admin.py</code></td>
-                  <td>Aggregates executive KPIs, readiness matrices, drive simulations, and append-only <code class="mono text-xs">AuditLog</code> traces.</td>
-                  <td>Analytics charts + immutable audit ledger</td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="p-6">
+            <div class="km-ui-grid">
+              <div class="km-step-card">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="pill-sage text-[11px]">Step 1 &middot; Resume Upload</span>
+                  <span class="km-ui-breadcrumb">Home &rarr; Onboarding / Profile</span>
+                </div>
+                <p class="text-xs sm:text-sm text-[#4A483F] leading-relaxed">
+                  A placement officer uploads a student&rsquo;s resume (PDF, Word, Text, Markdown, or Image). Personal contact details like phone numbers and emails are automatically hidden before AI reads the document. Students can request a one-time unlock from the TPO whenever they need to upload an updated resume.
+                </p>
+              </div>
+
+              <div class="km-step-card">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="pill-sage text-[11px]">Step 2 &middot; Skill Detection</span>
+                  <span class="km-ui-breadcrumb">Student Profile &rarr; Skills</span>
+                </div>
+                <p class="text-xs sm:text-sm text-[#4A483F] leading-relaxed">
+                  CareerOS automatically detects the student&rsquo;s name, branch, year, GPA, and technical skills, matching them against JKLU&rsquo;s standardized 124-skill catalog. Skills found on a resume start as <strong>Claimed</strong> until the student proves them in a quiz or interview.
+                </p>
+              </div>
+
+              <div class="km-step-card">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="pill-sage text-[11px]">Step 3 &middot; Job Matching</span>
+                  <span class="km-ui-breadcrumb">Matches Screen</span>
+                </div>
+                <p class="text-xs sm:text-sm text-[#4A483F] leading-relaxed">
+                  Every new resume or newly added job triggers instant matching. Openings are ranked by skill overlap, branch and GPA eligibility, and salary tier (Dream, Core, or Tier-2), clearly highlighting which skills are already covered and which ones are missing.
+                </p>
+              </div>
+
+              <div class="km-step-card">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="pill-sage text-[11px]">Step 4 &middot; Upskill Plan</span>
+                  <span class="km-ui-breadcrumb">Plan &amp; Progress Screens</span>
+                </div>
+                <p class="text-xs sm:text-sm text-[#4A483F] leading-relaxed">
+                  To close skill gaps, CareerOS builds a realistic week-by-week study schedule tailored to the student&rsquo;s available hours per week and topic prerequisites. Students complete tasks, take short verification quizzes, swap topics, or request faculty waivers.
+                </p>
+              </div>
+
+              <div class="km-step-card">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="pill-sage text-[11px]">Step 5 &middot; Mock Interview</span>
+                  <span class="km-ui-breadcrumb">Mock Interview Studio</span>
+                </div>
+                <p class="text-xs sm:text-sm text-[#4A483F] leading-relaxed">
+                  Students practice with a 5-question adaptive technical interview using either microphone voice or typed answers. A strict anti-bluff rubric grades accuracy, depth, and clarity &mdash; upgrading strong performances to <strong>Verified</strong> skills on their profile.
+                </p>
+              </div>
+
+              <div class="km-step-card">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="pill-sage text-[11px]">Step 6 &middot; Placement Copilot</span>
+                  <span class="km-ui-breadcrumb">Placement Copilot</span>
+                </div>
+                <p class="text-xs sm:text-sm text-[#4A483F] leading-relaxed">
+                  Anyone with questions about dream offers, GPA cutoffs, attendance rules, or company eligibility can ask the Placement Copilot. Answers stream word-by-word with clickable institutional policy citations so nothing is guessed or fabricated.
+                </p>
+              </div>
+
+              <div class="km-step-card">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="pill-sage text-[11px]">Step 7 &middot; Approvals &amp; Campus Drives</span>
+                  <span class="km-ui-breadcrumb">Approvals &amp; Public Recruiter Link</span>
+                </div>
+                <p class="text-xs sm:text-sm text-[#4A483F] leading-relaxed">
+                  Recruiters submit campus job details using a shareable public form. Sensitive actions &mdash; including job nominations, skill waivers, resume unlock requests, campus drive launches, and cohort bootcamps &mdash; pass through Faculty endorsement and TPO approval.
+                </p>
+              </div>
+
+              <div class="km-step-card">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="pill-sage text-[11px]">Step 8 &middot; Placement Analytics</span>
+                  <span class="km-ui-breadcrumb">Analytics &amp; Audit Trail</span>
+                </div>
+                <p class="text-xs sm:text-sm text-[#4A483F] leading-relaxed">
+                  Placement officers and faculty mentors monitor batch readiness charts, test drive eligibility cutoffs with a live simulator, manage institutional placement rules, and inspect a tamper-evident activity log of every important action.
+                </p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Card 1.2: Who Can Do What -->
+        <details class="km-card editorial-card overflow-hidden" open
+                 data-roles="tpo_admin faculty_mentor student public"
+                 data-keywords="roles permissions student faculty mentor tpo admin recruiter who can use access">
+          <summary class="px-6 py-4 flex items-center justify-between gap-4 bg-[#FAF9F5] hover:bg-[#F4F3EC] transition-colors">
+            <div class="flex flex-wrap items-center gap-2.5">
+              <span class="pill-sage text-[11px]">Roles</span>
+              <h3 class="font-semibold text-sm sm:text-base text-[#1C1E1B]">Who Can Use Each Part of CareerOS</h3>
+              <span class="pill-stone text-[11px]">All Users</span>
+            </div>
+            <svg class="km-chevron w-4 h-4 text-[#5C5A52] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </summary>
+          <div class="p-6">
+            <div class="km-ui-grid">
+              <div class="km-ui-card">
+                <div class="km-ui-preview">
+                  <span class="km-ui-toggle"><span class="km-ui-toggle-active">Student</span></span>
+                  <span class="km-ui-breadcrumb">Personal Workspace</span>
+                </div>
+                <p class="text-xs sm:text-sm text-[#4A483F] leading-relaxed">
+                  Views only their own profile, skill badges, matched jobs, upskill schedule, progress charts, and mock interviews. Can submit job applications, request skill waivers or resume re-uploads, and ask Placement Copilot about their own eligibility.
+                </p>
+              </div>
+
+              <div class="km-ui-card">
+                <div class="km-ui-preview">
+                  <span class="km-ui-toggle"><span class="km-ui-toggle-active">Faculty Mentor</span></span>
+                  <span class="km-ui-breadcrumb">Department Scope</span>
+                </div>
+                <p class="text-xs sm:text-sm text-[#4A483F] leading-relaxed">
+                  Views students and analytics filtered to their assigned department, runs mock interviews or review plans for mentees, and performs <strong>Tier-1 Endorsements</strong> on student requests before the TPO gives final sign-off.
+                </p>
+              </div>
+
+              <div class="km-ui-card">
+                <div class="km-ui-preview">
+                  <span class="km-ui-toggle"><span class="km-ui-toggle-active">TPO Admin</span></span>
+                  <span class="km-ui-breadcrumb">Full Placement Office</span>
+                </div>
+                <p class="text-xs sm:text-sm text-[#4A483F] leading-relaxed">
+                  Manages the entire cohort: onboards resumes, scrapes live jobs, runs the Drive Eligibility Simulator, gives final <strong>Tier-2 Approvals</strong>, configures institutional policies, inspects the Audit Trail, and accesses this User Guide.
+                </p>
+              </div>
+
+              <div class="km-ui-card">
+                <div class="km-ui-preview">
+                  <span class="km-ui-toggle"><span class="km-ui-toggle-active">Recruiter</span></span>
+                  <span class="km-ui-breadcrumb">Shareable JNF Link</span>
+                </div>
+                <p class="text-xs sm:text-sm text-[#4A483F] leading-relaxed">
+                  Opens the public Job Notification Form link shared by the placement cell &mdash; no account needed &mdash; to submit company role details, CTC package, required skills, and branch/GPA criteria for TPO verification.
+                </p>
+              </div>
+            </div>
           </div>
         </details>
       </section>
 
       <!-- Domain Partials (owned by specialist agents) -->
+      <div class="km-section-divider" data-divider-for="km-shell-auth" aria-hidden="true"><span>Chapter 2 &middot; App Bar, Sidebar &amp; Sign-In</span></div>
       {% include "know_more/_shell_auth_agent.html" ignore missing %}
+
+      <div class="km-section-divider" data-divider-for="km-cohort-profile" aria-hidden="true"><span>Chapter 3 &middot; Home &amp; Student Profile</span></div>
       {% include "know_more/_cohort_profile.html" ignore missing %}
+
+      <div class="km-section-divider" data-divider-for="km-matches-drives" aria-hidden="true"><span>Chapter 4 &middot; Job Matches, Scraper &amp; Drives</span></div>
       {% include "know_more/_matches_scraper_drives.html" ignore missing %}
+
+      <div class="km-section-divider" data-divider-for="km-plan-interview" aria-hidden="true"><span>Chapter 5 &middot; Upskill Plan, Progress &amp; Interviews</span></div>
       {% include "know_more/_plan_progress_interview.html" ignore missing %}
+
+      <div class="km-section-divider" data-divider-for="km-copilot-admin" aria-hidden="true"><span>Chapter 6 &middot; Copilot, Analytics, Approvals &amp; Policies</span></div>
       {% include "know_more/_copilot_admin_ops.html" ignore missing %}
 
       <!-- Empty Filter State -->
       <div id="km-empty-state" class="hidden editorial-card p-8 text-center space-y-3">
-        <p class="font-serif-display text-lg font-semibold text-[#1C1E1B]">No matching manual sections found</p>
-        <p class="text-xs text-[#5C5A52]">Try clearing your search query or switching the role filter back to All Roles.</p>
-        <button id="km-reset-filters" type="button" class="btn-secondary-pill">Reset Filters</button>
+        <p class="font-serif-display text-lg font-semibold text-[#1C1E1B]">No matching guide topics found</p>
+        <p class="text-xs sm:text-sm text-[#5C5A52]">Try clearing your search box, switching back to All Users, or viewing All Screens from the directory.</p>
+        <div class="flex flex-wrap items-center justify-center gap-2">
+          <button id="km-reset-filters" type="button" class="btn-secondary-pill">Reset Filters</button>
+          <button id="km-empty-show-all" type="button" class="btn-primary-pill hidden">Show All Screens</button>
+        </div>
       </div>
     </div>
   </div>
@@ -223,11 +329,28 @@
   var expandBtn = document.getElementById("km-expand-all");
   var collapseBtn = document.getElementById("km-collapse-all");
   var resetBtn = document.getElementById("km-reset-filters");
+  var showAllBtn = document.getElementById("km-show-all-screens");
+  var emptyShowAllBtn = document.getElementById("km-empty-show-all");
+  var focusBannerEl = document.getElementById("km-focus-banner");
+  var focusLabelEl = document.getElementById("km-focus-label");
   var visibleCountEl = document.getElementById("km-visible-count");
   var totalCountEl = document.getElementById("km-total-count");
   var emptyStateEl = document.getElementById("km-empty-state");
   var tocLinks = Array.prototype.slice.call(document.querySelectorAll("#km-toc .km-toc-link"));
+  var sectionsWrap = document.getElementById("km-sections");
+
   var activeRoleFilter = "all";
+  var activeChapter = "all";
+
+  var chapterTitles = {
+    "all": "All Screens",
+    "km-architecture": "1. How CareerOS Works",
+    "km-shell-auth": "2. App Bar, Sidebar & Sign-In",
+    "km-cohort-profile": "3. Home & Student Profile",
+    "km-matches-drives": "4. Job Matches, Scraper & Drives",
+    "km-plan-interview": "5. Upskill Plan, Progress & Interviews",
+    "km-copilot-admin": "6. Copilot, Analytics, Approvals & Policies"
+  };
 
   function getCards() {
     return Array.prototype.slice.call(document.querySelectorAll(".km-card"));
@@ -237,12 +360,34 @@
     return Array.prototype.slice.call(document.querySelectorAll(".km-section"));
   }
 
+  function getDividers() {
+    return Array.prototype.slice.call(document.querySelectorAll(".km-section-divider[data-divider-for]"));
+  }
+
+  function updateTocActive() {
+    tocLinks.forEach(function (link) {
+      var ch = link.getAttribute("data-chapter") || "all";
+      var isActive = ch === activeChapter;
+      link.classList.toggle("km-toc-active", isActive);
+      if (isActive) {
+        link.setAttribute("aria-current", "true");
+      } else {
+        link.removeAttribute("aria-current");
+      }
+    });
+  }
+
   function applyFilters() {
     var query = (searchEl && searchEl.value ? searchEl.value : "").trim().toLowerCase();
     var cards = getCards();
     var visibleCount = 0;
+    var scopedTotal = 0;
 
     cards.forEach(function (card) {
+      var parentSection = card.closest ? card.closest(".km-section") : null;
+      var chapterMatch = activeChapter === "all" || (parentSection && parentSection.id === activeChapter);
+      if (chapterMatch) scopedTotal += 1;
+
       var rolesAttr = (card.getAttribute("data-roles") || "").toLowerCase();
       var roleTokens = rolesAttr ? rolesAttr.split(/[\s,]+/) : [];
       var roleMatch = activeRoleFilter === "all" || roleTokens.indexOf(activeRoleFilter) >= 0;
@@ -250,21 +395,63 @@
       var haystack = ((card.getAttribute("data-keywords") || "") + " " + (card.textContent || "")).toLowerCase();
       var searchMatch = !query || haystack.indexOf(query) >= 0;
 
-      var show = roleMatch && searchMatch;
+      var show = chapterMatch && roleMatch && searchMatch;
       card.classList.toggle("hidden", !show);
       if (show) visibleCount += 1;
     });
 
+    var visibleSectionIds = {};
+    var visibleSectionCount = 0;
     getSections().forEach(function (sec) {
+      var chapterMatch = activeChapter === "all" || sec.id === activeChapter;
       var secCards = Array.prototype.slice.call(sec.querySelectorAll(".km-card"));
-      if (secCards.length === 0) return;
-      var anyVisible = secCards.some(function (c) { return !c.classList.contains("hidden"); });
-      sec.classList.toggle("hidden", !anyVisible);
+      var showSection = false;
+      if (secCards.length === 0) {
+        showSection = chapterMatch;
+      } else {
+        var anyVisible = secCards.some(function (c) { return !c.classList.contains("hidden"); });
+        showSection = chapterMatch && anyVisible;
+      }
+      sec.classList.toggle("hidden", !showSection);
+      if (showSection && sec.id) {
+        visibleSectionIds[sec.id] = true;
+        visibleSectionCount += 1;
+      }
     });
 
+    // Show chapter dividers only in All Screens mode when the target section is visible and follows another visible section
+    var seenVisibleBefore = !!visibleSectionIds["km-architecture"];
+    getDividers().forEach(function (div) {
+      var targetId = div.getAttribute("data-divider-for") || "";
+      var targetVisible = !!visibleSectionIds[targetId];
+      var showDivider = activeChapter === "all" && targetVisible && seenVisibleBefore;
+      div.classList.toggle("hidden", !showDivider);
+      if (targetVisible) seenVisibleBefore = true;
+    });
+
+    if (focusBannerEl) {
+      focusBannerEl.classList.toggle("hidden", activeChapter === "all");
+    }
+    if (focusLabelEl) {
+      focusLabelEl.textContent = chapterTitles[activeChapter] || "Selected Screen";
+    }
+    if (emptyShowAllBtn) {
+      emptyShowAllBtn.classList.toggle("hidden", activeChapter === "all");
+    }
+
     if (visibleCountEl) visibleCountEl.textContent = String(visibleCount);
-    if (totalCountEl) totalCountEl.textContent = String(cards.length);
-    if (emptyStateEl) emptyStateEl.classList.toggle("hidden", visibleCount > 0);
+    if (totalCountEl) totalCountEl.textContent = String(scopedTotal);
+    if (emptyStateEl) emptyStateEl.classList.toggle("hidden", visibleCount > 0 || (visibleSectionCount > 0 && cards.length === 0));
+  }
+
+  function selectChapter(chapterId, shouldScroll) {
+    activeChapter = chapterId || "all";
+    updateTocActive();
+    applyFilters();
+    if (shouldScroll && sectionsWrap) {
+      var y = sectionsWrap.getBoundingClientRect().top + window.pageYOffset - 132;
+      window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+    }
   }
 
   roleBtns.forEach(function (btn) {
@@ -290,19 +477,25 @@
 
   if (expandBtn) {
     expandBtn.addEventListener("click", function () {
-      getCards().forEach(function (card) { card.open = true; });
+      getCards().forEach(function (card) {
+        if (!card.classList.contains("hidden")) card.open = true;
+      });
     });
   }
 
   if (collapseBtn) {
     collapseBtn.addEventListener("click", function () {
-      getCards().forEach(function (card) { card.open = false; });
+      getCards().forEach(function (card) {
+        if (!card.classList.contains("hidden")) card.open = false;
+      });
     });
   }
 
   if (resetBtn) {
     resetBtn.addEventListener("click", function () {
       if (searchEl) searchEl.value = "";
+      activeChapter = "all";
+      updateTocActive();
       var allBtn = roleBtns.filter(function (b) { return b.getAttribute("data-role-filter") === "all"; })[0];
       if (allBtn) {
         allBtn.click();
@@ -313,43 +506,24 @@
     });
   }
 
-  function setActiveToc(id) {
-    tocLinks.forEach(function (link) {
-      var href = link.getAttribute("href") || "";
-      var isActive = href === "#" + id;
-      link.classList.toggle("km-toc-active", isActive);
-      if (isActive) {
-        link.setAttribute("aria-current", "true");
-      } else {
-        link.removeAttribute("aria-current");
-      }
-    });
+  if (showAllBtn) {
+    showAllBtn.addEventListener("click", function () { selectChapter("all", true); });
+  }
+  if (emptyShowAllBtn) {
+    emptyShowAllBtn.addEventListener("click", function () { selectChapter("all", true); });
   }
 
   tocLinks.forEach(function (link) {
     link.addEventListener("click", function (e) {
-      var href = link.getAttribute("href") || "";
-      if (href.indexOf("#") === 0) {
-        var target = document.getElementById(href.slice(1));
-        if (target) {
-          e.preventDefault();
-          target.scrollIntoView({ behavior: "smooth", block: "start" });
-          setActiveToc(target.id);
-        }
-      }
+      e.preventDefault();
+      var chapter = link.getAttribute("data-chapter") || "all";
+      selectChapter(chapter, true);
     });
   });
 
-  if ("IntersectionObserver" in window) {
-    var observer = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting && entry.target.id) {
-          setActiveToc(entry.target.id);
-        }
-      });
-    }, { rootMargin: "-20% 0px -65% 0px", threshold: 0.01 });
-
-    getSections().forEach(function (sec) { observer.observe(sec); });
+  if (window.location.hash && chapterTitles[window.location.hash.slice(1)]) {
+    activeChapter = window.location.hash.slice(1);
+    updateTocActive();
   }
 
   applyFilters();

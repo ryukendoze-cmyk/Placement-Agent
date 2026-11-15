@@ -19,6 +19,11 @@ Whenever you add, modify, or remove any feature, UI element, or backend behavior
    - Update `app/templates/know_more.html` if top-level sections, role filters, or architecture pipeline summaries change.
    - Update `tests/test_know_more.py` to cover newly added controls, routes, or behaviors (and preserve `tpo_admin`-only RBAC enforcement on `/know-more`).
 
-3. **Verification**:
-   - Ensure every documented button, toggle, route, and process accurately reflects the live code (never leave stale descriptions or unverified claims).
+3. **Writing & UI Style (User-First, No Code Dumps)**:
+   - Write in **plain, everyday layman language** for TPO Admins and end users — NEVER dump raw URL paths (`/api/...`, `/login`), CSS IDs (`#btn-id`), or Python/JS function names in the visible guide text.
+   - Show each control using a **visual UI button/toggle/pill preview** matching its **exact visible label** in the app, paired with **Where it is located**, **Who can use it**, and **What it does** (100% accurate to live code behavior).
+   - Keep each app screen cleanly separated into its own visual section.
+
+4. **Verification**:
+   - Ensure every documented button, toggle, screen, and workflow accurately reflects the live code (never leave stale descriptions or unverified claims).
    - Run `uv run pytest tests/test_know_more.py -q` alongside the relevant feature tests.

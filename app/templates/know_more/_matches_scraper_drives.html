@@ -1,537 +1,785 @@
-<section id="km-matches-drives" class="km-section space-y-4" data-section="matches-drives">
+<section id="km-matches-drives" class="km-section space-y-5" data-section="matches-drives">
   <!-- Section Header -->
   <div class="editorial-card p-6 space-y-4">
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div class="space-y-1.5">
-        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-[#EEF5F0] border border-[#DCE8E1] text-[#1E6B52] text-[11px] font-semibold uppercase tracking-wider">
-          Domain 03 · Matching, Scraping, Applications &amp; Drives
-        </div>
-        <h2 class="font-display text-2xl font-bold text-[#1C1E1B]">
-          Job Matching, Live Market Scraper, HITL Applications &amp; Smart JD / Campus Drives
+        <span class="pill-sage text-[11px] uppercase tracking-wider">Screen 04 &middot; Job Matches, Live Scraper &amp; Campus Drives</span>
+        <h2 class="font-serif-display text-xl sm:text-2xl font-bold text-[#1C1E1B]">
+          Job Matches, Live Market Scraper, Applications &amp; Campus Drives
         </h2>
-        <p class="text-sm text-[#5C5A52] max-w-4xl leading-relaxed">
-          Hybrid semantic-plus-skill matching engine with incremental auto-ranking, 8-dimension client-side filtering,
-          2-tier Human-in-the-Loop (HITL) application governance, counterfactual skill simulation, multi-provider
-          SSE live job scraping with strict grounding &amp; purge controls, and the Smart JD / Recruiter JNF campus drive pipeline.
+        <p class="text-xs sm:text-sm text-[#5C5A52] max-w-4xl leading-relaxed">
+          Your central career discovery workspace. Compare on-campus placement drives and live market roles side by side,
+          see exactly why each match score was awarded, filter opportunities in real time, submit applications or waiver requests,
+          pull fresh external openings, and publish new campus drives from uploaded job descriptions or recruiter links.
         </p>
       </div>
-      <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-medium">
-        <span class="px-2 py-0.5 rounded bg-[#F5F4EE] border border-[#E5E3DA] text-[#4A483F]">student</span>
-        <span class="px-2 py-0.5 rounded bg-[#F5F4EE] border border-[#E5E3DA] text-[#4A483F]">faculty_mentor</span>
-        <span class="px-2 py-0.5 rounded bg-[#EEF5F0] border border-[#DCE8E1] text-[#1E6B52]">tpo_admin</span>
-        <span class="px-2 py-0.5 rounded bg-[#EEF5FB] border border-[#C9DDF0] text-[#1D5A91]">public (/jnf)</span>
+      <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+        <span class="pill-stone">Student</span>
+        <span class="pill-stone">Faculty Mentor</span>
+        <span class="pill-sage">TPO Admin</span>
+        <span class="pill-stone">External Recruiter</span>
       </div>
     </div>
 
-    <!-- Process Flow Pill Bar -->
-    <div class="pt-3 border-t border-[#ECEAE2]">
-      <div class="text-[11px] font-semibold uppercase tracking-wider text-[#6E6C64] mb-2">End-to-End Process Flow</div>
-      <div class="flex flex-wrap items-center gap-2 text-xs">
-        <span class="px-2.5 py-1 rounded-md bg-[#FAF9F5] border border-[#E5E3DA] font-medium text-[#1C1E1B]">1. Profile &amp; Job Vectors</span>
-        <span class="text-[#6E6C64]">→</span>
-        <span class="px-2.5 py-1 rounded-md bg-[#FAF9F5] border border-[#E5E3DA] font-medium text-[#1C1E1B]">2. ANN + Hybrid Score &amp; Auto-Rank</span>
-        <span class="text-[#6E6C64]">→</span>
-        <span class="px-2.5 py-1 rounded-md bg-[#FAF9F5] border border-[#E5E3DA] font-medium text-[#1C1E1B]">3. 8-Dim Filter / What-If Sim</span>
-        <span class="text-[#6E6C64]">→</span>
-        <span class="px-2.5 py-1 rounded-md bg-[#FAF9F5] border border-[#E5E3DA] font-medium text-[#1C1E1B]">4. HITL Apply / Waiver</span>
-        <span class="text-[#6E6C64]">→</span>
-        <span class="px-2.5 py-1 rounded-md bg-[#FAF9F5] border border-[#E5E3DA] font-medium text-[#1C1E1B]">5. SSE Live Scrape &amp; Purge</span>
-        <span class="text-[#6E6C64]">→</span>
-        <span class="px-2.5 py-1 rounded-md bg-[#EEF5F0] border border-[#DCE8E1] font-medium text-[#1E6B52]">6. Smart JD / JNF → Cohort Rematch</span>
+    <!-- Plain-English Process Flow -->
+    <div class="pt-3 border-t border-[#E5E3DC]">
+      <p class="text-[11px] font-bold uppercase tracking-wider text-[#6E6C64] mb-2">How Opportunities Reach Students</p>
+      <div class="flex flex-wrap items-center gap-1.5 text-xs">
+        <span class="pill-stone">1. Campus Drives or Live Scraper</span>
+        <span class="text-[#7A776E]">&rarr;</span>
+        <span class="pill-stone">2. Skill &amp; Eligibility Check</span>
+        <span class="text-[#7A776E]">&rarr;</span>
+        <span class="pill-stone">3. Filter, Star &amp; Compare</span>
+        <span class="text-[#7A776E]">&rarr;</span>
+        <span class="pill-stone">4. Apply or Request Waiver</span>
+        <span class="text-[#7A776E]">&rarr;</span>
+        <span class="pill-sage">5. Mentor &amp; TPO Sign-Off</span>
       </div>
     </div>
   </div>
 
-  <!-- Card 1: Job Matching Engine & Incremental Auto-Rank -->
+  <!-- Card 4.1: Job Matches Top Bar & Match Scoring (in Plain English) -->
   <details
     class="km-card editorial-card overflow-hidden"
     open
     data-roles="student faculty_mentor tpo_admin"
-    data-keywords="matching engine rank_jobs score_job job_eligibility job_tier band_for incremental auto-rank cosine similarity ann vector pre-filter verification weight depth weight seniority penalty sop-01 sop-03 sop-05"
+    data-keywords="job matches top bar add campus drive smart jd share recruiter jnf link fetch live jobs remove all live jobs re-run matching run matching scoring formula verified skills seniority penalty eligibility gpa branch backlogs salary tier super dream dream standard"
   >
-    <summary class="px-5 py-4 cursor-pointer flex flex-wrap items-center justify-between gap-2 bg-[#FAF9F5] hover:bg-[#F3F1EA] transition-colors select-none">
+    <summary class="px-6 py-4 cursor-pointer flex flex-wrap items-center justify-between gap-3 bg-[#FAF9F5] hover:bg-[#F4F3EC] transition-colors select-none">
       <div class="flex items-center gap-3">
-        <span class="px-2 py-0.5 rounded bg-[#EEF5F0] text-[#1E6B52] text-[11px] font-bold">3.1</span>
+        <span class="px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] text-xs font-bold">4.1</span>
         <div>
-          <h3 class="font-display font-bold text-base text-[#1C1E1B]">Job Matching Engine &amp; Incremental Auto-Rank</h3>
-          <p class="text-xs text-[#5C5A52]">Hybrid semantic + skill-coverage scoring, verification &amp; depth weighting, SOP eligibility gates, and incremental page-load ranking</p>
+          <h3 class="font-serif-display font-semibold text-base text-[#1C1E1B]">Job Matches Top Bar &amp; Match Scoring</h3>
+          <p class="text-xs text-[#5C5A52]">Header action buttons and a plain-English breakdown of how every match score, eligibility badge, and salary tier is calculated</p>
         </div>
       </div>
-      <span class="text-[11px] font-mono text-[#6E6C64]">app/matching/engine.py · rank.py · pages.py · students.py</span>
+      <div class="flex items-center gap-2">
+        <span class="pill-stone text-[11px]">Student &middot; Faculty &middot; TPO Admin</span>
+        <svg class="km-chevron w-4 h-4 text-[#5C5A52] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
     </summary>
 
-    <div class="p-5 space-y-5 border-t border-[#ECEAE2]">
-      <!-- Scoring Formula & Multipliers -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="p-4 rounded-lg bg-[#FAF9F5] border border-[#ECEAE2] space-y-2">
-          <div class="text-xs font-bold uppercase tracking-wider text-[#1E6B52]">Composite Score Formula (<code>score_job</code>)</div>
+    <div class="p-6 space-y-6">
+      <!-- Top Bar Buttons -->
+      <div class="space-y-3">
+        <div class="km-section-divider">Top Header Buttons on Job Matches</div>
+        <div class="km-ui-grid">
+          <div class="km-ui-card">
+            <div class="km-ui-preview">
+              <span class="km-ui-btn-primary">+ Add Campus Drive (Smart JD)</span>
+            </div>
+            <div class="km-ui-meta">
+              <span class="km-ui-breadcrumb">Job Matches &rarr; Top Right</span>
+              <span class="pill-sage">TPO Admin only</span>
+            </div>
+            <p class="text-xs text-[#4A483F] leading-relaxed">
+              Opens the Smart JD assistant so you can upload a company PDF/Word/text file or paste an email/WhatsApp job post,
+              let the system extract salary, skills, and eligibility rules automatically, and publish a new on-campus drive.
+            </p>
+          </div>
+
+          <div class="km-ui-card">
+            <div class="km-ui-preview">
+              <span class="km-ui-btn-secondary">Share Recruiter JNF Link</span>
+            </div>
+            <div class="km-ui-meta">
+              <span class="km-ui-breadcrumb">Job Matches &rarr; Top Right</span>
+              <span class="pill-sage">TPO Admin only</span>
+            </div>
+            <p class="text-xs text-[#4A483F] leading-relaxed">
+              Opens the recruiter link generator to create an expiring, tamper-proof intake URL and scannable QR code
+              that visiting recruiters can fill out themselves without needing a CareerOS login.
+            </p>
+          </div>
+
+          <div class="km-ui-card">
+            <div class="km-ui-preview">
+              <span class="km-ui-btn-secondary">Fetch Live Jobs</span>
+            </div>
+            <div class="km-ui-meta">
+              <span class="km-ui-breadcrumb">Job Matches &rarr; Top Right</span>
+              <span class="pill-stone">Student &amp; TPO Admin</span>
+            </div>
+            <p class="text-xs text-[#4A483F] leading-relaxed">
+              Opens the Live Indian Tech Jobs scraper pop-up with AI-recommended search keywords tailored to the student's strongest skills,
+              pulling real openings from Indian job portals and company career boards.
+            </p>
+          </div>
+
+          <div class="km-ui-card">
+            <div class="km-ui-preview">
+              <span class="km-ui-btn-danger">Remove All Live Jobs</span>
+            </div>
+            <div class="km-ui-meta">
+              <span class="km-ui-breadcrumb">Job Matches &rarr; Top Right</span>
+              <span class="pill-stone">Student &amp; TPO Admin</span>
+            </div>
+            <p class="text-xs text-[#4A483F] leading-relaxed">
+              Asks for confirmation, then clears external scraped jobs from the workspace while keeping all On-Campus drives safe.
+              For a Student, it removes only the live jobs they fetched; for a TPO Admin, it clears all live market jobs system-wide.
+            </p>
+          </div>
+
+          <div class="km-ui-card md:col-span-2">
+            <div class="km-ui-preview">
+              <span class="km-ui-btn-primary">Re-run matching</span>
+              <span class="km-ui-btn-primary">Run matching</span>
+            </div>
+            <div class="km-ui-meta">
+              <span class="km-ui-breadcrumb">Job Matches &rarr; Top Right (or Center Empty Screen)</span>
+              <span class="pill-stone">Everyone viewing a student</span>
+            </div>
+            <p class="text-xs text-[#4A483F] leading-relaxed">
+              Recomputes all match scores from scratch against the student's latest skills and refreshes the page.
+              First-time profiles see <strong>Run matching</strong> in the center; once matches exist, <strong>Re-run matching</strong> appears in the top bar.
+              New campus drives or newly scraped roles are also auto-ranked incrementally when you open Job Matches, and your starred Favorites and Dismissed roles are always preserved.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Match Scoring in Plain English -->
+      <div class="space-y-3">
+        <div class="km-section-divider">How Every Job's Match Score Is Calculated</div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="km-step-card">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-bold text-[#1C1E1B]">1. Composite Fit Score (0&ndash;100)</span>
+              <span class="pill-sage text-[10px]">60 / 20 / 20</span>
+            </div>
+            <ul class="text-xs text-[#5C5A52] space-y-1.5 list-disc pl-4 leading-relaxed">
+              <li><strong>60% Required Skills &amp; Depth:</strong> Counts how many required skills the student has, checking if their depth matches the role (standard roles expect <em>Intermediate</em>; senior roles expect <em>Advanced</em>). Being one level below earns partial credit.</li>
+              <li><strong>20% Preferred Skills Bonus:</strong> Rewards matching nice-to-have skills listed by the employer.</li>
+              <li><strong>20% Overall Profile Relevance:</strong> Measures how closely the student's overall resume story aligns with the full job description.</li>
+            </ul>
+          </div>
+
+          <div class="km-step-card">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-bold text-[#1C1E1B]">2. Trust Bonus &amp; Experience Guard</span>
+              <span class="pill-stone text-[10px]">Fairness Rules</span>
+            </div>
+            <ul class="text-xs text-[#5C5A52] space-y-1.5 list-disc pl-4 leading-relaxed">
+              <li><strong>Verified Skill Trust:</strong> Skills proven in a quiz or mock interview earn <strong>100%</strong> credit; resume-only skills earn <strong>85%</strong>; skills needing re-verification earn <strong>50%</strong>; unverified skills earn <strong>20%</strong>.</li>
+              <li><strong>Proficiency Bonus (up to +10 pts):</strong> Extra points when matched required skills are verified at Intermediate or Advanced levels.</li>
+              <li><strong>Seniority Deduction (-25 pts):</strong> Automatically deducts 25 points if an undergrad/fresher (&lt; 2 yrs experience) is scored against a Senior, Lead, Staff, or 3+ year role.</li>
+            </ul>
+          </div>
+
+          <div class="km-step-card">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-bold text-[#1C1E1B]">3. Eligibility &amp; Salary Tier</span>
+              <span class="pill-stone text-[10px]">Policy Checks</span>
+            </div>
+            <ul class="text-xs text-[#5C5A52] space-y-1.5 list-disc pl-4 leading-relaxed">
+              <li><strong>4 Eligibility Checks:</strong> Verifies (a) role isn't senior-only for freshers, (b) student GPA meets the cutoff, (c) student branch is allowed (blank = open to all), and (d) active backlogs don't exceed policy limits.</li>
+              <li><strong>Score Bands:</strong> Strong (80%+), Moderate / Good (60&ndash;79%), Developing (40&ndash;59%), Early (&lt;40%).</li>
+              <li><strong>Salary Tiers (Disclosed Full-Time):</strong> <strong>Super Dream</strong> (&ge; 15 LPA), <strong>Dream</strong> (8&ndash;14.99 LPA), <strong>Standard</strong> (&lt; 8 LPA).</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- Card 4.2: Filters, Toggles & Saved Lists on Job Matches -->
+  <details
+    class="km-card editorial-card overflow-hidden"
+    open
+    data-roles="student faculty_mentor tpo_admin"
+    data-keywords="all opportunities live market on-campus favorites fresher roles only hiring portals select all deselect all scraped only campus only clear live jobs skill competencies sort reset all filters my campus drive applications 2-tier hitl status saved favorited opportunities open withdraw unfavorite"
+  >
+    <summary class="px-6 py-4 cursor-pointer flex flex-wrap items-center justify-between gap-3 bg-[#FAF9F5] hover:bg-[#F4F3EC] transition-colors select-none">
+      <div class="flex items-center gap-3">
+        <span class="px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] text-xs font-bold">4.2</span>
+        <div>
+          <h3 class="font-serif-display font-semibold text-base text-[#1C1E1B]">Filters, Toggles &amp; Saved Lists on Job Matches</h3>
+          <p class="text-xs text-[#5C5A52]">Instant category tabs, portal &amp; skill chips, dropdown filters, active application tracker, and starred favorites tray</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="pill-stone text-[11px]">Student &middot; Faculty &middot; TPO Admin</span>
+        <svg class="km-chevron w-4 h-4 text-[#5C5A52] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
+    </summary>
+
+    <div class="p-6 space-y-6">
+      <div class="km-ui-grid">
+        <div class="km-ui-card">
+          <div class="km-ui-preview">
+            <div class="km-ui-toggle">
+              <span class="km-ui-toggle-active">All Opportunities</span>
+              <span>Live Market</span>
+              <span>On-Campus</span>
+              <span>Favorites</span>
+            </div>
+            <span class="km-ui-btn-secondary">Fresher Roles Only</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Filter Panel &rarr; Top Row</span>
+            <span class="pill-stone">All authorized users</span>
+          </div>
           <p class="text-xs text-[#4A483F] leading-relaxed">
-            <code>base = round(100 * (0.60 * coverage + 0.20 * pref_score + 0.20 * semantic_sim))</code>
-            from <code>WEIGHTS = {"coverage": 0.6, "preferred": 0.2, "semantic": 0.2}</code>.
-            Final score is <code>max(0, min(100, base + proficiency_bonus + seniority_penalty))</code>.
+            Instantly narrows the job list by source (all jobs, external scraped roles, JKLU on-campus drives, or starred Favorites).
+            Toggle <strong>Fresher Roles Only</strong> to hide mid-level or experienced postings and focus purely on entry-level &amp; intern roles.
           </p>
-          <ul class="text-xs text-[#5C5A52] space-y-1 list-disc pl-4">
-            <li><strong>Depth Weight (<code>depth_weight</code>)</strong>: <code>target_depth_for(job)</code> is <code>"advanced"</code> when <code>is_senior_job(job)</code> is true, else <code>"intermediate"</code>. Exact/higher depth = <code>1.0</code>; 1 level below = <code>0.4</code>; 2 levels below = <code>0.1</code>.</li>
-            <li><strong>Verification Multipliers (<code>VERIFICATION_WEIGHTS</code>)</strong>: <code>verified = 1.0</code>, <code>claimed = 0.85</code>, <code>needs_reverification = 0.5</code>, <code>unverified = 0.2</code> (effective depth of <code>unverified</code> skills is also capped at <code>"basic"</code>).</li>
-            <li><strong>Proficiency Bonus (<code>_proficiency_bonus</code>)</strong>: <code>PROFICIENCY_POINTS</code> (<code>basic: 0</code>, <code>intermediate: 5</code>, <code>advanced: 10</code>) multiplied by verification weight, averaged across required skills, capped at <code>min(10, round(pts / req_count))</code>.</li>
-            <li><strong>Seniority Penalty (<code>SENIORITY_PENALTY = -25</code>)</strong>: Applied when <code>is_campus_fresher(student)</code> (year ≤ 4 or &lt; 2 yrs experience) is scored against <code>is_senior_job(job)</code> (Senior/Lead/Staff/III+ title or <code>experience_years &gt;= 3.0</code>).</li>
-          </ul>
         </div>
 
-        <div class="p-4 rounded-lg bg-[#FAF9F5] border border-[#ECEAE2] space-y-2">
-          <div class="text-xs font-bold uppercase tracking-wider text-[#1E6B52]">Bands, Eligibility, Tiers &amp; Visibility</div>
-          <ul class="text-xs text-[#5C5A52] space-y-1.5 list-disc pl-4">
-            <li><strong>Bands (<code>band_for</code>)</strong>: Reads <code>SOP-05</code> <code>min_coverage_pct</code> (default <code>40</code>): <code>strong</code> (&ge; <code>max(80, floor)</code>), <code>moderate</code> (&ge; 60), <code>developing</code> (&ge; 40), <code>early</code> (&lt; 40).</li>
-            <li><strong>Eligibility Gate (<code>job_eligibility</code>)</strong>: Evaluates (1) campus fresher vs senior role lock (<code>SENIOR_TITLE_RE</code> / <code>exp &gt;= 3</code>), (2) <code>student.gpa &lt; job.min_gpa</code>, (3) <code>allowed_branches</code> via <code>is_branch_eligible</code> (empty list = open to all branches), (4) <code>student.active_backlogs &gt; max_backlogs</code> per <code>SOP-03</code>. Returns <code>(bool, reasons[])</code>.</li>
-            <li><strong>Policy Tier (<code>job_tier</code>)</strong>: Uses <code>SOP-01</code> rules via top-end LPA — <code>super_dream</code> (&ge; 15.0 LPA), <code>dream</code> (&ge; 8.0 LPA), <code>standard</code> (&lt; 8.0 LPA or undisclosed fallback).</li>
-            <li><strong>Visibility Scope (<code>is_job_visible_to_student</code>)</strong>: On-campus jobs (<code>is_on_campus_job</code>: <code>source == "local"</code>, <code>scraper_engine == "campus_drive"</code>, or non-<code>job-ext-*</code> IDs) and unowned scraped jobs (<code>owner_student_id is None</code>) are visible to all; student-scraped jobs (<code>owner_student_id == sid</code>) stay scoped to their creator.</li>
-          </ul>
+        <div class="km-ui-card">
+          <div class="km-ui-preview">
+            <span class="km-ui-input">Search by role, company, location, or skill...</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Filter Panel &rarr; Top Left</span>
+            <span class="pill-stone">All authorized users</span>
+          </div>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Filters opportunities as you type across job titles, company names, cities, and required or missing skills.
+            Click the small clear icon inside the search box to erase your search instantly.
+          </p>
+        </div>
+
+        <div class="km-ui-card">
+          <div class="km-ui-preview">
+            <span class="km-ui-input">Salary (LPA) &#9662;</span>
+            <span class="km-ui-btn-secondary">&#9745; Disclosed Only</span>
+            <span class="km-ui-input">All Eligibility &#9662;</span>
+            <span class="km-ui-input">All Scores &#9662;</span>
+            <span class="km-ui-input">All Locations &#9662;</span>
+            <span class="km-ui-input">All Modes &#9662;</span>
+            <span class="km-ui-input">All Experience Levels &#9662;</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Filter Panel &rarr; Middle Grid</span>
+            <span class="pill-stone">All authorized users</span>
+          </div>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Narrow results by pay range (&lt;6 to 25+ LPA), hide undisclosed salaries with <strong>Disclosed Only</strong>,
+            filter by eligibility status or match band (Strong 80%+, Good 60&ndash;79%, Developing &lt;60%),
+            pick an Indian tech city, choose Remote/Hybrid/On-site, or filter by years of experience.
+          </p>
+        </div>
+
+        <div class="km-ui-card">
+          <div class="km-ui-preview">
+            <span class="km-ui-btn-secondary">Select All</span>
+            <span class="km-ui-btn-secondary">Deselect All</span>
+            <span class="km-ui-btn-secondary">Scraped Only</span>
+            <span class="km-ui-btn-secondary">Campus Only</span>
+            <span class="km-ui-btn-danger">Clear Live Jobs</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Filter Panel &rarr; Hiring Portals Row</span>
+            <span class="pill-stone">Portal toggles for all &middot; Clear Live Jobs for Student &amp; TPO</span>
+          </div>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Toggle individual job portals (On-Campus, Naukri, LinkedIn, Indeed, Foundit, Internshala, Unstop, Instahyre, Hirist, Ashby, Greenhouse, Lever)
+            or use the quick-preset links above them. <strong>Clear Live Jobs</strong> deletes live market postings while keeping campus drives intact.
+          </p>
+        </div>
+
+        <div class="km-ui-card">
+          <div class="km-ui-preview">
+            <span class="pill-sage">python</span>
+            <span class="pill-stone">fastapi</span>
+            <span class="pill-stone">react</span>
+            <span class="pill-stone">docker</span>
+            <span class="pill-stone">sql</span>
+            <span class="pill-stone">aws</span>
+            <span class="pill-stone">+4 more</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Filter Panel &rarr; Skill Competencies Row</span>
+            <span class="pill-stone">All authorized users</span>
+          </div>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Click one or more skill chips to show jobs that involve <strong>any</strong> of those selected skills (matching against the role title and skill requirements).
+          </p>
+        </div>
+
+        <div class="km-ui-card">
+          <div class="km-ui-preview">
+            <span class="km-ui-input">Sort By: Composite Fit (High to Low) &#9662;</span>
+            <span class="km-ui-btn-secondary">Reset All Filters</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Filter Panel &rarr; Bottom Status Strip</span>
+            <span class="pill-stone">All authorized users</span>
+          </div>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Shows how many opportunities match your active filters. Reorder cards by Composite Fit, Highest/Lowest Salary,
+            Newest Posting Date, or Company Name (A&ndash;Z), or click <strong>Reset All Filters</strong> to return to the full list.
+          </p>
         </div>
       </div>
 
-      <!-- Routes & Python Functions Table -->
-      <div class="overflow-x-auto">
-        <table class="km-table w-full text-xs text-left border-collapse">
-          <thead>
-            <tr class="border-b border-[#E5E3DA] bg-[#F5F4EE] text-[#4A483F] uppercase tracking-wider text-[11px]">
-              <th class="py-2 px-3">Route / Symbol</th>
-              <th class="py-2 px-3">Source File</th>
-              <th class="py-2 px-3">Role / Scope</th>
-              <th class="py-2 px-3">Behavior &amp; Process Mechanics</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[#ECEAE2]">
-            <tr>
-              <td class="py-2.5 px-3 font-mono">GET /students/{sid}/matches<br><span class="text-[#6E6C64]">matches_page()</span></td>
-              <td class="py-2.5 px-3 font-mono">app/api/routes/pages.py</td>
-              <td class="py-2.5 px-3">Enforces <code>enforce_student_scope</code></td>
-              <td class="py-2.5 px-3">
-                Prunes stale <code>JobMatch</code> rows whose job is no longer visible (<code>is_job_visible_to_student</code>).
-                If match rows already exist and newly published/scraped visible jobs lack <code>JobMatch</code> records (<code>missing_jobs</code>),
-                runs <strong>Incremental Auto-Rank</strong> via <code>rank_jobs(missing_jobs, ..., top=None)</code> and persists new rows
-                (preserving <code>is_favorite</code> from <code>JobApplication</code>). Filters out dismissed matches
-                (<code>band == "dismissed"</code>, <code>score &lt; 0</code>, or <code>breakdown["dismissed"]</code>).
-              </td>
-            </tr>
-            <tr>
-              <td class="py-2.5 px-3 font-mono">GET /api/students/{sid}/matches<br><span class="text-[#6E6C64]">get_matches() / _rank_and_persist()</span></td>
-              <td class="py-2.5 px-3 font-mono">app/api/routes/students.py</td>
-              <td class="py-2.5 px-3">Student-scoped (student / mentor / TPO)</td>
-              <td class="py-2.5 px-3">
-                Query param <code>include_scraped</code> (default <code>true</code>). Re-embeds student profile vector if missing in
-                <code>ctx.student_vectors</code>. Calls <code>_rank_and_persist(..., top=10)</code> which deletes and rebuilds <code>JobMatch</code> rows
-                for <code>sid</code> while preserving <code>dismissed_job_ids</code> (written back as <code>score=-1.0, band="dismissed"</code>) and
-                <code>favorite_job_ids</code> across re-ranking. Returns <code>_match_payload</code>.
-              </td>
-            </tr>
-            <tr>
-              <td class="py-2.5 px-3 font-mono">rank_jobs()</td>
-              <td class="py-2.5 px-3 font-mono">app/matching/rank.py</td>
-              <td class="py-2.5 px-3">Internal Engine</td>
-              <td class="py-2.5 px-3">
-                Looks up or computes job vectors in <code>ctx.job_vectors</code> / <code>vector_store</code>. When candidate catalog exceeds
-                <code>500</code> jobs (or <code>ann_pre_filter_k</code> is set) and <code>vector_store.search</code> is available, runs a
-                two-stage ANN pre-filter (<code>k = min(len(jobs), 200)</code>) unioned with any job sharing &ge;1 <code>required_skills</code>
-                token with the student, then calls <code>cosine_similarity</code> + <code>score_job</code> and sorts descending.
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Saved Lists & Applications Tracker -->
+      <div class="space-y-3">
+        <div class="km-section-divider">Applications Tracker &amp; Saved Opportunities Trays</div>
+        <div class="km-ui-grid">
+          <div class="km-ui-card">
+            <div class="km-ui-preview">
+              <span class="pill-sage">My Campus Drive Applications &amp; 2-Tier HITL Status</span>
+              <span class="km-ui-btn-danger">Withdraw</span>
+            </div>
+            <div class="km-ui-meta">
+              <span class="km-ui-breadcrumb">Job Matches &rarr; Upper Tracker Panel</span>
+              <span class="pill-stone">Visible once a student has applied</span>
+            </div>
+            <p class="text-xs text-[#4A483F] leading-relaxed">
+              Tracks every submitted application and its current stage: <strong>Nominated (TPO Approved)</strong>,
+              <strong>Tier 2: Awaiting TPO Approval</strong>, <strong>Tier 1: Awaiting Mentor Endorsement</strong>, or <strong>Rejected / Withdrawn</strong>.
+              Active applications include a <strong>Withdraw</strong> button so a student can pull back their request before completion.
+            </p>
+          </div>
+
+          <div class="km-ui-card">
+            <div class="km-ui-preview">
+              <span class="pill-stone">Saved &amp; Favorited Opportunities</span>
+              <span class="km-ui-btn-secondary">Open</span>
+              <span class="km-ui-btn-danger">Unfavorite</span>
+            </div>
+            <div class="km-ui-meta">
+              <span class="km-ui-breadcrumb">Job Matches &rarr; Starred Tray</span>
+              <span class="pill-stone">Visible when at least 1 job is starred</span>
+            </div>
+            <p class="text-xs text-[#4A483F] leading-relaxed">
+              Keeps starred roles in a quick-access tray along with their match percentage and current application status.
+              Click <strong>Open</strong> to jump straight to that job card in the detail viewer, or <strong>Unfavorite</strong> to remove the star.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   </details>
 
-  <!-- Card 2: Matches Page Controls, Filters, Toggles & Actions -->
+  <!-- Card 4.3: Per-Job Card Actions & Pop-Ups -->
   <details
     class="km-card editorial-card overflow-hidden"
     open
     data-roles="student faculty_mentor tpo_admin"
-    data-keywords="matches.html filters search band tier portal fresher remote favorites dismiss remove withdraw apply nominate hitl waiver simulator simulate_counterfactual master-detail"
+    data-keywords="generate plan for this job apply nominate request waiver hitl 4 approval paths favorite favorited dismiss remove job opportunity remove for this student only remove permanently for all students view on what-if skill simulator"
   >
-    <summary class="px-5 py-4 cursor-pointer flex flex-wrap items-center justify-between gap-2 bg-[#FAF9F5] hover:bg-[#F3F1EA] transition-colors select-none">
+    <summary class="px-6 py-4 cursor-pointer flex flex-wrap items-center justify-between gap-3 bg-[#FAF9F5] hover:bg-[#F4F3EC] transition-colors select-none">
       <div class="flex items-center gap-3">
-        <span class="px-2 py-0.5 rounded bg-[#EEF5F0] text-[#1E6B52] text-[11px] font-bold">3.2</span>
+        <span class="px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] text-xs font-bold">4.3</span>
         <div>
-          <h3 class="font-display font-bold text-base text-[#1C1E1B]">Matches Page Controls, 8-Dimension Filters, HITL Applications &amp; Actions</h3>
-          <p class="text-xs text-[#5C5A52]">Master-detail match cards, 8-dimension client-side filter &amp; sort suite, favorites, 2-tier application tracker, dismiss/remove &amp; what-if skill simulator</p>
+          <h3 class="font-serif-display font-semibold text-base text-[#1C1E1B]">Per-Job Card Actions, 4 Approval Paths &amp; Simulator</h3>
+          <p class="text-xs text-[#5C5A52]">Master-detail job breakdown, one-click upskill planning, 4 application approval paths, removal choices, and What-If Skill Simulator</p>
         </div>
       </div>
-      <span class="text-[11px] font-mono text-[#6E6C64]">app/templates/student/matches.html · applications.py · simulator.py</span>
+      <div class="flex items-center gap-2">
+        <span class="pill-stone text-[11px]">Student &middot; Faculty &middot; TPO Admin</span>
+        <svg class="km-chevron w-4 h-4 text-[#5C5A52] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
     </summary>
 
-    <div class="p-5 space-y-5 border-t border-[#ECEAE2]">
-      <!-- Header Buttons & Top Panels -->
-      <div class="space-y-2">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-[#1E6B52]">Header Controls, Applications Tracker &amp; Favorites Panels</h4>
-        <div class="overflow-x-auto">
-          <table class="km-table w-full text-xs text-left border-collapse">
-            <thead>
-              <tr class="border-b border-[#E5E3DA] bg-[#F5F4EE] text-[#4A483F] uppercase tracking-wider text-[11px]">
-                <th class="py-2 px-3">UI Element / Selector</th>
-                <th class="py-2 px-3">Role Guard</th>
-                <th class="py-2 px-3">Endpoint / Handler</th>
-                <th class="py-2 px-3">Behavior</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-[#ECEAE2]">
-              <tr>
-                <td class="py-2 px-3 font-mono">#open-smart-jd-modal<br><span class="text-[#6E6C64]">+ Add Campus Drive (Smart JD)</span></td>
-                <td class="py-2 px-3"><code>tpo_admin</code> only</td>
-                <td class="py-2 px-3 font-mono">CampusDriveUI.openModal()</td>
-                <td class="py-2 px-3">Opens Smart JD ingestion &amp; policy-validated campus drive creation modal.</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-mono">#open-jnf-drawer-btn<br><span class="text-[#6E6C64]">Share Recruiter JNF Link</span></td>
-                <td class="py-2 px-3"><code>tpo_admin</code> only</td>
-                <td class="py-2 px-3 font-mono">CampusDriveUI.openJnfDrawer()</td>
-                <td class="py-2 px-3">Opens JNF drawer modal to mint signed expiring recruiter URLs &amp; QR code.</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-mono">#open-scrape-modal<br><span class="text-[#6E6C64]">Fetch Live Jobs</span></td>
-                <td class="py-2 px-3"><code>student</code>, <code>tpo_admin</code></td>
-                <td class="py-2 px-3 font-mono">openScrapeModal()</td>
-                <td class="py-2 px-3">Opens Live Job Scraper modal and triggers AI suggested job query fetch.</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-mono">#purge-live-jobs-header-btn<br><span class="text-[#6E6C64]">Remove All Live Jobs</span></td>
-                <td class="py-2 px-3"><code>student</code>, <code>tpo_admin</code></td>
-                <td class="py-2 px-3 font-mono">purgeAllLiveJobs() → DELETE /api/students/{sid}/matches/live</td>
-                <td class="py-2 px-3">Confirms and purges live market jobs (student-scoped for students, global for TPO admin).</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-mono">Re-run matching / #run<br><span class="text-[#6E6C64]">#rerun-spinner</span></td>
-                <td class="py-2 px-3">All authorized</td>
-                <td class="py-2 px-3 font-mono">hx-get="/api/students/{sid}/matches"</td>
-                <td class="py-2 px-3">HTMX GET trigger (<code>hx-swap="none"</code>, <code>hx-on::after-request="location.reload()"</code>) that re-ranks top matches and refreshes the page.</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-mono">#student-applications-panel<br><span class="text-[#6E6C64]">.withdraw-app-btn</span></td>
-                <td class="py-2 px-3">All authorized</td>
-                <td class="py-2 px-3 font-mono">GET /api/students/{sid}/applications<br>POST .../applications/{app_id}/withdraw</td>
-                <td class="py-2 px-3">
-                  Hydrated by <code>window.reloadStudentApplications()</code>. Displays <code>Tier 1: Faculty Mentor Endorsement → Tier 2: TPO Final Sign-Off</code>,
-                  waiver notes, status pills (<code>Nominated (TPO Approved)</code>, <code>Tier 2: Awaiting TPO Approval</code>,
-                  <code>Tier 1: Awaiting Mentor Endorsement</code>, <code>REJECTED</code>/<code>WITHDRAWN</code>), and Withdraw buttons.
-                  Backend also supports <code>DELETE /api/students/{sid}/applications/{app_id}</code>, <code>POST/DELETE /api/applications/{app_id}/withdraw</code>,
-                  <code>GET /api/admin/applications</code>, and <code>DELETE /api/admin/applications/{app_id}</code>.
-                </td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-mono">#student-favorites-panel</td>
-                <td class="py-2 px-3">All authorized</td>
-                <td class="py-2 px-3 font-mono">selectMasterCard(jobId) · toggleFavoriteJob()</td>
-                <td class="py-2 px-3">Collapsible starred opportunities tray synced with <code>JobMatch.is_favorite</code> &amp; <code>JobApplication.is_favorite</code>; provides <code>Open</code> (jumps to card) and <code>Unfavorite</code> buttons.</td>
-              </tr>
-            </tbody>
-          </table>
+    <div class="p-6 space-y-6">
+      <!-- Per-Job Card Buttons -->
+      <div class="km-ui-grid">
+        <div class="km-ui-card">
+          <div class="km-ui-preview">
+            <span class="km-ui-btn-primary">+ Generate plan for this job</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Job Detail Card &rarr; Action Row</span>
+            <span class="pill-stone">All authorized users</span>
+          </div>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Builds a custom study roadmap targeting this specific role's missing or under-level skills and opens the <strong>Upskilling Plan</strong> screen right away.
+          </p>
+        </div>
+
+        <div class="km-ui-card">
+          <div class="km-ui-preview">
+            <span class="km-ui-btn-secondary">View on Naukri &#8599;</span>
+            <span class="km-ui-btn-secondary">View on Ashby &#8599;</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Job Detail Card &rarr; Action Row</span>
+            <span class="pill-stone">Live market roles with external links</span>
+          </div>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Opens the original verified job posting on the external hiring portal or company career page in a new browser tab.
+          </p>
+        </div>
+
+        <div class="km-ui-card">
+          <div class="km-ui-preview">
+            <span class="km-ui-btn-secondary"><svg class="w-3.5 h-3.5 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg> Apply / Nominate</span>
+            <span class="km-ui-btn-secondary"><svg class="w-3.5 h-3.5 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg> Request Waiver (HITL)</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Job Detail Card &rarr; Action Row</span>
+            <span class="pill-stone">Student &amp; Staff on behalf of student</span>
+          </div>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Label adapts automatically to eligibility: eligible students see <strong>Apply / Nominate</strong>; ineligible students see <strong>Request Waiver (HITL)</strong>.
+            A duplicate guard blocks re-applying while an active or approved application already exists for that job.
+          </p>
+        </div>
+
+        <div class="km-ui-card">
+          <div class="km-ui-preview">
+            <span class="km-ui-btn-secondary">&#9734; Favorite</span>
+            <span class="km-ui-btn-secondary">&#9733; Favorited</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Left Job List &amp; Detail Action Row</span>
+            <span class="pill-stone">All authorized users</span>
+          </div>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Stars or unstars the opportunity across the left list, the detail card, the <strong>Favorites</strong> tab, and the <strong>Saved &amp; Favorited Opportunities</strong> panel.
+            Your stars stay saved even if you re-run matching.
+          </p>
+        </div>
+
+        <div class="km-ui-card md:col-span-2">
+          <div class="km-ui-preview">
+            <span class="km-ui-btn-danger">Dismiss</span>
+            <span class="km-ui-btn-danger">Remove</span>
+            <span class="km-ui-btn-secondary">Remove for this student only</span>
+            <span class="km-ui-btn-danger">Remove permanently for ALL students</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Job Detail Card &rarr; Action Row &rarr; Remove Job Opportunity Pop-Up</span>
+            <span class="pill-stone">Student (Dismiss on live roles) &middot; Faculty &amp; TPO Admin (Remove)</span>
+          </div>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Students see <strong>Dismiss</strong> on live market jobs to hide unwanted roles from their match stream.
+            TPO Admins see <strong>Remove</strong>, which opens the <strong>Remove Job Opportunity</strong> pop-up with two choices:
+            <strong>Remove for this student only</strong> (dismisses from just this student's list) or
+            <strong>Remove permanently for ALL students</strong> (deletes a closed or expired role from the entire placement catalog).
+          </p>
         </div>
       </div>
 
-      <!-- 8-Dimension Filter & Sort Suite -->
-      <div class="space-y-2">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-[#1E6B52]">8-Dimension Client-Side Filter &amp; Sort Controls (<code>applyFilters()</code>)</h4>
-        <div class="overflow-x-auto">
-          <table class="km-table w-full text-xs text-left border-collapse">
-            <thead>
-              <tr class="border-b border-[#E5E3DA] bg-[#F5F4EE] text-[#4A483F] uppercase tracking-wider text-[11px]">
-                <th class="py-2 px-3">Dimension</th>
-                <th class="py-2 px-3">Control IDs / Selectors</th>
-                <th class="py-2 px-3">Options &amp; Exact Filtering Logic</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-[#ECEAE2]">
-              <tr>
-                <td class="py-2 px-3 font-semibold">Dim 0 · Quick Source Tabs &amp; Fresher Pill</td>
-                <td class="py-2 px-3 font-mono">.match-tab-btn (#count-all, #count-live, #count-local, #filter-source-favorites / #count-source-favorites)<br>#filter-fresher-pill · #filter-fresher-checkbox (#count-fresher)</td>
-                <td class="py-2 px-3">Switches source segment between <code>All Opportunities</code>, <code>Live Market</code> (<code>data-source!="local"</code>), <code>On-Campus</code> (<code>data-source="local"</code>), and <code>Favorites</code> (<code>data-favorite="true"</code>). Fresher toggle restricts to <code>data-fresher="true"</code> and syncs via <code>pageshow</code> guard against browser bfcache state restore.</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-semibold">Dim 1 · Instant Search</td>
-                <td class="py-2 px-3 font-mono">#filter-search · #clear-search-btn</td>
-                <td class="py-2 px-3">150 ms debounced substring query matching <code>data-title</code>, <code>data-company</code>, <code>data-location</code>, and <code>data-skills</code>; clear button resets input immediately.</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-semibold">Dim 2 · Salary &amp; Disclosure</td>
-                <td class="py-2 px-3 font-mono">#filter-salary · #filter-disclosed-only</td>
-                <td class="py-2 px-3"><code>#filter-salary</code>: <code>all</code>, <code>lt6</code> (&lt; 6 LPA), <code>6-10</code>, <code>10-15</code>, <code>15-25</code>, <code>gte25</code> (&ge; 25 LPA). <code>#filter-disclosed-only</code> checkbox hides jobs with <code>data-disclosed="false"</code>.</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-semibold">Dim 3 · Hiring Portals</td>
-                <td class="py-2 px-3 font-mono">#portal-pills · #btn-portal-all · #btn-portal-none · #btn-portal-scraped · #btn-portal-campus · #btn-purge-live-portal</td>
-                <td class="py-2 px-3">12 toggleable portal pills (<code>local</code>, <code>naukri</code>, <code>linkedin</code>, <code>indeed</code>, <code>foundit</code>, <code>internshala</code>, <code>unstop</code>, <code>instahyre</code>, <code>hirist</code>, <code>ashby</code>, <code>greenhouse</code>, <code>lever</code>) plus quick-select buttons and a <code>Clear Live Jobs</code> shortcut.</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-semibold">Dim 4 · Eligibility &amp; Match Band</td>
-                <td class="py-2 px-3 font-mono">#filter-eligibility · #filter-band</td>
-                <td class="py-2 px-3"><code>#filter-eligibility</code>: <code>all</code>, <code>true</code> (Eligible Now), <code>false</code> (Needs Waiver). <code>#filter-band</code>: <code>all</code>, <code>strong</code>, <code>moderate</code>, <code>developing</code>.</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-semibold">Dim 5 · Location &amp; Work Mode</td>
-                <td class="py-2 px-3 font-mono">#filter-location · #filter-mode</td>
-                <td class="py-2 px-3"><code>#filter-location</code>: <code>all</code>, <code>bengaluru</code>, <code>hyderabad</code>, <code>pune</code>, <code>delhi</code>, <code>mumbai</code>, <code>chennai</code>, <code>remote</code>, <code>other</code>. <code>#filter-mode</code>: <code>all</code>, <code>remote</code>, <code>hybrid</code>, <code>on_site</code>.</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-semibold">Dim 6 · Experience Level</td>
-                <td class="py-2 px-3 font-mono">#filter-exp</td>
-                <td class="py-2 px-3"><code>all</code>, <code>0-1</code>, <code>1-3</code>, <code>3-5</code>, <code>5+</code>. Excludes jobs with <code>exp == 1 &amp;&amp; data-fresher == "false"</code> from <code>0-1</code> so external 1-year non-fresher roles route to <code>1-3</code>.</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-semibold">Dim 7 · Skill Match Cloud</td>
-                <td class="py-2 px-3 font-mono">#skill-cloud (.skill-chip-btn)</td>
-                <td class="py-2 px-3">10 clickable chips (<code>python</code>, <code>fastapi</code>, <code>react</code>, <code>docker</code>, <code>sql</code>, <code>aws</code>, <code>machine learning</code>, <code>postgresql</code>, <code>typescript</code>, <code>git</code>) using ANY-match (OR) semantics against job skills.</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-semibold">Dim 8 · Sort &amp; Status Bar</td>
-                <td class="py-2 px-3 font-mono">#visible-matches-count · #total-matches-count · #active-filters-badge · #active-filter-count · #filter-sort · #btn-reset-filters</td>
-                <td class="py-2 px-3">Live counter + active-filter badge; <code>#filter-sort</code> reorders DOM master list &amp; detail cards by <code>score_desc</code>, <code>salary_desc</code>, <code>salary_asc</code>, <code>date_desc</code>, or <code>company_asc</code>; <code>#btn-reset-filters</code> restores defaults.</td>
-              </tr>
-            </tbody>
-          </table>
+      <!-- 4 Approval Paths -->
+      <div class="space-y-3">
+        <div class="km-section-divider">The 4 Application &amp; Waiver Approval Paths</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="km-step-card">
+            <span class="pill-sage text-[10px] w-fit">Path 1 &middot; Instant</span>
+            <h4 class="text-xs font-bold text-[#1C1E1B]">Eligible + Standard Tier</h4>
+            <p class="text-xs text-[#5C5A52] leading-relaxed">
+              Automatically approved and marked <strong>Nominated</strong> immediately — no manual review wait needed.
+            </p>
+          </div>
+          <div class="km-step-card">
+            <span class="pill-stone text-[10px] w-fit">Path 2 &middot; Tier 2 Review</span>
+            <h4 class="text-xs font-bold text-[#1C1E1B]">Eligible + Dream / Super Dream</h4>
+            <p class="text-xs text-[#5C5A52] leading-relaxed">
+              Creates a <strong>Tier 2: Awaiting TPO Approval</strong> request so the TPO Admin can verify high-tier placement rules before nominating.
+            </p>
+          </div>
+          <div class="km-step-card">
+            <span class="pill-coral text-[10px] w-fit">Path 3 &middot; Blocked</span>
+            <h4 class="text-xs font-bold text-[#1C1E1B]">Ineligible (No Waiver)</h4>
+            <p class="text-xs text-[#5C5A52] leading-relaxed">
+              Blocked by placement policy and lists the exact barriers (GPA cutoff, branch restriction, active backlogs, or senior experience requirement).
+            </p>
+          </div>
+          <div class="km-step-card">
+            <span class="pill-stone text-[10px] w-fit">Path 4 &middot; 2-Tier Waiver</span>
+            <h4 class="text-xs font-bold text-[#1C1E1B]">Ineligible + Request Waiver</h4>
+            <p class="text-xs text-[#5C5A52] leading-relaxed">
+              Enters the 2-Tier human review queue: requires <strong>Tier 1: Faculty Mentor Endorsement</strong> first, followed by <strong>Tier 2: TPO Final Sign-Off</strong>.
+            </p>
+          </div>
         </div>
       </div>
 
-      <!-- Master-Detail Card Actions & Simulator -->
-      <div class="space-y-2">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-[#1E6B52]">Master-Detail Card Actions, HITL Apply Flow &amp; Counterfactual Simulator</h4>
-        <div class="overflow-x-auto">
-          <table class="km-table w-full text-xs text-left border-collapse">
-            <thead>
-              <tr class="border-b border-[#E5E3DA] bg-[#F5F4EE] text-[#4A483F] uppercase tracking-wider text-[11px]">
-                <th class="py-2 px-3">Action / Endpoint</th>
-                <th class="py-2 px-3">Source File</th>
-                <th class="py-2 px-3">Exact Mechanics</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-[#ECEAE2]">
-              <tr>
-                <td class="py-2 px-3 font-mono">Master-Detail Inspector<br><span class="text-[#6E6C64]">#master-list-column &amp; #cards-container</span></td>
-                <td class="py-2 px-3 font-mono">matches.html</td>
-                <td class="py-2 px-3">Left sticky rail (<code>.master-nav-item</code> with mini SVG score ring + star button) selects the active <code>.match-card</code> on the right: circular Composite Fit gauge, 3-column explainability grid (<strong>Matched required</strong> with resume evidence quotes, <strong>Missing required</strong>, <strong>Preferred</strong> You have / Not yet), plus an unverified/reverification warning banner linking to <code>/students/{sid}/plan</code>.</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-mono">Generate plan for this job<br><span class="text-[#6E6C64]">genPlan(btn) → POST /api/students/{sid}/plans</span></td>
-                <td class="py-2 px-3 font-mono">matches.html · plans.py</td>
-                <td class="py-2 px-3">Generates a personalized CP-SAT/BKT upskill plan targeting this job's skill gaps and navigates to <code>/students/{sid}/plan</code>.</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-mono">Apply / Nominate &amp; Request Waiver (HITL)<br><span class="text-[#6E6C64]">applyJob(btn) → POST /api/students/{sid}/applications</span></td>
-                <td class="py-2 px-3 font-mono">matches.html · applications.py</td>
-                <td class="py-2 px-3">
-                  4-branch HITL governance:
-                  (1) <strong>Eligible + <code>standard</code> tier</strong> → auto-nominated (<code>APPROVED</code>, creates <code>JobApplication</code>);
-                  (2) <strong>Eligible + <code>dream</code> / <code>super_dream</code> tier</strong> → creates <code>Approval(kind="job_apply", status="PENDING_TPO_APPROVAL")</code>;
-                  (3) <strong>Ineligible, <code>request_waiver=false</code></strong> → HTTP <code>422</code> listing eligibility barriers;
-                  (4) <strong>Ineligible, <code>request_waiver=true</code></strong> (requires <code>waiver_reason</code>) → creates <code>Approval(kind="eligibility_waiver", status="PENDING_MENTOR_ENDORSEMENT")</code> requiring Tier 1 Faculty Mentor endorsement before Tier 2 TPO sign-off.
-                  Duplicate guard blocks re-applying while an active/approved application exists.
-                </td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-mono">Favorite Star Toggle<br><span class="text-[#6E6C64]">.btn-favorite-job → POST /api/students/{sid}/matches/{job_id}/favorite</span></td>
-                <td class="py-2 px-3 font-mono">matches.html · students.py</td>
-                <td class="py-2 px-3">Toggles <code>JobMatch.is_favorite</code> (and syncs <code>JobApplication.is_favorite</code> if an application exists), updates master-list star, detail button, Favorites tab badge, and <code>#student-favorites-panel</code>.</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-mono">Dismiss / Remove Match<br><span class="text-[#6E6C64]">POST .../dismiss · DELETE .../matches/{job_id} · DELETE /api/jobs/{job_id}</span></td>
-                <td class="py-2 px-3 font-mono">matches.html · students.py · jobs.py</td>
-                <td class="py-2 px-3"><code>student</code> sees <code>Dismiss</code> on live scraped jobs (marks <code>JobMatch.score=-1.0, band="dismissed"</code>). Non-students see <code>Remove</code>; for <code>tpo_admin</code>, opens a choice modal offering <em>Remove for this student only</em> vs <em>Remove permanently for ALL students</em> (<code>?permanent=true</code>, also exposed via <code>DELETE /api/jobs/{job_id}</code>).</td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-mono">What-If Skill Simulator API<br><span class="text-[#6E6C64]">POST /api/students/{sid}/matches/{job_id}/simulate</span></td>
-                <td class="py-2 px-3 font-mono">students.py · app/matching/simulator.py</td>
-                <td class="py-2 px-3"><code>simulate_counterfactual(student, job, skills, courses, ...)</code> projects adding candidate skills at <code>&ge; intermediate</code> verified depth, returning projected score, <code>delta</code>, <code>total_hours</code> summed across deduplicated courses, and <code>unlocked_higher_band</code>.</td>
-              </tr>
-            </tbody>
-          </table>
+      <!-- Explainability Grid & What-If Simulator -->
+      <div class="km-ui-grid">
+        <div class="km-ui-card">
+          <div class="km-ui-preview">
+            <span class="pill-sage">Matched required</span>
+            <span class="pill-coral">Missing required</span>
+            <span class="pill-stone">Preferred (You have / Not yet)</span>
+            <span class="km-ui-btn-secondary">Complete Remedial Plan &rarr;</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Job Detail Card &rarr; Lower Breakdown</span>
+            <span class="pill-stone">All authorized users</span>
+          </div>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Every job card shows exact resume evidence quotes for matched skills, missing gaps, and an amber warning banner with a shortcut to
+            <strong>Complete Remedial Plan</strong> whenever any required skill is unverified or flagged for re-verification.
+          </p>
+        </div>
+
+        <div class="km-ui-card">
+          <div class="km-ui-preview">
+            <span class="km-ui-btn-primary">What-If Skill Simulator</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Upskill Plan &rarr; What-If Simulator Tab</span>
+            <span class="pill-stone">All authorized users</span>
+          </div>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Lets you test learning missing skills (modeled at Intermediate verified proficiency) before committing time.
+            Instantly previews the projected match score, points gained, whether it unlocks a higher readiness band (e.g. Developing &rarr; Moderate or Strong),
+            and total study hours across deduplicated recommended courses.
+          </p>
         </div>
       </div>
     </div>
   </details>
 
-  <!-- Card 3: Live Job Scraper Engine, Providers & Purge Controls -->
+  <!-- Card 4.4: Fetch Live Indian Tech Jobs Pop-Up (Live Scraper) -->
   <details
     class="km-card editorial-card overflow-hidden"
     open
     data-roles="student tpo_admin"
-    data-keywords="scraper suggest-job-queries ai_query.py sse stream scrape-modal telemetry providers.py jobspy rapid remoteok stealth_harvester ashby_ats greenhouse lever _is_board_live 404 probe normalizer.py USD_TO_INR 86.5 circuit breaker purge_live_jobs"
+    data-keywords="fetch live indian tech jobs scraper modal targeted roles suggested chips location active scraper providers jobspy rapid automation remoteok proxy api stealth harvester ashby greenhouse lever target boards maximum results fresher entry-level start scraping live progress view opportunities 404 link check usd to lpa"
   >
-    <summary class="px-5 py-4 cursor-pointer flex flex-wrap items-center justify-between gap-2 bg-[#FAF9F5] hover:bg-[#F3F1EA] transition-colors select-none">
+    <summary class="px-6 py-4 cursor-pointer flex flex-wrap items-center justify-between gap-3 bg-[#FAF9F5] hover:bg-[#F4F3EC] transition-colors select-none">
       <div class="flex items-center gap-3">
-        <span class="px-2 py-0.5 rounded bg-[#EEF5F0] text-[#1E6B52] text-[11px] font-bold">3.3</span>
+        <span class="px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] text-xs font-bold">4.4</span>
         <div>
-          <h3 class="font-display font-bold text-base text-[#1C1E1B]">Live Job Scraper Engine, Providers, AI Grounding &amp; Purge Controls</h3>
-          <p class="text-xs text-[#5C5A52]">AI skill-aware query synthesis, SSE streaming telemetry across 6 providers, Ashby 404 liveness probing, USD-to-LPA &amp; LLM skill grounding, and scoped/global purge controls</p>
+          <h3 class="font-serif-display font-semibold text-base text-[#1C1E1B]">Fetch Live Indian Tech Jobs Pop-Up (Live Scraper)</h3>
+          <p class="text-xs text-[#5C5A52]">AI-suggested job search terms, job portal checkboxes, live 11-board progress stream, and automatic link &amp; salary cleanup</p>
         </div>
       </div>
-      <span class="text-[11px] font-mono text-[#6E6C64]">app/scraper/* · job_scraper/extractors/ashby.py · jobs.py · students.py</span>
+      <div class="flex items-center gap-2">
+        <span class="pill-stone text-[11px]">Student &amp; TPO Admin</span>
+        <svg class="km-chevron w-4 h-4 text-[#5C5A52] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
     </summary>
 
-    <div class="p-5 space-y-5 border-t border-[#ECEAE2]">
-      <!-- Scraper Modal & SSE Controls -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="p-4 rounded-lg bg-[#FAF9F5] border border-[#ECEAE2] space-y-2">
-          <div class="text-xs font-bold uppercase tracking-wider text-[#1E6B52]">AI Query Synthesizer &amp; Scrape Modal (<code>#scrape-modal</code>)</div>
-          <ul class="text-xs text-[#5C5A52] space-y-1 list-disc pl-4">
-            <li><strong>AI Suggest Queries (<code>GET /api/students/{sid}/suggest-job-queries</code>)</strong>: <code>suggest_job_queries_for_student()</code> + <code>has_diverse_skillset()</code> rank verified <code>StudentSkill</code> rows by <code>advanced &gt; intermediate &gt; basic</code> then mention count. &ge; 2 non-soft technical skills generate 2–3 targeted queries (LLM <code>json_mode=True</code> with deterministic fallback); narrow profiles yield 1 query. Modal shows <code>#query-loading-status</code>, <code>#skill-diversity-badge</code>, and clickable <code>#suggested-chips</code>.</li>
-            <li><strong>Modal Inputs &amp; Toggles</strong>: <code>#scrape-term</code> (comma-separated keywords), <code>#scrape-location</code> (default <code>Bengaluru</code>), <code>#scrape-limit</code> (<code>10</code>, <code>20</code> default, <code>30</code>), <code>#scrape-fresher-only</code> (checkbox, default checked — expands queries with <code>Fresher</code>/<code>Junior</code>/<code>Intern</code>/<code>Entry Level</code> variants).</li>
-            <li><strong>Checkboxes &amp; Buttons</strong>: Provider toggles (<code>name="scrape-provider"</code>: <code>jobspy</code>, <code>rapid</code>, <code>automation</code>, <code>proxy_api</code>, <code>stealth_harvester</code>, <code>ashby_ats</code>), Target board toggles (<code>name="scrape-site"</code>: <code>naukri</code>, <code>linkedin</code>, <code>indeed</code>, <code>ashby</code>, <code>greenhouse</code>, <code>lever</code>), plus <code>#modal-purge-live-btn</code>, <code>#cancel-scrape-btn</code>, <code>#close-scrape-modal</code>, <code>#submit-scrape-btn</code>.</li>
-          </ul>
+    <div class="p-6 space-y-6">
+      <div class="km-ui-grid">
+        <div class="km-ui-card">
+          <div class="km-ui-preview">
+            <span class="km-ui-input">Target Role / Keywords</span>
+            <span class="pill-sage">Targeted Roles (AI Suggestions)</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Fetch Live Jobs Pop-Up &rarr; Top</span>
+            <span class="pill-stone">Student &amp; TPO Admin</span>
+          </div>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            As soon as the pop-up opens, CareerOS inspects the student's strongest verified skills and generates clickable <strong>Targeted Roles</strong> chips
+            (2&ndash;3 role queries for broad skillsets, or 1 focused query for narrower profiles). You can also type comma-separated job titles manually.
+          </p>
         </div>
 
-        <div class="p-4 rounded-lg bg-[#FAF9F5] border border-[#ECEAE2] space-y-2">
-          <div class="text-xs font-bold uppercase tracking-wider text-[#1E6B52]">SSE Streaming, Telemetry &amp; Purge Routes</div>
-          <ul class="text-xs text-[#5C5A52] space-y-1 list-disc pl-4">
-            <li><strong>SSE Stream Endpoints</strong>: <code>POST /api/students/{sid}/scrape-jobs/stream</code> (student-owned, auto-ranks after ingest) and <code>POST /api/jobs/scrape/stream</code> (<code>tpo_admin</code> global), with synchronous JSON fallbacks (<code>POST /api/students/{sid}/scrape-jobs</code>, <code>POST /api/jobs/scrape</code>).</li>
-            <li><strong>SSE Events &amp; Telemetry UI (<code>#scrape-telemetry</code>)</strong>: Streams <code>init</code>, <code>portal_start</code>, <code>portal_progress</code>, <code>portal_done</code>, <code>portal_error</code>, <code>ingest_start</code>, <code>ranking_start</code>, and <code>complete</code> chunks (<code>_sse_chunk</code>). Live modal displays <code>#telemetry-stopwatch</code>, <code>#telemetry-progress-bar</code>, <code>#telemetry-progress-text</code>, <code>#telemetry-jobs-discovered</code>, 11-card <code>#portal-telemetry-grid</code>, and <code>#telemetry-done-btn</code>.</li>
-            <li><strong>Global &amp; Scoped Purge</strong>: <code>DELETE /api/jobs/live</code> &amp; <code>POST /api/jobs/purge-live</code> &amp; <code>POST /api/students/{sid}/matches/purge-live</code> (<code>tpo_admin</code> only → <code>purge_live_jobs</code>). <code>DELETE /api/students/{sid}/matches/live</code> &amp; <code>DELETE /api/students/{sid}/live-jobs</code> run global purge for <code>tpo_admin</code> or student-scoped <code>_cascade_delete_owned_live_jobs</code> for <code>student</code>, cascading FK rows (<code>PlanItem → UpskillPlan → Interview → JobApplication → JobMatch → Job</code>) and vector entries while preserving <code>local</code> campus drives.</li>
-          </ul>
+        <div class="km-ui-card">
+          <div class="km-ui-preview">
+            <span class="km-ui-input">Location: Bengaluru</span>
+            <span class="km-ui-input">Maximum Results: 20 postings &#9662;</span>
+            <span class="km-ui-btn-secondary">&#9745; Target Fresher &amp; Entry-Level Roles Only</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Fetch Live Jobs Pop-Up &rarr; Search Options</span>
+            <span class="pill-stone">Student &amp; TPO Admin</span>
+          </div>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Choose a target city (or Remote) and result cap (10, 20, or 30 postings).
+            Keeping <strong>Target Fresher &amp; Entry-Level Roles Only</strong> checked automatically adds Fresher, Junior, Intern, and Entry Level variants
+            to your search and filters out experienced roles.
+          </p>
+        </div>
+
+        <div class="km-ui-card">
+          <div class="km-ui-preview">
+            <span class="pill-sage">&#9745; JobSpy Engine</span>
+            <span class="pill-sage">&#9745; Rapid Tech Scraper</span>
+            <span class="pill-stone">&#9744; Automation (RemoteOK)</span>
+            <span class="pill-stone">&#9744; Proxy API Gateway</span>
+            <span class="pill-sage">&#9745; Stealth Harvester (8 Indian Portals)</span>
+            <span class="pill-sage">&#9745; Ashby &amp; Multi-ATS (146+ Firms)</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Fetch Live Jobs Pop-Up &rarr; Active Scraper Providers &amp; Target Boards</span>
+            <span class="pill-stone">Student &amp; TPO Admin</span>
+          </div>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Pick which scraping engines and target boards (<strong>Naukri</strong>, <strong>LinkedIn</strong>, <strong>Indeed</strong>, <strong>Foundit</strong>,
+            <strong>Internshala</strong>, <strong>Unstop</strong>, <strong>Instahyre</strong>, <strong>Hirist</strong>, <strong>Ashby HQ</strong>,
+            <strong>Greenhouse</strong>, <strong>Lever</strong>, plus <strong>RemoteOK</strong> under Automation Scraper) to query in parallel.
+          </p>
+        </div>
+
+        <div class="km-ui-card">
+          <div class="km-ui-preview">
+            <span class="km-ui-btn-primary">Start Scraping</span>
+            <span class="km-ui-btn-secondary">Cancel</span>
+            <span class="km-ui-btn-danger">Remove All Live Jobs</span>
+            <span class="km-ui-btn-primary">View Opportunities</span>
+          </div>
+          <div class="km-ui-meta">
+            <span class="km-ui-breadcrumb">Fetch Live Jobs Pop-Up &rarr; Footer &amp; Live Progress View</span>
+            <span class="pill-stone">Student &amp; TPO Admin</span>
+          </div>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Clicking <strong>Start Scraping</strong> switches the pop-up to a live progress stream with an elapsed timer, overall progress bar,
+            and an 11-card execution grid showing each portal's live status (Queued &rarr; Running &rarr; jobs found). Once ingestion and match ranking finish,
+            click <strong>View Opportunities</strong> (or wait for the automatic refresh) to inspect the new roles.
+          </p>
         </div>
       </div>
 
-      <!-- Providers & Normalization Table -->
-      <div class="overflow-x-auto">
-        <table class="km-table w-full text-xs text-left border-collapse">
-          <thead>
-            <tr class="border-b border-[#E5E3DA] bg-[#F5F4EE] text-[#4A483F] uppercase tracking-wider text-[11px]">
-              <th class="py-2 px-3">Component / Provider</th>
-              <th class="py-2 px-3">Source File</th>
-              <th class="py-2 px-3">Technical Implementation Details</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[#ECEAE2]">
-            <tr>
-              <td class="py-2 px-3 font-mono">CompositeJobScraper<br><span class="text-[#6E6C64]">JobSpyProvider, RapidJobScraperProvider, AutomationJobScraperProvider, ProxyAPIJobScraperProvider</span></td>
-              <td class="py-2 px-3 font-mono">app/scraper/service.py<br>app/scraper/providers.py</td>
-              <td class="py-2 px-3">
-                Orchestrates <code>fetch_jobs()</code> &amp; <code>fetch_jobs_streaming()</code> with URL/title+company dedup (<code>_clean_url</code> strips <code>utm_*</code>/<code>ref</code>/<code>gclid</code>; <code>_clean_key</code> retains richer descriptions).
-                <strong>JobSpyProvider</strong> wraps <code>python-jobspy</code> (Naukri, LinkedIn, Indeed, Glassdoor, ZipRecruiter).
-                <strong>RapidJobScraperProvider</strong> reads <code>RAPID_JOBS_FEED_URL</code> (with offline fallback).
-                <strong>AutomationJobScraperProvider</strong> fetches live <code>https://remoteok.com/api</code> JSON / <code>AUTOMATION_BOARDS_URL</code> + portal fallbacks.
-                <strong>ProxyAPIJobScraperProvider</strong> uses <code>SCRAPER_API_KEY</code> / <code>JOB_SCRAPER_PROXY_URL</code>.
-              </td>
-            </tr>
-            <tr>
-              <td class="py-2 px-3 font-mono">StealthHarvesterProvider<br><span class="text-[#6E6C64]">AshbyATSProvider + AshbyExtractor._is_board_live()</span></td>
-              <td class="py-2 px-3 font-mono">app/scraper/providers.py<br>job_scraper/extractors/ashby.py</td>
-              <td class="py-2 px-3">
-                <strong>StealthHarvesterProvider</strong> targets 8 Indian job portals (<code>naukri</code>, <code>linkedin</code>, <code>indeed</code>, <code>foundit</code>, <code>internshala</code>, <code>unstop</code>, <code>instahyre</code>, <code>hirist</code>) via <code>job_scraper.pipeline.run_pipeline</code> (<code>curl_cffi</code> / Playwright) or <code>output/normalized_jobs.json</code>.
-                <strong>AshbyATSProvider</strong> queries public ATS boards (<code>ashby</code>, <code>greenhouse</code>, <code>lever</code>). To prevent broken 404 links when companies disable Ashby-hosted pages, <code>AshbyExtractor._is_board_live()</code> runs a 3.0s <code>HEAD</code> liveness probe on <code>https://jobs.ashbyhq.com/{slug}</code> (rejecting HTTP 404, falling back to first <code>jobUrl</code> rejecting 404/410) and caches decisions in <code>_board_liveness_cache</code>.
-              </td>
-            </tr>
-            <tr>
-              <td class="py-2 px-3 font-mono">Normalization, Salary &amp; Grounding<br><span class="text-[#6E6C64]">parse_salary_lpa · normalize_job_with_ai · _ground_skills</span></td>
-              <td class="py-2 px-3 font-mono">app/scraper/normalizer.py</td>
-              <td class="py-2 px-3">
-                Optional full-description enrichment uses SSRF-safe <code>fetch_external_job_description()</code> (<code>_is_safe_public_http_url</code>).
-                <code>parse_salary_lpa()</code> converts USD using <code>USD_TO_INR = 86.5</code>, annualizes monthly INR (<code>amt * 12 / 100_000</code>), and returns <code>([0, 0], False)</code> when undisclosed (never fabricating synthetic bands).
-                <code>normalize_job_with_ai()</code> enforces a 3-error / 300s LLM circuit breaker, validates LLM skills against the 124-skill canonical taxonomy AND requires alias presence in job text (<code>_skill_in_text</code>), caps at 6 required + 6 preferred skills, pads to &ge;2 with <code>CORE_FALLBACK_SKILLS = ["python", "sql", "git"]</code>, and defers experience years to deterministic <code>extract_experience_years()</code>.
-              </td>
-            </tr>
-            <tr>
-              <td class="py-2 px-3 font-mono">Pipeline Ingestion &amp; Legacy Sanitization<br><span class="text-[#6E6C64]">ingest_scraped_jobs · ingest_from_output_folder</span></td>
-              <td class="py-2 px-3 font-mono">app/scraper/pipeline.py<br>app/api/routes/jobs.py</td>
-              <td class="py-2 px-3">
-                Runs AI normalization across a <code>ThreadPoolExecutor(max_workers=5)</code>, purges placeholder dummy hosts (<code>purge_dummy_jobs</code> for <code>example.com</code>/<code>rapid.example</code>), sanitizes legacy rows (<code>sanitize_legacy_salaries</code>, <code>sanitize_legacy_experience</code>, <code>sanitize_legacy_skills</code>), scopes student-owned jobs via SHA-1 ID suffixes, embeds into vector store (<code>index_job_vectors</code>), and writes <code>jobs.scraped</code> audit events.
-                Also exposes <code>POST /api/jobs/scrape/ingest-output</code>, <code>GET /api/jobs/scrape/providers</code>, <code>GET /api/jobs/scrape/status</code>, <code>GET /api/jobs</code>, and <code>GET /api/jobs/{job_id}</code>.
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Plain-English Cleanup & Quality Checks -->
+      <div class="km-step-card">
+        <p class="text-xs font-bold text-[#1C1E1B]">Automatic Quality &amp; Data Cleanup Behind the Scenes</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-[#5C5A52] leading-relaxed">
+          <div>
+            <strong class="text-[#1C1E1B]">Live Link Verification:</strong> Company career boards (such as Ashby) are automatically checked before importing so disabled or broken &ldquo;404 Page Not Found&rdquo; links are skipped.
+          </div>
+          <div>
+            <strong class="text-[#1C1E1B]">USD-to-LPA Salary Conversion:</strong> Overseas USD salaries are converted into Indian Lakhs Per Annum (LPA), monthly pay is annualized, and jobs without stated pay stay clearly marked as undisclosed instead of guessing.
+          </div>
+          <div>
+            <strong class="text-[#1C1E1B]">Duplicate &amp; Skill Cleanup:</strong> Tracking links and duplicate postings across boards are merged, placeholder links are blocked, and noisy skill tags are verified against the actual job description and 124-skill catalog. Student-fetched jobs stay private to that student's workspace.
+          </div>
+        </div>
       </div>
     </div>
   </details>
 
-  <!-- Card 4: Smart JD Modal, Campus Drives & Public Recruiter JNF -->
+  <!-- Card 4.5: Add Campus Drive (Smart JD) & Recruiter JNF Portal -->
   <details
     class="km-card editorial-card overflow-hidden"
     open
     data-roles="tpo_admin faculty_mentor public"
-    data-keywords="smart jd campus drive _smart_jd_modal jnf_public campus_drive.js parse-jd jnf-links public-jnf qr code encodeQrMatrix agent.py ingest.py llm_parser.py static_parser.py policy.py cohort rematch sop-01 sop-03"
+    data-keywords="smart jd campus drive upload jd paste email raw jd load sample campus jd parser mode auto static llm parse auto-fill branch chips clear open to all submit to approval queue approve publish drive immediately save changes share recruiter jnf link generate jnf link copy open qr code recruiter job notification form submit jnf for tpo review"
   >
-    <summary class="px-5 py-4 cursor-pointer flex flex-wrap items-center justify-between gap-2 bg-[#FAF9F5] hover:bg-[#F3F1EA] transition-colors select-none">
+    <summary class="px-6 py-4 cursor-pointer flex flex-wrap items-center justify-between gap-3 bg-[#FAF9F5] hover:bg-[#F4F3EC] transition-colors select-none">
       <div class="flex items-center gap-3">
-        <span class="px-2 py-0.5 rounded bg-[#EEF5F0] text-[#1E6B52] text-[11px] font-bold">3.4</span>
+        <span class="px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] text-xs font-bold">4.5</span>
         <div>
-          <h3 class="font-display font-bold text-base text-[#1C1E1B]">Smart JD Modal, Campus Drives Pipeline &amp; Public Recruiter JNF</h3>
-          <p class="text-xs text-[#5C5A52]">Hybrid LLM + static JD parsing with PII/injection/grounding guards, SOP-01/03 policy enforcement, cohort rematch tasks, and expiring QR-enabled recruiter JNF links</p>
+          <h3 class="font-serif-display font-semibold text-base text-[#1C1E1B]">Add Campus Drive (Smart JD) &amp; Recruiter JNF Portal</h3>
+          <p class="text-xs text-[#5C5A52]">AI-assisted campus drive creation with policy checks, branch chips, cohort re-matching, expiring QR links, and the public Recruiter JNF form</p>
         </div>
       </div>
-      <span class="text-[11px] font-mono text-[#6E6C64]">_smart_jd_modal.html · jnf_public.html · campus_drive.js · campus_drives.py · app/campus/*</span>
+      <div class="flex items-center gap-2">
+        <span class="pill-sage text-[11px]">TPO Admin &amp; Recruiter</span>
+        <svg class="km-chevron w-4 h-4 text-[#5C5A52] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
     </summary>
 
-    <div class="p-5 space-y-5 border-t border-[#ECEAE2]">
+    <div class="p-6 space-y-6">
       <!-- Smart JD Modal Controls -->
-      <div class="space-y-2">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-[#1E6B52]">Smart JD Modal (<code>#smart-jd-modal</code>) Controls &amp; Fields</h4>
-        <div class="overflow-x-auto">
-          <table class="km-table w-full text-xs text-left border-collapse">
-            <thead>
-              <tr class="border-b border-[#E5E3DA] bg-[#F5F4EE] text-[#4A483F] uppercase tracking-wider text-[11px]">
-                <th class="py-2 px-3">Step / Section</th>
-                <th class="py-2 px-3">UI IDs, Inputs &amp; Buttons</th>
-                <th class="py-2 px-3">Endpoint &amp; Behavior</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-[#ECEAE2]">
-              <tr>
-                <td class="py-2 px-3 font-semibold">Step 1 · JD Ingestion<br><span class="text-[#6E6C64]">#jd-ingest-section (hidden in Edit mode)</span></td>
-                <td class="py-2 px-3 font-mono">#jd-tab-upload · #jd-dropzone · #jd-file-input<br>#jd-tab-paste · #jd-raw-text · #jd-load-sample-btn<br>.jd-mode-btn (auto / static / llm)<br>#jd-simulate-failure (none / timeout / invalid_json)<br>#jd-parse-btn</td>
-                <td class="py-2 px-3">
-                  Supports <code>.pdf</code>, <code>.docx</code>, <code>.txt</code>, <code>.text</code>, <code>.md</code> up to 2 MB (<code>MAX_JD_BYTES</code>) or pasted text (<code>#jd-load-sample-btn</code> inserts a Razorpay JD).
-                  <code>#jd-simulate-failure</code> is restricted to <code>tpo_admin</code> in <code>demo</code> auth mode to test LLM fallback recovery.
-                  <code>#jd-parse-btn</code> calls <code>runParseJd()</code> → <code>POST /api/campus-drives/parse-jd</code> (with 404 offline fixture fallback).
-                </td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-semibold">Step 2 · Explainability Banner<br><span class="text-[#6E6C64]">#jd-explainability-banner</span></td>
-                <td class="py-2 px-3 font-mono">#jd-engine-badge · #jd-trace-badge<br>#jd-confidence-bar · #jd-confidence-pct<br>#jd-fallback-reason · #jd-attempts-list · #jd-defaults-list · #jd-missing-list</td>
-                <td class="py-2 px-3">
-                  Displays active engine (<code>LLM Structured</code>, <code>Static Deterministic</code>, or <code>Hybrid Merge</code>), trace ID, weighted confidence meter,
-                  LLM attempt/fallback trace, applied SOP defaults, missing fields needing confirmation, and per-field source evidence quotes via <code>[data-evidence-caption]</code>.
-                </td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-semibold">Step 3 · Editable Campus Drive Form<br><span class="text-[#6E6C64]">#campus-drive-form</span></td>
-                <td class="py-2 px-3 font-mono">#cd-company · #cd-role-title · #cd-location · #cd-work-mode · #cd-experience-level<br>#cd-salary-disclosed · #cd-ctc-min · #cd-ctc-max · #cd-stipend · #cd-policy-tier-badge<br>#cd-min-cgpa · #cd-max-backlogs · #cd-graduation-year<br>.cd-branch-chip (9 branches) · #cd-branches-clear<br>#cd-req-skill-input · #cd-pref-skill-input · #cd-unmapped-wrap</td>
-                <td class="py-2 px-3">
-                  Unchecking <code>#cd-salary-disclosed</code> disables CTC inputs and clears the tier; changing CTC updates <code>#cd-policy-tier-badge</code> live via <code>computeSop01Tier()</code> (SOP-01).
-                  9 canonical branch chips (<code>CSE</code>, <code>IT</code>, <code>ECE</code>, <code>EE</code>, <code>ME</code>, <code>CE</code>, <code>AI&amp;DS</code>, <code>CHE</code>, <code>BT</code>).
-                  <code>wireSkillAutocomplete()</code> queries <code>GET /api/campus-drives/taxonomy</code> for canonical chips and highlights unmapped mentions in <code>#cd-unmapped-wrap</code>.
-                </td>
-              </tr>
-              <tr>
-                <td class="py-2 px-3 font-semibold">Step 4 · Submit / Publish / Edit &amp; Cohort Rematch</td>
-                <td class="py-2 px-3 font-mono">#cd-cancel-btn · #cd-submit-queue-btn<br>#cd-publish-now-btn · #cd-save-edit-btn<br>#cd-rematch-banner</td>
-                <td class="py-2 px-3">
-                  <code>#cd-submit-queue-btn</code> submits <code>POST /api/campus-drives</code> (<code>publish_now=false</code> → <code>PENDING_TPO_APPROVAL</code>);
-                  <code>#cd-publish-now-btn</code> sends <code>publish_now=true, confirm=true</code> to publish immediately and trigger <code>pollCohortTask()</code> polling <code>GET /api/tasks/{taskId}</code> in <code>#cd-rematch-banner</code>;
-                  <code>#cd-save-edit-btn</code> calls <code>PATCH /api/campus-drives/{drive_id}</code> (allowed while <code>DRAFT</code> or <code>PENDING_TPO_APPROVAL</code>).
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <div class="space-y-3">
+        <div class="km-section-divider">Add Campus Drive (Smart JD) Pop-Up</div>
+        <div class="km-ui-grid">
+          <div class="km-ui-card">
+            <div class="km-ui-preview">
+              <div class="km-ui-toggle">
+                <span class="km-ui-toggle-active">Upload JD (.pdf / .docx / .txt)</span>
+                <span>Paste Email / Raw JD</span>
+              </div>
+              <span class="km-ui-btn-secondary">Load Sample Campus JD</span>
+            </div>
+            <div class="km-ui-meta">
+              <span class="km-ui-breadcrumb">Smart JD Pop-Up &rarr; Step 1</span>
+              <span class="pill-sage">TPO Admin only</span>
+            </div>
+            <p class="text-xs text-[#4A483F] leading-relaxed">
+              Drop a PDF, Word, or text job description (up to 2 MB) or switch to <strong>Paste Email / Raw JD</strong> for recruiter emails and forwards.
+              Click <strong>Load Sample Campus JD</strong> to test the parser instantly with a sample Razorpay Backend Engineer JD.
+            </p>
+          </div>
+
+          <div class="km-ui-card">
+            <div class="km-ui-preview">
+              <div class="km-ui-toggle">
+                <span class="km-ui-toggle-active">Auto (LLM + Static Fallback)</span>
+                <span>Force Static</span>
+                <span>Force LLM</span>
+              </div>
+              <span class="km-ui-btn-primary">Parse &amp; Auto-Fill</span>
+            </div>
+            <div class="km-ui-meta">
+              <span class="km-ui-breadcrumb">Smart JD Pop-Up &rarr; Parser Controls</span>
+              <span class="pill-sage">TPO Admin only</span>
+            </div>
+            <p class="text-xs text-[#4A483F] leading-relaxed">
+              <strong>Auto</strong> tries the AI extractor first and seamlessly falls back to fast rule-based parsing if the AI times out or returns invalid output;
+              <strong>Force Static</strong> or <strong>Force LLM</strong> lets you run either mode directly. Clicking <strong>Parse &amp; Auto-Fill</strong> extracts details,
+              shows a confidence &amp; evidence trace banner, and highlights any missing or conflicting fields.
+            </p>
+          </div>
+
+          <div class="km-ui-card">
+            <div class="km-ui-preview">
+              <span class="pill-sage">CSE</span>
+              <span class="pill-sage">IT</span>
+              <span class="pill-stone">ECE</span>
+              <span class="pill-stone">AI&amp;DS</span>
+              <span class="km-ui-btn-secondary">Clear (Open to All)</span>
+              <span class="pill-stone">Salary Disclosed &#9745;</span>
+            </div>
+            <div class="km-ui-meta">
+              <span class="km-ui-breadcrumb">Smart JD Pop-Up &rarr; Drive Form</span>
+              <span class="pill-sage">TPO Admin only</span>
+            </div>
+            <p class="text-xs text-[#4A483F] leading-relaxed">
+              Review or edit Company, Role Title, Location, Work Mode, Offer Type, CTC/Stipend, CGPA, Max Backlogs, and Graduation Year.
+              As you type CTC, the institutional <strong>Policy Tier</strong> badge (Standard, Dream, or Super Dream) updates live.
+              Click branch chips to restrict eligibility, or <strong>Clear (Open to All)</strong> to allow every branch, and pick Required/Preferred skills from the 124-skill autocomplete list.
+            </p>
+          </div>
+
+          <div class="km-ui-card">
+            <div class="km-ui-preview">
+              <span class="km-ui-btn-secondary">Submit to Approval Queue</span>
+              <span class="km-ui-btn-primary">Approve &amp; Publish Drive Immediately</span>
+              <span class="km-ui-btn-primary">Save Changes</span>
+            </div>
+            <div class="km-ui-meta">
+              <span class="km-ui-breadcrumb">Smart JD Pop-Up &rarr; Bottom Footer</span>
+              <span class="pill-sage">TPO Admin only</span>
+            </div>
+            <p class="text-xs text-[#4A483F] leading-relaxed">
+              <strong>Submit to Approval Queue</strong> saves the drive for final review in the Approvals Center.
+              <strong>Approve &amp; Publish Drive Immediately</strong> confirms sign-off, posts the role to On-Campus Opportunities right away,
+              and runs background cohort re-matching for all students with a live progress banner. When editing an existing draft or pending drive from Approvals,
+              <strong>Save Changes</strong> updates and re-validates it.
+            </p>
+          </div>
         </div>
       </div>
 
-      <!-- Backend Agentic Parser & JNF Public Portal -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="p-4 rounded-lg bg-[#FAF9F5] border border-[#ECEAE2] space-y-2">
-          <div class="text-xs font-bold uppercase tracking-wider text-[#1E6B52]">Campus Agentic Parser &amp; Drive APIs (<code>app/campus/*</code>)</div>
-          <ul class="text-xs text-[#5C5A52] space-y-1 list-disc pl-4">
-            <li><strong>Document Ingestion (<code>ingest.py</code>)</strong>: <code>extract_jd_text()</code> enforces <code>2 MB</code> cap (HTTP <code>413</code>) and extensions (<code>415</code>) via <code>pypdf</code>/<code>python-docx</code>; <code>normalize_jd_text()</code> strips email headers/signatures and normalizes bullets.</li>
-            <li><strong>Agent Orchestrator (<code>agent.py::parse_campus_jd</code>)</strong>: Executes <em>Plan → Act → Validate → Recover</em> with <code>sanitize_untrusted_text()</code> PII scrubbing &amp; injection defense, plus <code>AgentRun</code>/<code>AgentStep</code> telemetry &amp; audit logging.</li>
-            <li><strong>LLM + Static Hybrid (<code>llm_parser.py</code>, <code>static_parser.py</code>)</strong>: <code>parse_jd_with_llm()</code> (6.0s timeout, Pydantic <code>LLMJDOutput</code>) undergoes <code>validate_and_ground_llm_json()</code> (compound-token masking + numeric/skill/identity grounding against raw text). Hybrid mode merges via <code>_merge_hybrid()</code> and flags <code>conflict:*</code> discrepancies.</li>
-            <li><strong>Policy &amp; Publish (<code>policy.py</code>, <code>agent.py</code>)</strong>: <code>apply_policy_and_defaults()</code> enforces SOP-01 tiers, SOP-03 backlog caps (<code>super_dream=0</code>, <code>dream=1</code>), <code>campus_drive_defaults.json</code>, and <code>compute_weighted_confidence()</code>. <code>publish_campus_drive()</code> upserts <code>Job(source="local", scraper_engine="campus_drive")</code>, embeds into <code>vector_store</code>/<code>ctx.job_vectors</code>, and queues <code>campus_drive_cohort_rematch</code> (<code>run_cohort_rematch</code>).</li>
-            <li><strong>Drive Governance Routes (<code>campus_drives.py</code>)</strong>: <code>GET /api/campus-drives</code>, <code>GET /api/campus-drives/{drive_id}</code>, <code>PATCH /api/campus-drives/{drive_id}</code>, <code>POST /api/campus-drives/{drive_id}/approve</code>, <code>POST /api/campus-drives/{drive_id}/reject</code>.</li>
-          </ul>
-        </div>
+      <!-- Recruiter JNF Drawer & Public Form -->
+      <div class="space-y-3">
+        <div class="km-section-divider">Share Recruiter JNF Link Drawer &amp; External Recruiter Portal</div>
+        <div class="km-ui-grid">
+          <div class="km-ui-card">
+            <div class="km-ui-preview">
+              <span class="km-ui-input">Link Expiry (hours): 72</span>
+              <span class="km-ui-btn-primary">Generate JNF Link</span>
+              <span class="km-ui-btn-secondary">Copy</span>
+              <span class="km-ui-btn-primary">Open</span>
+            </div>
+            <div class="km-ui-meta">
+              <span class="km-ui-breadcrumb">Share Recruiter JNF Link Drawer</span>
+              <span class="pill-sage">TPO Admin only</span>
+            </div>
+            <p class="text-xs text-[#4A483F] leading-relaxed">
+              Set an expiry window (1 to 720 hours, default 72) and click <strong>Generate JNF Link</strong> to mint a signed recruiter intake URL.
+              Use <strong>Copy</strong> to paste it into an email, <strong>Open</strong> to preview the form, or let a visiting recruiter scan the built-in offline <strong>QR Code</strong> on campus Wi-Fi.
+            </p>
+          </div>
 
-        <div class="p-4 rounded-lg bg-[#FAF9F5] border border-[#ECEAE2] space-y-2">
-          <div class="text-xs font-bold uppercase tracking-wider text-[#1E6B52]">Shareable JNF Drawer &amp; Public Recruiter Portal (<code>/jnf/{token}</code>)</div>
-          <ul class="text-xs text-[#5C5A52] space-y-1 list-disc pl-4">
-            <li><strong>JNF Link Drawer (<code>#jnf-drawer-modal</code>)</strong>: <code>#jnf-expires-hours</code> (1–720 hrs, default 72), <code>#jnf-generate-btn</code> calls <code>POST /api/campus-drives/jnf-links</code> to sign an HMAC token (<code>_create_jnf_token</code>), renders <code>#jnf-full-url</code>, <code>#jnf-copy-btn</code>, <code>#jnf-open-link</code>, and an offline pure-JS Model 2 EC-Level-L QR code SVG (<code>encodeQrMatrix</code> + <code>renderQrSvg</code> into <code>#jnf-qr-svg</code>) with LAN-sharing tips.</li>
-            <li><strong>Public JNF Portal (<code>GET /jnf/{token}</code> → <code>jnf_public.html</code>)</strong>: Unauthenticated allowlisted route verified via <code>_verify_jnf_token()</code> and IP rate-limited (<code>20/min</code>). Includes standalone <code>#theme-toggle</code>, drag-and-drop <code>#jnf-dropzone</code> / <code>#jnf-file-input</code>, structured fields (<code>#jnf-company</code>, <code>#jnf-role</code>, <code>#jnf-location</code>, <code>#jnf-work-mode</code>, <code>#jnf-exp-level</code>, <code>#jnf-ctc-min</code>, <code>#jnf-ctc-max</code>, <code>#jnf-stipend</code>, <code>#jnf-salary-disclosed</code>, <code>#jnf-min-cgpa</code>, <code>#jnf-max-backlogs</code>, <code>#jnf-grad-year</code>, <code>.jnf-branch-chip</code>, <code>#jnf-raw-text</code>), and <code>#jnf-submit-btn</code>.</li>
-            <li><strong>Strict Queue Isolation (<code>POST /api/campus-drives/public-jnf</code>)</strong>: Parses uploaded JD/text via <code>parse_campus_jd</code>, merges structured recruiter fields, and <strong>always</strong> creates a <code>PENDING_TPO_APPROVAL</code> record (never auto-publishes), displaying <code>#jnf-success-card</code> with <code>#jnf-success-trace</code> for TPO review.</li>
-          </ul>
+          <div class="km-ui-card">
+            <div class="km-ui-preview">
+              <span class="pill-stone">Recruiter Job Notification Form (JNF)</span>
+              <span class="km-ui-btn-secondary">Dark Mode</span>
+              <span class="km-ui-btn-primary">Submit JNF for TPO Review</span>
+            </div>
+            <div class="km-ui-meta">
+              <span class="km-ui-breadcrumb">External Public Recruiter Portal</span>
+              <span class="pill-stone">Public (Signed Link Only)</span>
+            </div>
+            <p class="text-xs text-[#4A483F] leading-relaxed">
+              A standalone, mobile-friendly form (with its own Light/Dark Mode toggle) where visiting recruiters can upload a JD document,
+              enter compensation and CGPA/backlog rules, click eligible branch chips, and paste JD text.
+              Clicking <strong>Submit JNF for TPO Review</strong> parses and validates the submission, shows a Trace ID confirmation screen,
+              and <strong>always</strong> routes the drive to the TPO Approval Queue — external recruiters can never publish directly to students without TPO review.
+            </p>
+          </div>
         </div>
       </div>
     </div>

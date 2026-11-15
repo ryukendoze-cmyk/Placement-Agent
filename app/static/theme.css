@@ -538,7 +538,7 @@ html.dark tbody tr:hover {
   background-color: #171E28;
 }
 
-/* Know More Engineering Manual (#km-toolbar, details.km-card, .km-table, TOC) */
+/* Know More Interactive User Guide (#km-toolbar, details.km-card, .km-table, TOC, .km-ui-*) */
 details.km-card > summary {
   list-style: none;
   cursor: pointer;
@@ -585,11 +585,200 @@ details.km-card[open] > summary .km-chevron {
   border-color: #1D5C42;
   color: #FFFFFF;
 }
+.km-toc-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #4A483F;
+  text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.km-toc-link:hover {
+  background-color: #FAF9F5;
+  color: #1C1E1B;
+}
 .km-toc-link.km-toc-active {
   background-color: #E3F2EA;
   border-color: #C8E4D5;
   color: #1B5E43;
   font-weight: 600;
+}
+
+/* Shared Visual UI Snippet Previews (for layman-friendly control cards) */
+.km-ui-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 0.875rem;
+}
+@media (min-width: 768px) {
+  .km-ui-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.km-ui-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 1rem 1.125rem;
+  border-radius: 1rem;
+  border: 1px solid #E5E3DC;
+  background-color: #FAF9F5;
+  color: #1C1E1B;
+}
+.km-ui-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.km-ui-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  color: #5C5A52;
+}
+.km-ui-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 9999px;
+  background-color: #FFFFFF;
+  border: 1px solid #E5E3DC;
+  color: #4A483F;
+  font-weight: 500;
+}
+.km-ui-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  background-color: #1D5C42;
+  color: #FFFFFF;
+  border: 1px solid #1D5C42;
+  border-radius: 9999px;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(29, 92, 66, 0.16);
+  user-select: none;
+}
+.km-ui-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  background-color: #FFFFFF;
+  color: #1C1E1B;
+  border: 1px solid #D5D2C6;
+  border-radius: 9999px;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(28, 30, 27, 0.04);
+  user-select: none;
+}
+.km-ui-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  background-color: #FDECE9;
+  color: #9E2A20;
+  border: 1px solid #F5C6BF;
+  border-radius: 9999px;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  user-select: none;
+}
+.km-ui-toggle {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  background-color: #EFECE4;
+  color: #4A483F;
+  border: 1px solid #E2DEC9;
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+  user-select: none;
+}
+.km-ui-toggle .km-ui-toggle-active,
+.km-ui-toggle [data-active="true"] {
+  background-color: #1D5C42;
+  color: #FFFFFF;
+  border-radius: 9999px;
+  padding: 0.15rem 0.6rem;
+}
+.km-ui-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background-color: #FFFFFF;
+  color: #5C5A52;
+  border: 1px solid #D5D2C6;
+  border-radius: 0.75rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  user-select: none;
+}
+.km-section-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.5rem 0;
+  color: #7A776E;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.km-section-divider::before,
+.km-section-divider::after {
+  content: "";
+  flex: 1 1 0%;
+  height: 1px;
+  background-color: #E5E3DC;
+}
+.km-step-card {
+  border-radius: 1rem;
+  border: 1px solid #E5E3DC;
+  background-color: #FAF9F5;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.km-focus-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1.125rem;
+  border-radius: 1rem;
+  border: 1px solid #C8E4D5;
+  background-color: #E3F2EA;
+  color: #1B5E43;
 }
 
 html.dark #km-toolbar {
@@ -652,6 +841,62 @@ html.dark .km-toc-link:hover {
   color: #FFFFFF;
 }
 html.dark .km-toc-link.km-toc-active {
+  background-color: #0E2920;
+  border-color: #1D5944;
+  color: #6EE7B7;
+}
+html.dark .km-ui-card,
+html.dark .km-step-card {
+  background-color: #181F29;
+  border-color: #283242;
+  color: #E6EDF3;
+}
+html.dark .km-ui-meta {
+  color: #95A2B3;
+}
+html.dark .km-ui-breadcrumb {
+  background-color: #12171F;
+  border-color: #303B4E;
+  color: #D0D7DE;
+}
+html.dark .km-ui-btn-primary {
+  background-color: #059669;
+  border-color: #10B981;
+  color: #FFFFFF;
+}
+html.dark .km-ui-btn-secondary {
+  background-color: #1B222D;
+  border-color: #313C4E;
+  color: #F0F6FC;
+}
+html.dark .km-ui-btn-danger {
+  background-color: #2B1216;
+  border-color: #6E242D;
+  color: #FDA4AF;
+}
+html.dark .km-ui-toggle {
+  background-color: #1E2532;
+  border-color: #303B4E;
+  color: #D6DEE8;
+}
+html.dark .km-ui-toggle .km-ui-toggle-active,
+html.dark .km-ui-toggle [data-active="true"] {
+  background-color: #059669;
+  color: #FFFFFF;
+}
+html.dark .km-ui-input {
+  background-color: #0B0E14;
+  border-color: #313D50;
+  color: #95A2B3;
+}
+html.dark .km-section-divider {
+  color: #7D8B9D;
+}
+html.dark .km-section-divider::before,
+html.dark .km-section-divider::after {
+  background-color: #252E3D;
+}
+html.dark .km-focus-banner {
   background-color: #0E2920;
   border-color: #1D5944;
   color: #6EE7B7;

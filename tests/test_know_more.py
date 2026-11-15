@@ -1,6 +1,7 @@
-"""Tests for the TPO-Admin-only /know-more System Engineering Manual and strict RBAC."""
+"""Tests for the TPO-Admin-only /know-more User & Operations Guide and strict RBAC."""
 from __future__ import annotations
 
+import html as htmllib
 import re
 from pathlib import Path
 
@@ -51,12 +52,13 @@ def test_know_more_renders_all_partials_controls_and_dark_theme(client: TestClie
     assert "{{" not in html
     assert "{%" not in html
 
-    # Master shell controls, TOC, search, role filters, expand/collapse, theme toggle
+    # Master shell controls, TOC, focus banner, search, role filters, expand/collapse, theme toggle
     for required_id in (
         'id="km-search"',
         'id="km-expand-all"',
         'id="km-collapse-all"',
         'id="km-toc"',
+        'id="km-focus-banner"',
         'id="km-visible-count"',
         'id="km-total-count"',
         'id="theme-toggle"',
@@ -64,6 +66,17 @@ def test_know_more_renders_all_partials_controls_and_dark_theme(client: TestClie
         "/static/theme.js",
     ):
         assert required_id in html, f"missing {required_id} in /know-more"
+
+    for chapter in (
+        'data-chapter="all"',
+        'data-chapter="km-architecture"',
+        'data-chapter="km-shell-auth"',
+        'data-chapter="km-cohort-profile"',
+        'data-chapter="km-matches-drives"',
+        'data-chapter="km-plan-interview"',
+        'data-chapter="km-copilot-admin"',
+    ):
+        assert chapter in html, f"missing TOC chapter link {chapter}"
 
     assert html.count("km-role-btn") >= 5
     for role_filter in ("all", "student", "faculty_mentor", "tpo_admin", "public"):
@@ -80,12 +93,12 @@ def test_know_more_renders_all_partials_controls_and_dark_theme(client: TestClie
     ):
         assert sec_id in html, f"missing section {sec_id}"
 
-    # Representative content from each of the 5 partials
+    # Representative content from each of the 5 redesigned partials
     for marker in (
-        "Left Sidebar, Topbar Shell, Command Bar &amp; Obsidian Theme",
-        "Home Cohort Directory",
-        "Job Matching Engine &amp; Incremental Auto-Rank",
-        "Upskill Plan Generator, BKT Mastery &amp; CPM/RCPSP Solver",
+        "Navigation, Sign-In, Agent Brain &amp; Multi-Device Access",
+        "Home Cohort Directory, AI Resume Onboarding &amp; Student Profiles",
+        "Job Matches, Live Market Scraper, Applications &amp; Campus Drives",
+        "Upskill Planner, Progress Center &amp; Mock Interview Studio",
         "Placement Copilot &amp; Policy RAG",
     ):
         assert marker in html, f"partial content missing: {marker}"
@@ -104,6 +117,13 @@ def test_know_more_renders_all_partials_controls_and_dark_theme(client: TestClie
         "html.dark .km-table",
         "html.dark .km-role-btn",
         "html.dark .km-toc-link",
+        "html.dark .km-ui-card",
+        "html.dark .km-ui-btn-primary",
+        "html.dark .km-ui-btn-secondary",
+        "html.dark .km-ui-btn-danger",
+        "html.dark .km-ui-toggle",
+        "html.dark .km-ui-input",
+        "html.dark .km-focus-banner",
     ):
         assert selector in css_res.text, f"missing dark mode CSS selector: {selector}"
 
@@ -195,30 +215,55 @@ def test_know_more_strict_mode_rbac_and_redirects(client: TestClient, monkeypatc
     assert 'href="/know-more"' in _extract_sidebar(r_ok.text)
 
 
-def test_know_more_documents_key_routes_and_guards_shell_navigation(client: TestClient):
+def test_know_more_visual_plain_english_no_code_dumps_and_shell_guards(client: TestClient):
     res = client.get("/know-more", headers={"X-Demo-Role": "tpo_admin"})
     assert res.status_code == 200
     html = res.text
 
-    for expected_route in (
-        "/login",
-        "/auth/login",
-        "/auth/logout",
-        "/copilot",
-        "/admin",
-        "/admin/approvals",
-        "/admin/policies",
-        "/admin/audit",
-        "/know-more",
-        "/jnf/{token}",
-        "/healthz",
-        "/readyz",
-        "/api/agent/run/stream",
-        "/api/campus-drives/public-jnf",
-        "/api/students/{sid}/matches",
-        "/api/plans/{plan_id}/simulate",
+    main_match = re.search(r"<main\b[^>]*>(.*?)</main>", html, re.DOTALL)
+    assert main_match, "<main> block missing from /know-more"
+    main_no_script = re.sub(r"<script\b[^>]*>.*?</script>", "", main_match.group(1), flags=re.DOTALL)
+    visible_text = htmllib.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", main_no_script)))
+
+    # Visual UI button & control previews rendered across the guide
+    for ui_cls in (
+        "km-ui-card",
+        "km-ui-btn-primary",
+        "km-ui-btn-secondary",
+        "km-ui-btn-danger",
+        "km-ui-toggle",
+        "km-ui-input",
     ):
-        assert expected_route in html, f"route {expected_route} missing from /know-more documentation"
+        assert ui_cls in main_no_script, f"missing visual preview class {ui_cls}"
+
+    # Real user-facing button labels present in plain English
+    for label in (
+        "Dark Mode",
+        "Agent Brain",
+        "Upload & Run AI Extraction",
+        "Fetch Live Jobs",
+        "Remove All Live Jobs",
+        "Re-Solve Plan",
+        "Start interview (top match)",
+        "Print scorecard",
+        "Run Simulation",
+        "Endorse (Tier 1)",
+        "Approve & Execute (Tier 2)",
+        "Reset Core Defaults",
+    ):
+        assert label in visible_text, f"missing plain-English button label {label!r}"
+
+    # Zero raw code dumps (endpoints, .py files, HTTP verbs, CSS IDs) in visible <main> guide text
+    for forbidden_pat, desc in (
+        (r"/api/", "raw /api/ path"),
+        (r"/auth/", "raw /auth/ path"),
+        (r"/admin/audit", "raw /admin/audit path"),
+        (r"/jnf/\{", "raw /jnf/{token} path"),
+        (r"\b[a-zA-Z0-9_]+\.py\b", ".py filename"),
+        (r"\b(?:GET|POST|PUT|PATCH|DELETE)\s+/", "HTTP method + path"),
+        (r"#(?:menu-btn|cohort-search|theme-toggle)\b", "raw CSS selector ID"),
+    ):
+        assert not re.search(forbidden_pat, visible_text), f"found {desc} in /know-more visible text"
 
     # Base shell guards /know-more in switchDemoRole and Ctrl+K command bar
     base_html = (ROOT / "app" / "templates" / "base.html").read_text(encoding="utf-8")

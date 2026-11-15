@@ -1,473 +1,585 @@
-<section id="km-copilot-admin" class="km-section space-y-4" data-section="copilot-admin">
-  <!-- Section Header & End-to-End Process Flow -->
-  <div class="editorial-card p-6 space-y-4">
+<section id="km-copilot-admin" class="km-section space-y-5" data-section="copilot-admin">
+  <!-- Chapter Header & End-to-End Journey -->
+  <div class="editorial-card p-6 sm:p-7 space-y-4">
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div class="space-y-1.5">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[#1B5E43] text-xs font-semibold">
           <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
-          Section 5 &middot; Governance, Intelligence &amp; Platform Ops
+          Chapter 6 &middot; Governance, Intelligence &amp; Operations
         </div>
         <h2 class="font-serif-display text-xl sm:text-2xl font-bold text-[#1C1E1B]">
-          Placement Copilot, Cohort Analytics, HITL Approvals, Policies &amp; Ops
+          Placement Policy Copilot, Analytics, Approvals, Policies &amp; Audit
         </h2>
-        <p class="text-sm text-[#5C5A52] max-w-3xl">
-          Grounded policy RAG copilot, executive cohort &amp; department analytics with what-if drive simulation, two-tier human-in-the-loop governance, live SOP threshold management, immutable audit logging, and offline-first LLM, vector, CLI, and background worker infrastructure.
+        <p class="text-sm text-[#5C5A52] max-w-3xl leading-relaxed">
+          Visual guide to the five governance and intelligence screens: asking placement policy questions with verified citations, tracking cohort readiness and simulating campus drives, reviewing two-tier approvals, editing live placement SOPs, and monitoring audit logs and AI operations.
         </p>
       </div>
-      <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
-        <span class="pill-sage">/copilot</span>
-        <span class="pill-stone">/admin</span>
-        <span class="pill-stone">/admin/approvals</span>
-        <span class="pill-stone">/admin/policies</span>
-        <span class="pill-stone">/admin/audit</span>
+      <div class="flex flex-wrap items-center gap-1.5 text-xs">
+        <span class="pill-sage">Policy Copilot</span>
+        <span class="pill-stone">Analytics &amp; Simulator</span>
+        <span class="pill-stone">HITL Approvals</span>
+        <span class="pill-stone">Placement Policies</span>
+        <span class="pill-stone">Audit &amp; Ops</span>
       </div>
     </div>
 
-    <!-- Process Flow Pill Bar -->
+    <!-- Plain-English 5-Step Flow -->
     <div class="pt-3 border-t border-[#ECEAE2] flex flex-wrap items-center gap-2 text-xs">
-      <span class="text-[11px] font-mono uppercase tracking-wider text-[#6E6C64] font-semibold mr-1">Process Flow:</span>
-      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] text-[#1C1E1B] font-medium">1. Policy RAG &amp; Eligibility</span>
+      <span class="text-[11px] font-semibold uppercase tracking-wider text-[#6E6C64] mr-1">How these screens work together:</span>
+      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] text-[#1C1E1B] font-medium">1. Ask Policy Copilot</span>
       <span class="text-[#7A776E]">&rarr;</span>
-      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] text-[#1C1E1B] font-medium">2. Cohort Analytics &amp; Simulator</span>
+      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] text-[#1C1E1B] font-medium">2. Track Cohort &amp; Simulate Drives</span>
       <span class="text-[#7A776E]">&rarr;</span>
-      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] text-[#1C1E1B] font-medium">3. Two-Tier HITL Approvals</span>
+      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] text-[#1C1E1B] font-medium">3. Review Two-Tier Approvals</span>
       <span class="text-[#7A776E]">&rarr;</span>
-      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] text-[#1C1E1B] font-medium">4. Live SOP Studio Sync</span>
+      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] text-[#1C1E1B] font-medium">4. Tune Live Placement SOPs</span>
       <span class="text-[#7A776E]">&rarr;</span>
-      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] text-[#1C1E1B] font-medium">5. Audit, Telemetry &amp; Workers</span>
+      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#E5E3DC] text-[#1C1E1B] font-medium">5. Inspect Audit &amp; System Health</span>
     </div>
   </div>
 
-  <!-- Card 1: Placement Copilot & Policy RAG -->
+  <!-- 6.1 Placement Policy Copilot -->
   <details class="km-card editorial-card overflow-hidden" open
            data-roles="student faculty_mentor tpo_admin"
-           data-keywords="copilot policy rag sop citation sse stream eligibility check quick prompts trace agent run copilot.html copilot.py policy_rag.py student context">
+           data-keywords="placement policy copilot rag quick prompts ask button streaming citations sop pills eligibility check agent step trace known sop documents student context">
     <summary class="px-6 py-4 bg-[#FAF9F5] border-b border-[#ECEAE2] cursor-pointer flex flex-wrap items-center justify-between gap-3 select-none">
       <div class="flex flex-wrap items-center gap-2.5">
-        <span class="px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white text-[11px] font-mono font-bold">5.1</span>
+        <span class="px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white text-[11px] font-bold">6.1</span>
         <h3 class="font-serif-display text-base sm:text-lg font-bold text-[#1C1E1B]">Placement Copilot &amp; Policy RAG</h3>
-        <code class="text-[11px] font-mono text-[#5C5A52] bg-white px-2 py-0.5 rounded-lg border border-[#E5E3DC]">/copilot</code>
+        <span class="pill-stone text-[11px]">Screen: Placement Copilot</span>
       </div>
       <div class="flex flex-wrap items-center gap-1.5">
-        <span class="pill-sage text-[11px]">student</span>
-        <span class="pill-stone text-[11px]">faculty_mentor</span>
-        <span class="pill-stone text-[11px]">tpo_admin</span>
+        <span class="pill-sage text-[11px]">Student</span>
+        <span class="pill-stone text-[11px]">Faculty Mentor</span>
+        <span class="pill-stone text-[11px]">TPO Admin</span>
       </div>
     </summary>
-    <div class="p-6 space-y-5 text-xs text-[#4A483F] leading-relaxed">
+    <div class="p-6 space-y-5 text-xs sm:text-sm text-[#4A483F] leading-relaxed">
       <p>
-        Grounded conversational policy workbench combining hybrid lexical + dense SOP retrieval (<code>search_sops</code>), live student profile/match/favorite/plan inspection (<code>_student_context</code>), SSE streaming synthesis, and deterministic citation &amp; numeric threshold verification.
+        The <strong>Placement Policy Copilot</strong> answers everyday questions about placement tiers, CGPA cutoffs, active backlogs, mock interview gates, and a student's own job matches. Every answer is grounded directly in JKLU's active Standard Operating Procedures (SOPs) and live student records so it never invents rules or fake thresholds.
       </p>
 
-      <!-- UI Controls & Inputs -->
-      <div class="overflow-x-auto">
-        <table class="km-table w-full text-left border border-[#E5E3DC] rounded-xl overflow-hidden">
-          <thead class="bg-[#FAF9F5] text-[#5C5A52] text-[10px] font-bold uppercase tracking-wider border-b border-[#E5E3DC]">
-            <tr>
-              <th class="px-4 py-2.5">UI Element / Selector</th>
-              <th class="px-4 py-2.5">Type &amp; Location</th>
-              <th class="px-4 py-2.5">Exact Behavior &amp; Role Scope</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[#ECEAE2]">
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">#quick-prompts .quick-prompt</td>
-              <td class="px-4 py-2.5">Quick-Prompt Chips (<code>copilot.html</code>)</td>
-              <td class="px-4 py-2.5">Populated from <code>QUICK_PROMPTS</code> (5 curated queries: top job matches, Dream score, Super-Dream eligibility, skill priority, backlog limits). Clicking immediately invokes <code>ask(prompt)</code>.</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">#copilot-student / #copilot-student-badge</td>
-              <td class="px-4 py-2.5">Student Context Selector</td>
-              <td class="px-4 py-2.5"><strong>Student:</strong> locked hidden input + emerald badge (<code>_enforce_copilot_student_scope</code> returns <code>403</code> on cross-student IDs). <strong>Faculty Mentor:</strong> dropdown scoped to mentor's department + <em>"No student context"</em>. <strong>TPO Admin:</strong> all students sorted alphabetically. Changing resets <code>chatHistory = []</code>.</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">#copilot-input &amp; #copilot-send</td>
-              <td class="px-4 py-2.5">Composer Input &amp; <em>Ask</em> Button</td>
-              <td class="px-4 py-2.5">Submits on click or <code>Enter</code>. Sends <code>{ question, student_id, history }</code> (last 6 turns via <code>chatHistory.slice(-6)</code>, capped at 12 locally).</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">#chat-log &amp; .citation-pill[data-sop]</td>
-              <td class="px-4 py-2.5">Stream Surface &amp; SOP Badges</td>
-              <td class="px-4 py-2.5"><code>pillify()</code> turns inline <code>[SOP-XX]</code> and <code>[JOB-XX]</code> references into clickable citation pills. Right-hand <em>Known SOP Documents</em> registry renders <code>sorted(sop_ids())</code>. Clicking any real pill auto-asks <code>"What does &lt;SOP&gt; say?"</code> (example <code>SOP-XX</code> triggers an info toast).</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">#copilot-trace</td>
-              <td class="px-4 py-2.5">Agent Step Trace Sidebar</td>
-              <td class="px-4 py-2.5">Updated immediately on SSE <code>retrieval</code> (and <code>complete</code>) via <code>renderTrace()</code> showing retrieval, profile, favorites, and match ranking steps.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Routes & Python Pipeline -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-2">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-[#1C1E1B] font-mono">API Routes (<code>copilot.py</code>)</h4>
-          <ul class="space-y-1.5">
-            <li><code class="font-mono text-[#1D5C42]">GET /copilot</code> &mdash; <code>copilot_page()</code> renders <code>copilot.html</code> with role-scoped student list, <code>QUICK_PROMPTS</code>, and active <code>sop_ids()</code>.</li>
-            <li><code class="font-mono text-[#1D5C42]">POST /api/copilot/ask/stream</code> &mdash; <code>copilot_ask_stream()</code> (rate-limited: <code>copilot_ask</code>). Accepts <code>question</code>, optional <code>student_id</code>, optional <code>job_id</code>, <code>history</code>. Emits SSE events: <code>retrieval</code> (immediate sources + trace), <code>: ping</code> keep-alives every 2s during LLM synthesis, <code>token</code> (3-word chunks), and <code>complete</code> (annotated answer, citations, <code>agent_run_id</code>).</li>
-            <li><code class="font-mono text-[#1D5C42]">POST /api/copilot/ask</code> &mdash; <code>copilot_ask()</code> synchronous JSON endpoint used as automatic fallback when <code>ReadableStream</code> / SSE fails.</li>
-            <li><code class="font-mono text-[#1D5C42]">GET /api/students/{sid}/eligibility/{job_id}</code> &mdash; <code>student_job_eligibility()</code> one-click eligibility check guarded by <code>enforce_student_scope</code>, returning <code>evaluate_student_eligibility()</code> JSON (404 if student/job missing).</li>
-          </ul>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Quick-Prompt Starter Buttons -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap gap-1.5">
+              <span class="km-ui-btn-secondary inline-flex items-center px-3 py-1 rounded-full border border-[#D5D2C6] bg-white text-[11px] font-medium text-[#1C1E1B]">Rank my top job matches</span>
+              <span class="km-ui-btn-secondary inline-flex items-center px-3 py-1 rounded-full border border-[#D5D2C6] bg-white text-[11px] font-medium text-[#1C1E1B]">How many backlogs are allowed?</span>
+            </div>
+            <span class="pill-sage text-[10px]">Everyone</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Top of the Placement Copilot screen under <em>Suggested Questions</em>.</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> Five ready-made starter buttons (<em>Rank my top job matches</em>, <em>What score do I need for Dream drives?</em>, <em>Am I eligible for Super-Dream offers?</em>, <em>What skills should I prioritize next?</em>, and <em>How many backlogs are allowed?</em>). Clicking any pill sends that question right away.</p>
+          </div>
         </div>
-        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-2">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-[#1C1E1B] font-mono">RAG, Eligibility &amp; Grounding (<code>policy_rag.py</code>)</h4>
-          <ul class="space-y-1.5">
-            <li><strong>Hybrid Retrieval (<code>search_sops</code>):</strong> Combines exact <code>SOP-XX</code> regex pinning (<code>s_exact = 1.0</code>), stop-word-filtered lexical overlap (<code>0.55 &times; s_lex</code>), and dense cosine similarity (<code>0.45 &times; s_dense</code>) over <code>index_sops()</code>. Returns <code>status="out_of_scope"</code> below relevance floor (<code>min_score=0.14</code>).</li>
-            <li><strong>Safety &amp; Telemetry:</strong> <code>_sanitize_copilot_question()</code> scrubs PII (<code>scrub_for_llm</code>) and blocks prompt injections (<code>sanitize_untrusted_text</code> &rarr; audits <code>security.prompt_injection_blocked</code>). <code>_copilot_synthesis()</code> strips raw job IDs (<code>_clean_job_ids</code>), checks SOP IDs (<code>verify_policy_citations</code>) and numeric bounds (<code>verify_sop_numeric_claims</code>), persists <code>AgentRun</code>/<code>AgentStep</code> (<code>_record_copilot_agent_run</code>), and logs <code>copilot.asked</code>.</li>
-            <li><strong>Explainable Eligibility Gate (<code>evaluate_student_eligibility</code>):</strong> Evaluates <strong>SOP-03</strong> (<code>gpa_cutoff</code> + tier backlog limits), <strong>SOP-09</strong> (<code>branch_restriction</code> via <code>is_branch_eligible</code>), <strong>SOP-04</strong> (<code>tier_mock_gate</code> vs <code>min_mock_score</code>), <strong>SOP-05</strong> (<code>skill_readiness</code> vs <code>min_coverage_pct</code> &amp; <code>blocked_band</code>), and <strong>SOP-08</strong> (flags <code>unverified</code> skills).</li>
-          </ul>
+
+        <!-- Student & Target Job Selectors -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[11px] font-semibold text-[#1B5E43]">Locked Student Context: Rohit</span>
+              <span class="km-ui-input inline-flex items-center px-3 py-1 rounded-full border border-[#D5D2C6] bg-white text-[11px] text-[#1C1E1B]">Student Dropdown &#9662;</span>
+            </div>
+            <span class="pill-stone text-[10px]">Role-Scoped</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Left side of the bottom message bar inside <em>Policy Conversation Stream</em>.</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> Controls whose profile Copilot inspects. <strong>Students</strong> see a locked badge for their own profile (other students cannot be viewed). <strong>Faculty Mentors</strong> can pick <em>No student context</em> or any mentee in their own department. <strong>TPO Admins</strong> can pick any student alphabetically; switching students clears the current chat history so answers never mix across profiles. When checking a specific drive, Copilot also factors in that <strong>Target Job</strong>.</p>
+          </div>
         </div>
-      </div>
-    </div>
-  </details>
 
-  <!-- Card 2: Cohort & Department Analytics + Drive Simulator -->
-  <details class="km-card editorial-card overflow-hidden" open
-           data-roles="faculty_mentor tpo_admin"
-           data-keywords="analytics cohort department chart.js kpi matrix skill gap simulator what-if bootcamp roi eval benchmark telemetry task queue scraper analytics.html admin.py cohort.py drive_simulator.py benchmark.py task_queue.py">
-    <summary class="px-6 py-4 bg-[#FAF9F5] border-b border-[#ECEAE2] cursor-pointer flex flex-wrap items-center justify-between gap-3 select-none">
-      <div class="flex flex-wrap items-center gap-2.5">
-        <span class="px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white text-[11px] font-mono font-bold">5.2</span>
-        <h3 class="font-serif-display text-base sm:text-lg font-bold text-[#1C1E1B]">Cohort &amp; Department Analytics + Drive Simulator</h3>
-        <code class="text-[11px] font-mono text-[#5C5A52] bg-white px-2 py-0.5 rounded-lg border border-[#E5E3DC]">/admin</code>
-      </div>
-      <div class="flex flex-wrap items-center gap-1.5">
-        <span class="pill-stone text-[11px]">faculty_mentor (dept-scoped)</span>
-        <span class="pill-sage text-[11px]">tpo_admin</span>
-      </div>
-    </summary>
-    <div class="p-6 space-y-5 text-xs text-[#4A483F] leading-relaxed">
-      <p>
-        Institutional command center computing live readiness KPIs, 4 theme-synced Chart.js charts, student &amp; skill-gap matrices, a non-persisted Campus Drive What-If Simulator, quantitative M23 evaluation benchmarks, system LLM/DB telemetry, and background task monitoring. When signed in as <code>faculty_mentor</code>, <code>_faculty_mentee_ids()</code> scopes all analytics to the mentor's department.
-      </p>
-
-      <!-- Controls, Charts & Tables -->
-      <div class="overflow-x-auto">
-        <table class="km-table w-full text-left border border-[#E5E3DC] rounded-xl overflow-hidden">
-          <thead class="bg-[#FAF9F5] text-[#5C5A52] text-[10px] font-bold uppercase tracking-wider border-b border-[#E5E3DC]">
-            <tr>
-              <th class="px-4 py-2.5">Section / Control ID</th>
-              <th class="px-4 py-2.5">Inputs, Buttons &amp; Visuals</th>
-              <th class="px-4 py-2.5">Backend Function / Data Behavior</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[#ECEAE2]">
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">Header Toolbar</td>
-              <td class="px-4 py-2.5"><code>&lt;a href="/admin/policies"&gt;</code>, <code>#export-csv</code> (<em>Export CSV</em>), <code>#export-json</code> (<em>Export JSON</em>)</td>
-              <td class="px-4 py-2.5">Exports <code>DATA.skill_gap_report</code> as <code>skill-gaps.csv</code> or full analytics payload as <code>analytics.json</code> client-side. Sidebar <code>#nav-scraper-controls</code> (<code>tpo_admin</code> only) jumps to <code>/students/{sid}/matches#scrape</code> and opens the Live Scraper modal.</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">#kpi-strip (6 Cards)</td>
-              <td class="px-4 py-2.5">Total Cohort, Mean Readiness Index, Drive-Eligible %, Verified Authenticity %, SOP-04 Mock Pass %, 30-Day Plan Completion %</td>
-              <td class="px-4 py-2.5">Computed by <code>cohort_executive_kpis()</code> in <code>app/analytics/cohort.py</code> from <code>Student</code>, <code>JobMatch</code> (top-3 avg), <code>StudentSkill</code>, latest finished <code>Interview</code> vs SOP-04 <code>min_mock_score</code>, and <code>PlanItem</code> completion.</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">2&times;2 Chart.js Grid</td>
-              <td class="px-4 py-2.5"><code>#gapChart</code> (horiz. bar), <code>#bandChart</code> (doughnut), <code>#branchReadinessChart</code> (bar), <code>#roleReadinessChart</code> (bar)</td>
-              <td class="px-4 py-2.5">Uses <code>/static/vendor/chart.umd.min.js</code> and auto-syncs dark/light colors via <code>CareerOSTheme.syncCharts()</code> (<code>theme.js</code>). Backed by <code>enriched_skill_gap_matrix()</code>, <code>readiness_distribution()</code>, <code>branch_readiness_breakdown()</code>, and <code>role_track_readiness()</code> (5 career tracks).</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">#cohort-student-matrix-card &amp; #cohort-skill-intervention-card</td>
-              <td class="px-4 py-2.5"><code>#matrix-student-search</code>, <code>#matrix-branch-filter</code>, <code>#matrix-band-filter</code> + Training Priorities table (top 12)</td>
-              <td class="px-4 py-2.5"><code>student_readiness_matrix()</code> shows per-student readiness, best role/tier, Verified/Claimed/Unverified counts, SOP-04 status, Plan %, and top gaps. <code>enriched_skill_gap_matrix()</code> assigns lab/bootcamp/workshop intervention types.</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">Placement Drive Eligibility Simulator</td>
-              <td class="px-4 py-2.5">Inputs: <code>#sim-title</code>, <code>#sim-sal-min</code>, <code>#sim-sal-max</code>, <code>#sim-gpa</code>, <code>#sim-skills</code>, <code>#sim-branches</code>. Button: <code>#sim-run</code> (<em>Run Simulation</em>; auto-runs on load).</td>
-              <td class="px-4 py-2.5"><code>POST /api/admin/simulate-drive</code> &rarr; <code>simulate_placement_drive()</code> (<code>drive_simulator.py</code>) builds an ephemeral non-persisted <code>Job</code> and runs <code>evaluate_student_eligibility()</code> across all students. Outputs <code>#sim-summary</code> (Tier, Cohort, Eligible now, Ready %), <code>#sim-bottleneck</code> (SOP-03/09/04/05 counts), <code>#sim-missing</code> + courses, and <code>#sim-roi</code> (<code>_project_bootcamp_roi</code> counterfactual + dual progress bars).</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">Eval Benchmark &amp; System Telemetry</td>
-              <td class="px-4 py-2.5">Button: <code>#run-eval-benchmark-btn</code> (<em>Run Live Benchmark</em>), 6 tiles in <code>#eval-benchmark-grid</code>, <code>#system-telemetry-bar</code></td>
-              <td class="px-4 py-2.5"><code>GET /api/admin/eval-benchmark</code> &rarr; <code>run_evaluation_benchmark()</code> (<code>benchmark.py</code>): 10 golden RAG queries, fresher/senior + depth monotonicity, SAVEPOINT-isolated SOP-03 test, 10-profile DAG cycle/order check, hallucinated ID + numeric/URL grounding, and live <code>AgentRun</code> p95 latency. <code>GET /api/admin/system-telemetry</code> (<code>tpo_admin</code> only) populates LLM provider/calls/tokens/cost/fallbacks and DB row counts.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Campus Drives Management & Task Queue -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-1.5">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-[#1C1E1B] font-mono">Campus Drives Management Controls</h4>
-          <p>
-            Prospective drives are modeled via <code>POST /api/admin/simulate-drive</code> on <code>/admin</code>, while persisted <code>campus_drive_publish</code> drives (from TPO Smart JD or Public Recruiter JNF) are managed in <code>/admin/approvals</code>: <code>Edit Drive</code> (opens <code>CampusDriveUI.openSmartJdModalForEdit</code>), <code>Approve &amp; Publish (TPO Only)</code> (creates live On-Campus <code>Job</code> + triggers background cohort re-matching polled by <code>CampusDriveUI.pollCohortTask</code>), and <code>Reject</code>.
-          </p>
+        <!-- Question Input + Ask Button -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="km-ui-input inline-flex items-center px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white text-[11px] text-[#7A776E]">Ask about placement policy, rules...</span>
+              <span class="km-ui-btn-primary inline-flex items-center px-4 py-1.5 rounded-full bg-[#1D5C42] text-white text-[11px] font-semibold">Ask</span>
+            </div>
+            <span class="pill-sage text-[10px]">Everyone</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Bottom composer bar (click <em>Ask</em> or press <strong>Enter</strong>).</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> Submits your question along with up to 6 recent conversation turns for natural follow-up questions. Before the AI sees your message, personal contact details (emails, phone numbers, Aadhaar, PAN, addresses) are masked and prompt-manipulation attempts are blocked and logged.</p>
+          </div>
         </div>
-        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-1.5">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-[#1C1E1B] font-mono">Task Queue &amp; Analytics APIs (<code>admin.py</code>)</h4>
-          <ul class="space-y-1">
-            <li><code class="font-mono text-[#1D5C42]">GET /admin</code> &amp; <code class="font-mono text-[#1D5C42]">GET /api/admin/analytics</code> &mdash; Full or department-scoped <code>_collect()</code> bundle.</li>
-            <li><code class="font-mono text-[#1D5C42]">GET /api/tasks?kind=&amp;limit=50</code> &amp; <code class="font-mono text-[#1D5C42]">GET /api/tasks/{task_id}</code> &mdash; <code>list_tasks()</code> / <code>get_task()</code> backed by <code>TaskQueueManager</code> (<code>memory</code> or <code>redis</code>) for async scraping, OCR, and drive re-matching.</li>
-          </ul>
+
+        <!-- Streaming Answers & Policy Citation Pills -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[11px] font-semibold text-[#1B5E43]">[SOP-01]</span>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[11px] font-semibold text-[#1B5E43]">[SOP-04]</span>
+              <span class="pill-stone text-[10px]">Live Word-by-Word Stream</span>
+            </div>
+            <span class="pill-sage text-[10px]">Verified Citations</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Inside every Copilot reply bubble in <em>Policy Conversation Stream</em>.</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> Replies stream word-by-word in real time (falling back smoothly to a standard reply if streaming is blocked). Policy references appear as clickable green pills—clicking any real pill automatically asks <em>"What does [SOP] say?"</em>. An automated checker verifies every SOP ID and rule number against live policies and hides raw internal job codes so you only see readable job titles and companies.</p>
+          </div>
         </div>
-      </div>
-    </div>
-  </details>
 
-  <!-- Card 3: Approvals Console (HITL) -->
-  <details class="km-card editorial-card overflow-hidden" open
-           data-roles="faculty_mentor tpo_admin"
-           data-keywords="approvals hitl endorse approve reject withdraw campus drive edit waiver nomination bootcamp resume reupload separation of duties approvals.html approvals.py">
-    <summary class="px-6 py-4 bg-[#FAF9F5] border-b border-[#ECEAE2] cursor-pointer flex flex-wrap items-center justify-between gap-3 select-none">
-      <div class="flex flex-wrap items-center gap-2.5">
-        <span class="px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white text-[11px] font-mono font-bold">5.3</span>
-        <h3 class="font-serif-display text-base sm:text-lg font-bold text-[#1C1E1B]">Approvals Console (Two-Tier HITL Governance)</h3>
-        <code class="text-[11px] font-mono text-[#5C5A52] bg-white px-2 py-0.5 rounded-lg border border-[#E5E3DC]">/admin/approvals</code>
-      </div>
-      <div class="flex flex-wrap items-center gap-1.5">
-        <span class="pill-stone text-[11px]">faculty_mentor (Tier 1)</span>
-        <span class="pill-sage text-[11px]">tpo_admin (Tier 2)</span>
-      </div>
-    </summary>
-    <div class="p-6 space-y-5 text-xs text-[#4A483F] leading-relaxed">
-      <p>
-        Human-in-the-loop governance ledger enforcing two-tier separation of duties and atomic database execution. Every action writes an immutable <code>AuditLog</code> row in the same transaction; <code>faculty_mentor</code> visibility and actions are department-scoped via <code>_faculty_approval_allowed()</code> / <code>_enforce_faculty_approval_scope()</code> (403 on cross-department items).
-      </p>
+        <!-- Instant Eligibility Check Results -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="inline-flex items-center px-3 py-1 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[11px] font-semibold text-[#1B5E43]">5-Gate Eligibility Check</span>
+            <span class="pill-stone text-[10px]">Instant Policy Gate</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Triggered when checking eligibility for a student and target job (via Copilot or Job Matches).</p>
+            <p><strong class="text-[#1C1E1B]">What it checks:</strong> Evaluates five explainable rules and lists clear action steps if blocked: <strong>SOP-03</strong> (CGPA &amp; backlog limits), <strong>SOP-09</strong> (branch eligibility), <strong>SOP-04</strong> (mock interview score &ge; 65 for Dream/Super-Dream), <strong>SOP-05</strong> (&ge; 40% required skills &amp; not in the Early readiness band), and <strong>SOP-08</strong> (flags any required skill marked Unverified after assessment).</p>
+          </div>
+        </div>
 
-      <div class="overflow-x-auto">
-        <table class="km-table w-full text-left border border-[#E5E3DC] rounded-xl overflow-hidden">
-          <thead class="bg-[#FAF9F5] text-[#5C5A52] text-[10px] font-bold uppercase tracking-wider border-b border-[#E5E3DC]">
-            <tr>
-              <th class="px-4 py-2.5">Control / Endpoint</th>
-              <th class="px-4 py-2.5">Role Rules &amp; Separation of Duties</th>
-              <th class="px-4 py-2.5">Execution &amp; Audit Effect</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[#ECEAE2]">
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">#approval-status-filters .approval-filter-btn</td>
-              <td class="px-4 py-2.5"><code>all</code>, <code>pending_review</code>, <code>approved</code>, <code>rejected</code></td>
-              <td class="px-4 py-2.5">Filters loaded items from <code>GET /api/approvals</code>; <code>All</code> displays every <code>pending_review</code> card plus the 15 most recent completed records.</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">POST /api/approvals/{id}/endorse<br><span class="text-[11px] text-[#5C5A52]">Button: <em>Endorse (Tier 1)</em></span></td>
-              <td class="px-4 py-2.5"><code>faculty_mentor</code> or <code>tpo_admin</code>. Shown on nominations &amp; waivers (hidden on <code>cohort_bootcamp_publish</code> &amp; <code>resume_reupload_request</code>).</td>
-              <td class="px-4 py-2.5">Sets <code>endorsed_by</code> &amp; <code>endorsed_at</code>; advances linked <code>JobApplication</code> from <code>awaiting_mentor_endorsement</code> to <code>awaiting_tpo_approval</code>; logs <code>approval.endorsed</code>.</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">POST /api/approvals/{id}/approve<br><span class="text-[11px] text-[#5C5A52]">Buttons: <em>Approve &amp; Execute (Tier 2)</em> / <em>Approve &amp; Publish (TPO Only)</em></span></td>
-              <td class="px-4 py-2.5"><code>faculty_mentor</code> blocked (<code>403</code> &amp; disabled button) on <code>job_application_nomination</code>, <code>nomination</code>, <code>campus_drive_publish</code>, <code>cohort_bootcamp_publish</code>, <code>resume_reupload_request</code>, or items they requested/endorsed. Requires prior endorsement (<code>400</code>) if linked app is <code>awaiting_mentor_endorsement</code>.</td>
-              <td class="px-4 py-2.5">Runs <code>execute_approved()</code> atomically inside the commit transaction (idempotent if already <code>approved</code>; <code>409</code> if <code>rejected</code>). On exception or error, rolls back, logs <code>approval.approve_failed</code>, and raises <code>400</code>/<code>409</code>. Otherwise logs <code>approval.approved</code>.</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">POST /api/approvals/{id}/reject<br><span class="text-[11px] text-[#5C5A52]">Buttons: <em>Reject</em> &amp; <em>Withdraw / Remove</em></span></td>
-              <td class="px-4 py-2.5"><code>faculty_mentor</code> blocked (<code>403</code>) from rejecting <code>campus_drive_publish</code>, <code>cohort_bootcamp_publish</code>, or <code>resume_reupload_request</code>. <em>Withdraw / Remove</em> is <code>tpo_admin</code>-only.</td>
-              <td class="px-4 py-2.5">Flips status to <code>rejected</code> with optional <code>.note-input</code>, sets linked <code>JobApplication.status = "rejected"</code> (unless nominated/withdrawn) and <code>CampusDrive.approval_status = "REJECTED"</code>, logs <code>approval.rejected</code>.</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]"><em>Edit Drive</em> &amp; Trace Link</td>
-              <td class="px-4 py-2.5"><code>campus_drive_publish</code> cards (<code>tpo_admin</code> only for Edit)</td>
-              <td class="px-4 py-2.5">Displays SOP-01 tier pill, <code>Recruiter JNF</code> / <code>TPO Smart JD</code> badge, <code>engine_used</code>, clickable <code>/admin/audit?trace_id=...</code> badge, and CGPA/Branches/Backlogs/Batch grid. <em>Edit Drive</em> opens <code>CampusDriveUI.openSmartJdModalForEdit()</code>.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Mutation Handlers -->
-      <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-2">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-[#1C1E1B] font-mono"><code>execute_approved()</code> Mutation Handlers (<code>approvals.py</code>)</h4>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-          <div class="p-3 rounded-xl bg-white border border-[#E5E3DC]">
-            <p class="font-mono font-bold text-[#1D5C42]">job_application_nomination / nomination</p>
-            <p class="mt-1">Creates <code>ProgressEvent(kind="nomination")</code> and advances linked <code>JobApplication.status</code> to <code>"nominated"</code>.</p>
+        <!-- Agent Step Trace & Known SOP Documents -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap gap-1.5">
+              <span class="pill-stone text-[11px]">Agent Step Trace</span>
+              <span class="pill-sage text-[11px]">Known SOP Documents</span>
+            </div>
+            <span class="pill-sage text-[10px]">Right Sidebar</span>
           </div>
-          <div class="p-3 rounded-xl bg-white border border-[#E5E3DC]">
-            <p class="font-mono font-bold text-[#1D5C42]">proficiency_waiver</p>
-            <p class="mt-1">Upgrades <code>StudentSkill.level</code> and calls <code>_recompute_job_match()</code> to re-rank <code>JobMatch</code> rows and update active application scores.</p>
-          </div>
-          <div class="p-3 rounded-xl bg-white border border-[#E5E3DC]">
-            <p class="font-mono font-bold text-[#1D5C42]">resume_reupload_request</p>
-            <p class="mt-1">Sets <code>Student.resume_reupload_unlocked = True</code> so the student can re-upload their resume once.</p>
-          </div>
-          <div class="p-3 rounded-xl bg-white border border-[#E5E3DC]">
-            <p class="font-mono font-bold text-[#1D5C42]">campus_drive_publish</p>
-            <p class="mt-1">Calls <code>publish_campus_drive()</code> to publish an On-Campus <code>Job</code> and enqueue background cohort re-matching (polled via <code>CampusDriveUI.pollCohortTask</code>).</p>
-          </div>
-          <div class="p-3 rounded-xl bg-white border border-[#E5E3DC]">
-            <p class="font-mono font-bold text-[#1D5C42]">cohort_bootcamp_publish</p>
-            <p class="mt-1">Resolves course via <code>pick_course_for_skill()</code>, publishes pending <code>PlanItem</code> rows, recalculates <code>UpskillPlan.total_hours</code>, and computes <code>students_impacted</code>.</p>
-          </div>
-          <div class="p-3 rounded-xl bg-white border border-[#E5E3DC]">
-            <p class="font-mono font-bold text-[#1D5C42]">POST /api/approvals</p>
-            <p class="mt-1">Queues new HITL <code>ApprovalRequest(status="pending_review")</code> and logs <code>approval.requested</code>.</p>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Two panels in the right-hand column of the Placement Copilot screen.</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> <strong>Agent Step Trace</strong> updates immediately as soon as Copilot searches policies, reads the student's verified skills, checks explicitly favorited jobs, and ranks visible matches. <strong>Known SOP Documents</strong> displays clickable pills for all active institutional rules (<em>SOP-01</em> through <em>SOP-18</em> plus any custom <em>SOP-19+</em> rules)—click any pill to inspect its rule instantly.</p>
           </div>
         </div>
       </div>
     </div>
   </details>
 
-  <!-- Card 4: Placement Policies Studio -->
+  <!-- 6.2 Cohort & Department Analytics + Drive Eligibility Simulator -->
   <details class="km-card editorial-card overflow-hidden" open
            data-roles="faculty_mentor tpo_admin"
-           data-keywords="policies sop studio sop-01 sop-18 sop-19 thresholds parameters modal create edit delete reset overrides policies.html admin.py policy_rag.py">
+           data-keywords="cohort department analytics kpi charts export csv json placement policies student readiness matrix training priorities simulator run simulation bootcamp roi live benchmark system telemetry">
     <summary class="px-6 py-4 bg-[#FAF9F5] border-b border-[#ECEAE2] cursor-pointer flex flex-wrap items-center justify-between gap-3 select-none">
       <div class="flex flex-wrap items-center gap-2.5">
-        <span class="px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white text-[11px] font-mono font-bold">5.4</span>
-        <h3 class="font-serif-display text-base sm:text-lg font-bold text-[#1C1E1B]">Placement Policies Studio (SOP-01..SOP-18 &amp; Custom SOP-19+)</h3>
-        <code class="text-[11px] font-mono text-[#5C5A52] bg-white px-2 py-0.5 rounded-lg border border-[#E5E3DC]">/admin/policies</code>
+        <span class="px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white text-[11px] font-bold">6.2</span>
+        <h3 class="font-serif-display text-base sm:text-lg font-bold text-[#1C1E1B]">Cohort &amp; Department Analytics + Drive Eligibility Simulator</h3>
+        <span class="pill-stone text-[11px]">Screen: Analytics / Department Analytics</span>
       </div>
       <div class="flex flex-wrap items-center gap-1.5">
-        <span class="pill-stone text-[11px]">faculty_mentor (read-only)</span>
-        <span class="pill-sage text-[11px]">tpo_admin (editable)</span>
+        <span class="pill-stone text-[11px]">Faculty Mentor (Own Dept)</span>
+        <span class="pill-sage text-[11px]">TPO Admin (Full Cohort)</span>
       </div>
     </summary>
-    <div class="p-6 space-y-5 text-xs text-[#4A483F] leading-relaxed">
+    <div class="p-6 space-y-5 text-xs sm:text-sm text-[#4A483F] leading-relaxed">
       <p>
-        Live governance studio for the 18 core institutional SOPs (<code>data/placement_sops.json</code>) and custom rules (<code>SOP-19+</code> in <code>data/policies_overrides.json</code>). Every create, edit, delete, or baseline reset atomically updates disk files, calls <code>reload_sops()</code> + <code>index_sops()</code> to re-index Copilot RAG &amp; Agent Brain grounding immediately, and writes an <code>AuditLog</code> entry.
+        The <strong>Analytics Command Center</strong> turns live student profiles, verified skills, mock interviews, and upskilling progress into visual reports and what-if drive projections. <strong>TPO Admins</strong> see the entire campus cohort plus system-wide AI telemetry, while <strong>Faculty Mentors</strong> automatically see only students from their own department.
       </p>
 
-      <div class="overflow-x-auto">
-        <table class="km-table w-full text-left border border-[#E5E3DC] rounded-xl overflow-hidden">
-          <thead class="bg-[#FAF9F5] text-[#5C5A52] text-[10px] font-bold uppercase tracking-wider border-b border-[#E5E3DC]">
-            <tr>
-              <th class="px-4 py-2.5">Control / Modal / Route</th>
-              <th class="px-4 py-2.5">Inputs &amp; Toggles</th>
-              <th class="px-4 py-2.5">Validation, Persistence &amp; RAG Sync</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[#ECEAE2]">
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">Header &amp; 4-KPI Strip</td>
-              <td class="px-4 py-2.5"><code>#open-create-policy-modal</code> (<em>+ Add New Policy (SOP)</em>), <code>#policy-reset-btn</code> (<em>Reset Core Defaults</em>), or <code>#policy-readonly-badge</code> (non-TPO). KPIs: <code>#kpi-total-sops</code>, <code>#kpi-core-sops</code>, <code>#kpi-custom-sops</code>, <code>#kpi-param-count</code>.</td>
-              <td class="px-4 py-2.5"><code>POST /api/admin/policies/reset</code> &rarr; <code>reset_sops()</code> restores baseline <code>SOP-01..SOP-18</code> from <code>_DEFAULT_SOPS_SNAPSHOT</code> while preserving custom <code>SOP-19+</code> rows; logs <code>policy.reset</code>.</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">#policy-search-input &amp; #policy-category-tabs</td>
-              <td class="px-4 py-2.5">Live search + 7 category tabs (<code>All</code>, <code>Tiers &amp; Compensation</code>, <code>Academic Eligibility</code>, <code>Preparation &amp; Assessment</code>, <code>Applications &amp; Offers</code>, <code>Data &amp; AI Governance</code>, <code>Custom Rules</code>).</td>
-              <td class="px-4 py-2.5"><code>matchesCategory()</code> uses <code>CATEGORY_ALIASES</code> + <code>isCustomSop()</code>; search matches SOP ID, title, category, section, <code>rule_text</code>, and serialized <code>parameters</code>.</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">Create Modal (<code>#policy-create-modal</code>)</td>
-              <td class="px-4 py-2.5"><code>#create-sop-title</code>, <code>#create-sop-category</code>, <code>#create-sop-section</code>, <code>#create-sop-rule</code> (&ge;15 chars), <code>#create-add-param-btn</code>, <code>#submit-create-policy-btn</code>, <code>#cancel-create-policy-btn</code>, <code>#close-create-policy-modal</code>.</td>
-              <td class="px-4 py-2.5"><code>POST /api/admin/policies</code> &rarr; <code>create_sop()</code> auto-assigns next <code>SOP-19+</code> ID, persists to <code>policies_overrides.json</code> via <code>_write_json_atomic()</code>, re-indexes RAG, and logs <code>policy.created</code>.</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">Edit Modal (<code>#policy-edit-modal</code>)</td>
-              <td class="px-4 py-2.5"><code>#edit-sop-title</code>, <code>#edit-sop-category</code>, <code>#edit-sop-section</code>, <code>#edit-sop-rule</code>, <code>#edit-add-param-btn</code>, boolean <em>Enabled/Disabled</em> checkboxes &amp; typed number/array/text inputs in <code>#edit-sop-params</code>, <code>#save-edit-policy-btn</code>, <code>#delete-edit-policy-btn</code>.</td>
-              <td class="px-4 py-2.5"><code>PUT /api/admin/policies/{sop_id}</code> runs <code>_validate_policy_params()</code>: checks <code>0..100</code> percentages, non-negative ints (backlogs &le; 20), LPA in <code>(0, 200]</code>, <code>min_cgpa</code> in <code>[0, 10]</code>, valid <code>applicable_tiers</code>, and SOP-01 invariant <code>dream_min_lpa &lt; super_dream_min_lpa</code> (auto-syncing <code>standard_max_lpa</code> &amp; <code>dream_max_lpa</code>). Calls <code>update_sop()</code> &amp; logs <code>policy.updated</code>.</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">Remove Policy Button</td>
-              <td class="px-4 py-2.5"><code>[data-delete-sop]</code> on cards &amp; <code>#delete-edit-policy-btn</code> inside Edit modal.</td>
-              <td class="px-4 py-2.5"><code>DELETE /api/admin/policies/{sop_id}</code> &rarr; <code>delete_sop()</code> removes custom <code>SOP-19+</code> or writes reversible tombstone <code>{"id": sid, "_deleted": true}</code> for core <code>SOP-01..SOP-18</code>; re-indexes RAG &amp; logs <code>policy.deleted</code>.</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Header Downloads & Shortcut -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap gap-1.5">
+              <span class="km-ui-btn-secondary inline-flex items-center px-3 py-1 rounded-full border border-[#D5D2C6] bg-white text-[11px] font-semibold text-[#1C1E1B]">Placement Policies</span>
+              <span class="km-ui-btn-secondary inline-flex items-center px-3 py-1 rounded-full border border-[#D5D2C6] bg-white text-[11px] font-semibold text-[#1C1E1B]">Export CSV</span>
+              <span class="km-ui-btn-secondary inline-flex items-center px-3 py-1 rounded-full border border-[#D5D2C6] bg-white text-[11px] font-semibold text-[#1C1E1B]">Export JSON</span>
+            </div>
+            <span class="pill-stone text-[10px]">Faculty &amp; TPO</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Top-right toolbar of the Analytics header.</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> <em>Placement Policies</em> jumps straight to the SOP Rules manager. <em>Export CSV</em> downloads a spreadsheet of skill-gap priorities, and <em>Export JSON</em> saves the complete analytics report directly in your browser.</p>
+          </div>
+        </div>
+
+        <!-- 6 Executive KPI Cards -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="pill-sage text-[11px]">6 Executive KPI Cards</span>
+            <span class="pill-stone text-[10px]">Faculty &amp; TPO</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Six summary tiles right below the header.</p>
+            <p><strong class="text-[#1C1E1B]">What they show:</strong> <strong>Total Cohort</strong> (students &amp; active branches), <strong>Mean Readiness Index</strong> (average of each student's top-3 match scores out of 100), <strong>Drive-Eligible</strong> (% above the Early band &amp; meeting top-role GPA), <strong>Verified Authenticity</strong> (% of skills proven via interview/assessment), <strong>SOP-04 Mock Pass</strong> (% scoring &ge; 65), and <strong>30-Day Plan Completion</strong> (% of roadmap tasks finished).</p>
+          </div>
+        </div>
+
+        <!-- 4 Interactive Charts -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="pill-sage text-[11px]">4 Interactive Charts</span>
+            <span class="pill-stone text-[10px]">Light &amp; Dark Theme Synced</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> The 2&times;2 chart grid below the KPI tiles.</p>
+            <p><strong class="text-[#1C1E1B]">What they show:</strong> <strong>1. Cohort Skill Demand vs. Coverage</strong> (top 10 in-demand skills comparing role demand, verified mastery, and missing gap); <strong>2. Readiness Band Distribution</strong> (doughnut split across Strong &ge;75, Moderate 55&ndash;74, Developing 35&ndash;54, Early &lt;35); <strong>3. Branch-Wise Readiness</strong> (readiness, CGPA &times;10, and mock score by branch); <strong>4. Career Role Tracks</strong> (mean readiness vs eligible % across 5 tracks: Backend &amp; Cloud, Frontend &amp; Full-Stack, Data &amp; AI/ML, DevOps &amp; SRE, Core ECE / Embedded).</p>
+          </div>
+        </div>
+
+        <!-- Student Readiness & Training Priorities Matrices -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap gap-1.5">
+              <span class="km-ui-input inline-flex items-center px-2.5 py-1 rounded-lg border border-[#D5D2C6] bg-white text-[11px] text-[#7A776E]">Search student or role...</span>
+              <span class="km-ui-input inline-flex items-center px-2.5 py-1 rounded-lg border border-[#D5D2C6] bg-white text-[11px] text-[#1C1E1B]">All Branches &#9662;</span>
+              <span class="km-ui-input inline-flex items-center px-2.5 py-1 rounded-lg border border-[#D5D2C6] bg-white text-[11px] text-[#1C1E1B]">All Bands &#9662;</span>
+            </div>
+            <span class="pill-stone text-[10px]">Faculty &amp; TPO</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> <em>Student-by-Student Placement Readiness &amp; Verification Matrix</em> and <em>Institutional Training Priorities Matrix</em>.</p>
+            <p><strong class="text-[#1C1E1B]">What they do:</strong> Filter students live by name, role, branch, or readiness band; click any student's name to open their Profile, inspect Verified / Claimed / Unverified skill counts, SOP-04 mock status, plan %, and top missing skills. Below it, the Training Priorities table ranks the top 12 skill gaps and suggests whether to run a <em>Supervised Verification Lab</em>, <em>Hands-On Bootcamp</em>, or <em>Guided Technical Workshop</em>.</p>
+          </div>
+        </div>
+
+        <!-- Placement Drive Eligibility Simulator -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3 md:col-span-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="km-ui-input inline-flex items-center px-2.5 py-1 rounded-lg border border-[#D5D2C6] bg-white text-[11px] text-[#1C1E1B]">Min GPA: 7.0</span>
+              <span class="km-ui-input inline-flex items-center px-2.5 py-1 rounded-lg border border-[#D5D2C6] bg-white text-[11px] text-[#1C1E1B]">Salary: 12&ndash;16 LPA</span>
+              <span class="km-ui-input inline-flex items-center px-2.5 py-1 rounded-lg border border-[#D5D2C6] bg-white text-[11px] text-[#1C1E1B]">Skills &amp; Branches</span>
+              <span class="km-ui-btn-primary inline-flex items-center px-4 py-1.5 rounded-full bg-[#1D5C42] text-white text-[11px] font-semibold">Run Simulation</span>
+            </div>
+            <span class="pill-sage text-[10px]">What-If Drive Modeler</span>
+          </div>
+          <div class="space-y-1.5 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> <em>Placement Drive Eligibility Simulator</em> card (runs automatically on page load and whenever you click <em>Run Simulation</em>).</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> Lets you test a prospective company drive (title, salary range in LPA, minimum GPA, comma-separated required skills, and optional allowed branches) against every student using the exact live SOP rules—<strong>without saving or publishing anything</strong>.</p>
+            <p><strong class="text-[#1C1E1B]">What you get back:</strong> 4 summary tiles (<em>Tier</em>, <em>Cohort</em>, <em>Eligible now</em>, <em>Ready %</em>), an <strong>SOP gate bottleneck breakdown</strong> showing how many students are blocked by CGPA/backlogs, branch restrictions, mock interviews, or skill coverage, the <strong>top 5 missing skills</strong> paired with recommended courses, and a <strong>Bootcamp intervention ROI</strong> forecast (dual progress bars showing how many extra students become eligible after a targeted 1&ndash;2 skill bootcamp and mock clearance, while noting hard GPA/branch rules cannot be waived by training).</p>
+          </div>
+        </div>
+
+        <!-- Run Live Benchmark & System Telemetry -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3 md:col-span-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="km-ui-btn-secondary inline-flex items-center px-3.5 py-1.5 rounded-full border border-[#D5D2C6] bg-white text-[11px] font-semibold text-[#1C1E1B]">Run Live Benchmark</span>
+              <span class="pill-stone text-[11px]">System Health Telemetry Strip (TPO Only)</span>
+            </div>
+            <span class="pill-stone text-[10px]">Quality &amp; Health</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Bottom card titled <em>Quantitative Evaluation Benchmark &amp; System Telemetry</em>.</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> Clicking <em>Run Live Benchmark</em> tests 10 golden policy questions (<em>RAG Recall@3</em> &amp; <em>RAG MRR</em>), checks 10 learning roadmaps for valid prerequisite ordering and zero loops (<em>DAG Invariant Rate</em>), verifies that fake IDs, wrong SOP numbers, and fake links are caught (<em>Citation Grounding</em>), and reports live <em>Agent Success Rate</em> and <em>Agent p95 Latency</em>. Beneath the tiles, <strong>TPO Admins</strong> also see a live telemetry strip showing active AI provider, total calls, tokens, estimated USD cost, fallbacks, and database record counts.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- 6.3 HITL Approvals Center -->
+  <details class="km-card editorial-card overflow-hidden" open
+           data-roles="faculty_mentor tpo_admin"
+           data-keywords="hitl approvals center status filter all pending review approved rejected reviewer note endorse tier 1 approve execute publish tpo only reject withdraw remove edit drive separation of duties">
+    <summary class="px-6 py-4 bg-[#FAF9F5] border-b border-[#ECEAE2] cursor-pointer flex flex-wrap items-center justify-between gap-3 select-none">
+      <div class="flex flex-wrap items-center gap-2.5">
+        <span class="px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white text-[11px] font-bold">6.3</span>
+        <h3 class="font-serif-display text-base sm:text-lg font-bold text-[#1C1E1B]">HITL Approvals Center (Two-Tier Governance)</h3>
+        <span class="pill-stone text-[11px]">Screen: Approvals</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-1.5">
+        <span class="pill-stone text-[11px]">Faculty Mentor (Tier 1)</span>
+        <span class="pill-sage text-[11px]">TPO Admin (Tier 2)</span>
+      </div>
+    </summary>
+    <div class="p-6 space-y-5 text-xs sm:text-sm text-[#4A483F] leading-relaxed">
+      <p>
+        Sensitive actions never happen silently behind a user's back—they wait in the <strong>HITL (Human-in-the-Loop) Approvals Center</strong> until reviewed by authorized staff. The system enforces <strong>two-person separation of duties</strong> (no one can approve their own request or bypass TPO sign-off on institutional items) and scopes Faculty Mentors strictly to students and drives matching their department.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Status Filter Tabs -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="km-ui-toggle inline-flex flex-wrap gap-1 p-1 rounded-full bg-[#EFECE4]">
+              <span class="px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white text-[11px] font-semibold">All</span>
+              <span class="px-2.5 py-0.5 rounded-full text-[#4A4943] text-[11px] font-semibold">Pending Review</span>
+              <span class="px-2.5 py-0.5 rounded-full text-[#4A4943] text-[11px] font-semibold">Approved</span>
+              <span class="px-2.5 py-0.5 rounded-full text-[#4A4943] text-[11px] font-semibold">Rejected</span>
+            </div>
+            <span class="pill-stone text-[10px]">Faculty &amp; TPO</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Top-right filter tabs in the HITL Approvals Center header.</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> Switches the queue view. <em>All</em> displays every item waiting for review plus the 15 most recent completed decisions; the other tabs show only that exact status.</p>
+          </div>
+        </div>
+
+        <!-- Reviewer Note & Tier 1 Endorsement -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="km-ui-input inline-flex items-center px-3 py-1 rounded-full border border-[#D4D1C7] bg-white text-[11px] text-[#7A776E]">Review note (optional)</span>
+              <span class="km-ui-btn-primary inline-flex items-center px-3 py-1 rounded-full bg-[#1D5C42] text-white text-[11px] font-semibold">Endorse (Tier 1)</span>
+            </div>
+            <span class="pill-stone text-[10px]">Tier 1 Review</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Bottom action bar of pending student nominations and skill waivers.</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> Adds an optional decision note to the permanent record. Clicking <em>Endorse (Tier 1)</em> records faculty endorsement and advances linked waiver applications to await final TPO sign-off (hidden on bootcamps and resume re-upload requests, which go straight to TPO).</p>
+          </div>
+        </div>
+
+        <!-- Tier 2 Approve & Reject / Withdraw -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="km-ui-btn-primary inline-flex items-center px-3 py-1 rounded-full bg-[#1D5C42] text-white text-[11px] font-semibold">Approve &amp; Execute (Tier 2)</span>
+              <span class="km-ui-btn-danger inline-flex items-center px-3 py-1 rounded-full bg-[#FBECE9] border border-[#F3D2CC] text-[#9E2A20] text-[11px] font-semibold">Reject</span>
+              <span class="km-ui-btn-secondary inline-flex items-center px-3 py-1 rounded-full border border-[#D5D2C6] bg-white text-[11px] font-semibold text-[#5C5A52]">Withdraw / Remove</span>
+            </div>
+            <span class="pill-sage text-[10px]">Separation of Duties</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Action row on every pending card.</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> <strong>Approve &amp; Execute (Tier 2)</strong> / <strong>Approve &amp; Publish (TPO Only)</strong> runs the requested change and records an immutable audit entry in one atomic step—if anything fails, nothing is partially saved. <strong>Faculty Mentors</strong> are blocked from giving final approval on nominations, campus drives, cohort bootcamps, resume re-upload unlocks, or anything they requested or endorsed themselves. <strong>Reject</strong> declines the request and marks linked applications/drives as rejected; <strong>Withdraw / Remove</strong> (TPO Admin only) closes out generic requests cleanly.</p>
+          </div>
+        </div>
+
+        <!-- Edit Drive & Trace Link -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="km-ui-btn-secondary inline-flex items-center px-3 py-1 rounded-full border border-[#D5D2C6] bg-white text-[11px] font-semibold text-[#1C1E1B]">Edit Drive</span>
+              <span class="km-ui-btn-primary inline-flex items-center px-3 py-1 rounded-full bg-[#1D5C42] text-white text-[11px] font-semibold">Approve &amp; Publish (TPO Only)</span>
+              <span class="pill-sage text-[10px]">trace: ...</span>
+            </div>
+            <span class="pill-sage text-[10px]">TPO Admin Only</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Pending <em>Campus Drive Publish</em> cards (submitted via Smart JD or Recruiter JNF).</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> Displays the SOP-01 salary tier badge, <em>Recruiter JNF</em> or <em>TPO Smart JD</em> origin badge, parser engine used, CGPA/Branches/Backlogs/Batch grid, and a clickable <em>trace</em> badge that jumps directly to the Audit Trail filtered to that drive. Clicking <em>Edit Drive</em> opens the Smart JD editor so the TPO Admin can refine fields before publishing.</p>
+          </div>
+        </div>
       </div>
 
-      <!-- Baseline SOP-01..SOP-18 Index -->
-      <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-2">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-[#1C1E1B] font-mono">Baseline Institutional Policy Registry (<code>data/placement_sops.json</code>)</h4>
+      <!-- What Each of the 5 Approval Types Unlocks -->
+      <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-[#1C1E1B]">What Each Approval Type Automatically Unlocks Once Approved</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 text-xs">
+          <div class="p-3 rounded-xl bg-white border border-[#E5E3DC]">
+            <p class="font-bold text-[#1D5C42]">1. Job Nomination</p>
+            <p class="mt-1">Adds an official nomination milestone to the student's progress timeline and advances their drive application status to <strong>Nominated</strong>.</p>
+          </div>
+          <div class="p-3 rounded-xl bg-white border border-[#E5E3DC]">
+            <p class="font-bold text-[#1D5C42]">2. Skill Proficiency Waiver</p>
+            <p class="mt-1">Upgrades the student's skill proficiency level and immediately recalculates their job match scores and active application readiness.</p>
+          </div>
+          <div class="p-3 rounded-xl bg-white border border-[#E5E3DC]">
+            <p class="font-bold text-[#1D5C42]">3. Student Resume Re-upload Unlock</p>
+            <p class="mt-1">Grants the student a <strong>one-time unlock</strong> on their Profile page to upload a new resume (automatically re-locks right after they upload).</p>
+          </div>
+          <div class="p-3 rounded-xl bg-white border border-[#E5E3DC]">
+            <p class="font-bold text-[#1D5C42]">4. Campus Drive Publish</p>
+            <p class="mt-1">Publishes the job into live On-Campus Opportunities and launches a background task to re-score the entire student cohort against it.</p>
+          </div>
+          <div class="p-3 rounded-xl bg-white border border-[#E5E3DC] sm:col-span-2 lg:col-span-2">
+            <p class="font-bold text-[#1D5C42]">5. Cohort Bootcamp Publish</p>
+            <p class="mt-1">Selects the best matching course from the catalog, publishes pending bootcamp tasks across student upskilling plans, updates total plan hours, and reports how many students are impacted.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- 6.4 Institutional Placement Policies (SOPs) -->
+  <details class="km-card editorial-card overflow-hidden" open
+           data-roles="faculty_mentor tpo_admin"
+           data-keywords="institutional placement policies sop add new policy reset core defaults search category tabs tiers compensation academic eligibility preparation assessment applications offers data ai governance custom rules threshold parameter save create remove soft disable sync copilot">
+    <summary class="px-6 py-4 bg-[#FAF9F5] border-b border-[#ECEAE2] cursor-pointer flex flex-wrap items-center justify-between gap-3 select-none">
+      <div class="flex flex-wrap items-center gap-2.5">
+        <span class="px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white text-[11px] font-bold">6.4</span>
+        <h3 class="font-serif-display text-base sm:text-lg font-bold text-[#1C1E1B]">Institutional Placement Policies (SOPs)</h3>
+        <span class="pill-stone text-[11px]">Screen: Placement Policies</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-1.5">
+        <span class="pill-stone text-[11px]">Faculty Mentor (Read-Only)</span>
+        <span class="pill-sage text-[11px]">TPO Admin (Full Edit)</span>
+      </div>
+    </summary>
+    <div class="p-6 space-y-5 text-xs sm:text-sm text-[#4A483F] leading-relaxed">
+      <p>
+        Manage JKLU's 18 baseline placement policies (<em>SOP-01</em> through <em>SOP-18</em>) and create custom institutional rules (<em>SOP-19+</em>). Every update is validated for safe numeric limits, logged in the audit trail, and <strong>automatically synced with Placement Policy Copilot and live eligibility checks</strong>. Faculty Mentors can view all rules with a <em>Read-Only (TPO Admin Editable)</em> badge, while TPO Admins can add, edit, disable, or reset rules.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Add New Policy & Reset Core Defaults -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="km-ui-btn-primary inline-flex items-center px-3.5 py-1.5 rounded-full bg-[#1D5C42] text-white text-[11px] font-semibold">+ Add New Policy (SOP)</span>
+              <span class="km-ui-btn-secondary inline-flex items-center px-3.5 py-1.5 rounded-full border border-[#D5D2C6] bg-white text-[11px] font-semibold text-[#9E2A20]">Reset Core Defaults</span>
+            </div>
+            <span class="pill-sage text-[10px]">TPO Admin Only</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Top-right header of Placement Policies (above the 4 summary KPI tiles showing total, core, custom SOPs, and active parameter guardrails).</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> <strong>+ Add New Policy (SOP)</strong> opens a pop-up to create a custom rule (automatically numbered <em>SOP-19+</em>). <strong>Reset Core Defaults</strong> safely restores all 18 baseline SOPs back to factory settings—re-enabling any core rules that were removed—while keeping all custom rules intact.</p>
+          </div>
+        </div>
+
+        <!-- Search & 7 Category Filter Tabs -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="km-ui-input inline-flex items-center px-3 py-1 rounded-lg border border-[#D4D1C7] bg-white text-[11px] text-[#7A776E]">Search SOP ID, title, clause...</span>
+              <span class="pill-sage text-[10px]">7 Category Tabs</span>
+            </div>
+            <span class="pill-stone text-[10px]">Faculty &amp; TPO</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Filter toolbar above the 2-column policy card grid.</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> Live search matches SOP IDs, titles, categories, section references, rule text, and parameter values. The 7 category tabs filter rules into <strong>All</strong>, <strong>Tiers &amp; Compensation</strong>, <strong>Academic Eligibility</strong>, <strong>Preparation &amp; Assessment</strong>, <strong>Applications &amp; Offers</strong>, <strong>Data &amp; AI Governance</strong>, and <strong>Custom Rules</strong>.</p>
+          </div>
+        </div>
+
+        <!-- Dynamic Threshold Parameters, Save & Create -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="km-ui-btn-secondary inline-flex items-center px-3 py-1 rounded-full border border-[#D5D2C6] bg-white text-[11px] font-semibold text-[#1D5C42]">+ Add Threshold Parameter</span>
+              <span class="km-ui-btn-primary inline-flex items-center px-3 py-1 rounded-full bg-[#1D5C42] text-white text-[11px] font-semibold">Save Policy</span>
+              <span class="km-ui-btn-primary inline-flex items-center px-3 py-1 rounded-full bg-[#1D5C42] text-white text-[11px] font-semibold">Create Policy</span>
+            </div>
+            <span class="pill-sage text-[10px]">TPO Admin Only</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Inside the <em>Edit Policy &amp; Thresholds</em> and <em>Add New Policy (SOP)</em> pop-up windows.</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> <strong>+ Add Threshold Parameter</strong> adds a dynamic rule setting row (supporting Enabled/Disabled switches, numbers, comma-separated tier lists, or text; click <em>X</em> to delete a row). Clicking <strong>Save Policy</strong> or <strong>Create Policy</strong> validates safe bounds—percentages 0&ndash;100, backlogs 0&ndash;20, CGPA 0.0&ndash;10.0, LPA 0&ndash;200, and keeps Dream salary minimums below Super-Dream minimums—then updates Copilot immediately.</p>
+          </div>
+        </div>
+
+        <!-- Remove Policy (Soft-Disable vs Delete) & Copilot Sync -->
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="km-ui-btn-danger inline-flex items-center px-3 py-1 rounded-full bg-[#FDF3F2] border border-[#F5D0CC] text-[#9E2A20] text-[11px] font-semibold">Remove Policy</span>
+              <span class="pill-sage text-[10px]">RAG Grounding Synced</span>
+            </div>
+            <span class="pill-sage text-[10px]">Reversible for Core SOPs</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Bottom-right of each policy card and bottom-left of the Edit pop-up.</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> Removes custom rules (<em>SOP-19+</em>) permanently, or <strong>soft-disables core SOPs (<em>SOP-01</em>&ndash;<em>SOP-18</em>)</strong> so they stop appearing in Copilot answers and policy lists while remaining safely restorable anytime via <em>Reset Core Defaults</em>.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 18 Core Policies Quick Reference -->
+      <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-2.5">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-[#1C1E1B]">Baseline Institutional Policies (SOP-01 to SOP-18)</h4>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-[11px]">
-          <div><strong class="font-mono text-[#1D5C42]">SOP-01</strong> Placement Tier Classification &amp; CTC (&lt;8 / 8-14.99 / &ge;15 LPA)</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-02</strong> One-Offer-Per-Tier &amp; Upward Mobility (48h accept)</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-03</strong> Minimum CGPA &amp; Active Backlog Cutoffs (0 Super-Dream, &le;1 Dream)</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-04</strong> Mandatory AI Mock-Interview Gate (&ge;65, 24h cooldown)</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-05</strong> Skill Readiness (&ge;40% coverage, blocks <code>early</code> band)</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-06</strong> No-Show Penalty (14-day suspension; 2nd forfeits season)</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-07</strong> PPO Conversion &amp; Dual-Option Rules (report in 7 days)</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-08</strong> Resume Grounding &amp; Zero-Fabrication Integrity</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-09</strong> Cross-Branch Eligibility (&ge;70% match or bridge course)</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-10</strong> Attendance &amp; Semester NOC Protocols (&ge;75% attendance)</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-11</strong> Drive Registration (48h close) &amp; Withdrawal (24h cutoff)</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-12</strong> Off-Campus Offer Reporting &amp; NOC (deposit within 5 days)</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-13</strong> Multiple Same-Day Offer Resolution Priority (24h choice)</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-14</strong> 8th Sem Internship-to-Placement Transition (&ge;7.0 CGPA + Dean)</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-15</strong> Corporate Interview Etiquette &amp; NDA Compliance</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-16</strong> Medical &amp; Compassionate Absence Deferrals (48h report)</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-17</strong> Placement Grievance Redressal (72h appeal, 5-day SLA)</div>
-          <div><strong class="font-mono text-[#1D5C42]">SOP-18</strong> Equal Opportunity &amp; Reasonable Accommodation</div>
+          <div><strong class="text-[#1D5C42]">SOP-01:</strong> Tier Classification &amp; CTC (&lt;8 / 8&ndash;14.99 / &ge;15 LPA)</div>
+          <div><strong class="text-[#1D5C42]">SOP-02:</strong> One Offer Per Tier &amp; Upward Mobility (48h accept)</div>
+          <div><strong class="text-[#1D5C42]">SOP-03:</strong> Minimum CGPA &amp; Active Backlog Cutoffs (0 Super-Dream, &le;1 Dream)</div>
+          <div><strong class="text-[#1D5C42]">SOP-04:</strong> Mandatory AI Mock Interview (&ge;65 score, 24h cooldown)</div>
+          <div><strong class="text-[#1D5C42]">SOP-05:</strong> Skill Readiness (&ge;40% coverage, blocks Early band)</div>
+          <div><strong class="text-[#1D5C42]">SOP-06:</strong> No-Show Penalty (14-day pause; 2nd forfeits season)</div>
+          <div><strong class="text-[#1D5C42]">SOP-07:</strong> PPO Conversion &amp; Reporting (report within 7 days)</div>
+          <div><strong class="text-[#1D5C42]">SOP-08:</strong> Resume Grounding &amp; Zero-Fabrication Integrity</div>
+          <div><strong class="text-[#1D5C42]">SOP-09:</strong> Cross-Branch Eligibility (&ge;70% match or bridge course)</div>
+          <div><strong class="text-[#1D5C42]">SOP-10:</strong> Attendance &amp; Semester NOC (&ge;75% attendance)</div>
+          <div><strong class="text-[#1D5C42]">SOP-11:</strong> Drive Registration (48h close) &amp; Withdrawal (24h cutoff)</div>
+          <div><strong class="text-[#1D5C42]">SOP-12:</strong> Off-Campus Offer Reporting &amp; NOC (deposit within 5 days)</div>
+          <div><strong class="text-[#1D5C42]">SOP-13:</strong> Same-Day Multiple Offer Resolution (24h priority choice)</div>
+          <div><strong class="text-[#1D5C42]">SOP-14:</strong> 8th Sem Internship-to-Placement (&ge;7.0 CGPA + Dean approval)</div>
+          <div><strong class="text-[#1D5C42]">SOP-15:</strong> Corporate Interview Etiquette &amp; NDA Compliance</div>
+          <div><strong class="text-[#1D5C42]">SOP-16:</strong> Medical &amp; Compassionate Deferrals (report within 48h)</div>
+          <div><strong class="text-[#1D5C42]">SOP-17:</strong> Grievance Redressal &amp; Appeals (72h appeal, 5-day SLA)</div>
+          <div><strong class="text-[#1D5C42]">SOP-18:</strong> Equal Opportunity &amp; Reasonable Accommodation</div>
         </div>
       </div>
     </div>
   </details>
 
-  <!-- Card 5: Audit Trail, Health Checks, CLI, LLM & Workers -->
+  <!-- 6.5 Audit Trail Inspector & System Operations -->
   <details class="km-card editorial-card overflow-hidden" open
            data-roles="tpo_admin public"
-           data-keywords="audit trail trace_id healthz readyz cli seed demo scrape-jobs ingest-output purge-live-jobs eval-benchmark warm-cache config settings llm bedrock openai mock telemetry circuit breaker embedder vector store pgvector memory backfill task queue redis audit.html cli.py config.py seed.py">
+           data-keywords="audit trail inspector trace id search include sessions clear trace filter clickable trace chips email privacy masking background tasks offline ai cloud ai bedrock openai circuit breaker terminal setup admin commands health">
     <summary class="px-6 py-4 bg-[#FAF9F5] border-b border-[#ECEAE2] cursor-pointer flex flex-wrap items-center justify-between gap-3 select-none">
       <div class="flex flex-wrap items-center gap-2.5">
-        <span class="px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white text-[11px] font-mono font-bold">5.5</span>
-        <h3 class="font-serif-display text-base sm:text-lg font-bold text-[#1C1E1B]">Audit Trail, Health Probes, CLI, LLM Routing, Vector Store &amp; Workers</h3>
-        <code class="text-[11px] font-mono text-[#5C5A52] bg-white px-2 py-0.5 rounded-lg border border-[#E5E3DC]">/admin/audit &middot; /healthz &middot; /readyz &middot; app.cli</code>
+        <span class="px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white text-[11px] font-bold">6.5</span>
+        <h3 class="font-serif-display text-base sm:text-lg font-bold text-[#1C1E1B]">Audit Trail Inspector &amp; System Operations</h3>
+        <span class="pill-stone text-[11px]">Screen: Audit Trail &amp; Operator Tools</span>
       </div>
       <div class="flex flex-wrap items-center gap-1.5">
-        <span class="pill-sage text-[11px]">tpo_admin</span>
-        <span class="pill-stone text-[11px]">public (health probes)</span>
+        <span class="pill-sage text-[11px]">TPO Admin Only</span>
+        <span class="pill-stone text-[11px]">Public Health Checks</span>
       </div>
     </summary>
-    <div class="p-6 space-y-5 text-xs text-[#4A483F] leading-relaxed">
-      <!-- Audit & Health Probes -->
-      <div class="overflow-x-auto">
-        <table class="km-table w-full text-left border border-[#E5E3DC] rounded-xl overflow-hidden">
-          <thead class="bg-[#FAF9F5] text-[#5C5A52] text-[10px] font-bold uppercase tracking-wider border-b border-[#E5E3DC]">
-            <tr>
-              <th class="px-4 py-2.5">Surface / Route</th>
-              <th class="px-4 py-2.5">Controls &amp; Filters</th>
-              <th class="px-4 py-2.5">Backend Behavior &amp; Security</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[#ECEAE2]">
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">/admin/audit &amp; GET /api/admin/audit?limit=200</td>
-              <td class="px-4 py-2.5"><code>#audit-filter</code> (supports <code>?trace_id=...</code> URL param), <code>#audit-include-sessions</code> checkbox, <code>#audit-clear-filter</code> button, <code>#audit-count</code> badge, clickable <code>.trace-filter-chip</code> pills.</td>
-              <td class="px-4 py-2.5"><code>tpo_admin</code>-only immutable ledger (1..500 rows). By default hides routine <code>auth.login</code>, <code>auth.logout</code>, <code>auth.role_switched</code>, and <code>demo_role_switch_disabled</code> noise unless checked. Both backend (<code>_scrub_email_text</code> &rarr; <code>id-&lt;sha256[:8]&gt;</code>) and UI (<code>scrubEmails</code> &rarr; <code>[redacted-id]</code>) redact emails. Color-coded badges for <code>campus_drive.*</code>, <code>jnf.*</code>, <code>auth.*</code>, <code>approval*</code>, <code>interview*</code>.</td>
-            </tr>
-            <tr>
-              <td class="px-4 py-2.5 font-mono text-[#1C1E1B]">GET /healthz &amp; GET /readyz</td>
-              <td class="px-4 py-2.5">Public liveness &amp; readiness probes (no auth required)</td>
-              <td class="px-4 py-2.5"><code>healthz()</code> returns <code>{"status": "ok", "service": "ps06-careeros", "version": "3.0.0"}</code> with no DB hit. <code>readyz()</code> checks 5 subsystems (<code>database</code> <code>SELECT 1</code>, <code>taxonomy_skills &ge; 124</code>, <code>sops &ge; 18</code>, <code>question_bank &ge; 220</code>, <code>embedder</code> probe dim) and returns <code>200</code> (<code>ready</code>) or <code>503</code> (<code>degraded</code>).</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <div class="p-6 space-y-5 text-xs sm:text-sm text-[#4A483F] leading-relaxed">
+      <p>
+        Every AI decision, approval, policy edit, and security event is recorded in an <strong>append-only, tamper-evident Audit Trail</strong> accessible only to TPO Admins. Underneath the interface, CareerOS is designed to work reliably offline out of the box while supporting cloud AI, background workers, and terminal administration tools when needed.
+      </p>
 
-      <!-- CLI Commands & Config -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-2">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-[#1C1E1B] font-mono">CLI Commands (<code>python -m app.cli</code>, <code>cli.py</code> &amp; <code>seed.py</code>)</h4>
-          <ul class="space-y-1.5">
-            <li><code class="font-mono text-[#1D5C42]">seed [--demo-cohort]</code> &mdash; <code>cmd_seed()</code> initializes DB tables and seeds <code>Skill</code>, <code>Job</code> (<code>jobs.json</code>), and <code>Course</code> (<code>courses.json</code>) plus 384-dim job embeddings on Postgres. <code>--demo-cohort</code> runs <code>seed_demo_cohort()</code>: idempotently creates 12 students (CSE/AI&amp;DS/ECE/IT) with matches, upskill plans, 5-point <code>ProgressEvent</code> history, 4 finished interviews with speech telemetry, 3 <code>AgentRun</code> traces, 4 pending approvals, and 3 flagship applications.</li>
-            <li><code class="font-mono text-[#1D5C42]">demo --file &lt;path&gt; [--name] [--top 5]</code> &mdash; <code>cmd_demo()</code> parses resume bytes &amp; ranks against <code>data/jobs.json</code> with zero DB required.</li>
-            <li><code class="font-mono text-[#1D5C42]">scrape-jobs [--term] [--location] [--limit] [--sites]</code> &mdash; <code>cmd_scrape_jobs()</code> executes <code>JobSpyScraper</code> + <code>ingest_scraped_jobs()</code>.</li>
-            <li><code class="font-mono text-[#1D5C42]">ingest-output</code> / <code class="font-mono text-[#1D5C42]">ingest-scraped-jobs [--file]</code> &mdash; <code>cmd_ingest_output()</code> ingests normalized JSON into DB + vector store.</li>
-            <li><code class="font-mono text-[#1D5C42]">purge-live-jobs [--keep-output]</code> &mdash; <code>cmd_purge_live_jobs()</code> deletes live scraped jobs, embeddings, and output caches.</li>
-            <li><code class="font-mono text-[#1D5C42]">eval-benchmark</code> &amp; <code class="font-mono text-[#1D5C42]">warm-cache</code> &mdash; runs M23 benchmark suite or warms <code>LocalEmbedder</code> sentence-transformers cache.</li>
-          </ul>
+      <!-- Audit Trail Inspector Controls -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="km-ui-input inline-flex items-center px-3 py-1 rounded-full border border-[#D4D1C7] bg-white text-[11px] text-[#7A776E]">Filter by action, trace_id, entity ID...</span>
+              <span class="km-ui-btn-secondary inline-flex items-center px-2.5 py-1 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[11px] font-semibold text-[#164934]">Clear trace filter &times;</span>
+            </div>
+            <span class="pill-sage text-[10px]">TPO Admin Only</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Top filter toolbar on the <em>Audit Trail Inspector</em> screen.</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> Searches live across action types, trace IDs, record IDs, actor roles, and event details (automatically pre-filled if you click a trace badge on an Approval card). Clicking <strong>Clear trace filter &times;</strong> resets the filter immediately. Inside any row, clicking a green <strong>trace chip</strong> filters the entire log to that single end-to-end event chain.</p>
+          </div>
         </div>
-        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-2">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-[#1C1E1B] font-mono">Configuration (<code>app/config.py</code> <code>Settings</code>)</h4>
-          <ul class="space-y-1.5">
-            <li><strong>Database &amp; Embeddings:</strong> <code>database_url</code>, <code>test_database_url</code>, <code>embedder</code> (<code>local</code> | <code>hashing</code>), <code>embedding_dim</code> (<code>384</code> required for <code>PgVectorStore</code>).</li>
-            <li><strong>LLM Routing:</strong> <code>llm_provider</code> (<code>mock</code> | <code>bedrock</code> | <code>openai</code>), <code>llm_model</code> (<code>amazon.nova-lite-v1:0</code>), <code>aws_region</code> (<code>ap-south-1</code>), <code>openai_model</code> (<code>gpt-4o-mini</code>), <code>openai_base_url</code>, <code>llm_timeout</code> (<code>90.0</code>s).</li>
-            <li><strong>Auth &amp; Security:</strong> <code>auth_mode</code> (<code>demo</code> | <code>strict</code>), <code>demo_role_switch</code>, <code>session_secret_key</code>, <code>session_ttl_seconds</code> (7 days), <code>rate_limit_enabled</code>.</li>
-            <li><strong>Background Queue:</strong> <code>task_backend</code> (<code>memory</code> | <code>redis</code>), <code>redis_url</code>.</li>
-          </ul>
+
+        <div class="km-ui-card rounded-2xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="km-ui-toggle inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#D4D1C7] text-[11px] text-[#4A4943]">&#9744; Include routine auth sessions &amp; role switches</span>
+              <span class="pill-stone text-[10px]">Auto Email Masking</span>
+            </div>
+            <span class="pill-sage text-[10px]">Privacy Safe</span>
+          </div>
+          <div class="space-y-1 text-xs">
+            <p><strong class="text-[#1C1E1B]">Where to find it:</strong> Right side of the Audit Trail toolbar &amp; across all log rows.</p>
+            <p><strong class="text-[#1C1E1B]">What it does:</strong> By default, routine logins, logouts, and role-switch noise are tucked away so governance actions stand out—tick <strong>Include routine auth sessions &amp; role switches</strong> (<em>Include Sessions</em>) to inspect sign-in history. For student and staff privacy, both the server and the screen <strong>automatically mask email addresses</strong> into anonymized IDs.</p>
+          </div>
         </div>
       </div>
 
-      <!-- LLM Routing, Embeddings & Workers -->
+      <!-- Plain-English System Operations Cards -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-1.5">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-[#1C1E1B] font-mono">LLM Providers &amp; Circuit Breaker</h4>
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-1.5 text-xs">
+          <div class="flex items-center justify-between gap-2">
+            <h4 class="font-bold text-[#1C1E1B]">Background Tasks &amp; Health Checks</h4>
+            <span class="pill-stone text-[10px]">Non-Blocking</span>
+          </div>
           <p>
-            <code>get_llm()</code> routes to <code>BedrockLLM</code> (<code>converse</code>/<code>converse_stream</code>), <code>OpenAILLM</code> (streaming-first with <code>429</code> backoff + <code>_direct_complete</code> fallback), or deterministic offline <code>MockLLM</code> (handles 14 <code>TASK:</code> prompts). <code>get_instrumented_llm()</code> wraps them in <code>TelemetryLLM</code> + <code>LLMTelemetryTracker</code>: logs tokens &amp; USD cost (<code>PRICING_USD_PER_M</code>) and trips a circuit breaker after <code>3</code> failures in <code>60s</code> for a <code>30s</code> cooldown on <code>MockLLM</code> (<code>complete_live()</code> blocks mock fallback).
+            Heavy jobs—such as fetching live job boards, scanning image resumes with OCR, and re-scoring the whole student cohort when a new Campus Drive is published—run quietly in the background (tracking <em>queued</em>, <em>running</em>, <em>completed</em>, or <em>failed</em> with live progress) so screens never freeze. By default it uses built-in local worker threads, or Redis when configured (automatically falling back to local threads if Redis is offline).
+          </p>
+          <p class="text-[#5C5A52]">
+            Two built-in health checks monitor uptime: a fast <strong>liveness check</strong> and a 5-point <strong>readiness check</strong> (verifying database connection, 124+ taxonomy skills, 18+ SOPs, 220+ interview questions, and the 384-dim text embedder).
           </p>
         </div>
-        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-1.5">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-[#1C1E1B] font-mono">Embedder &amp; VectorStore Backfill</h4>
+
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-1.5 text-xs">
+          <div class="flex items-center justify-between gap-2">
+            <h4 class="font-bold text-[#1C1E1B]">Offline AI vs. Cloud AI Modes</h4>
+            <span class="pill-sage text-[10px]">Zero-Key Ready</span>
+          </div>
           <p>
-            <code>LocalEmbedder</code> loads <code>sentence-transformers/all-MiniLM-L6-v2</code> (384-dim, respects <code>HF_HUB_OFFLINE=1</code>) and falls back to deterministic <code>HashingEmbedder(dim=384)</code>. <code>PgVectorStore</code> persists <code>Vector(384)</code> rows with HNSW cosine index (<code>ix_embeddings_hnsw</code>, graceful sequential-scan fallback). On SQLite/tests, <code>MemoryVectorStore</code> is warmed at startup by <code>backfill_memory_vectors(ctx)</code> in <code>main.py</code>.
+            <strong>Offline AI Mode (Default):</strong> Uses the built-in deterministic offline assistant and local sentence embeddings, requiring <strong>no internet connection and no paid API keys</strong>.
+          </p>
+          <p>
+            <strong>Cloud AI Mode:</strong> Can be configured to use <strong>AWS Bedrock</strong> (e.g., Amazon Nova Lite) or <strong>OpenAI</strong>-compatible models while tracking token usage and estimated USD cost. If a cloud AI service fails 3 times within 60 seconds, a <strong>30-second safety circuit breaker</strong> automatically switches normal tasks to the offline assistant so users never wait on a stalled network.
           </p>
         </div>
-        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-1.5">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-[#1C1E1B] font-mono">Background <code>TaskQueueManager</code></h4>
-          <p>
-            Executes async scraping, OCR, and campus drive cohort re-matching outside the request path, tracking <code>TaskState</code> (<code>queued</code> | <code>running</code> | <code>completed</code> | <code>failed</code>, <code>progress_pct</code>). Uses in-process <code>ThreadPoolExecutor(max_workers=4)</code> (capped at 2000 states) for <code>TASK_BACKEND=memory</code>, or a Redis list + <code>BRPOP(timeout=1)</code> daemon consumer for <code>TASK_BACKEND=redis</code> with automatic fallback to memory if Redis is unreachable.
-          </p>
+
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-1.5 text-xs">
+          <div class="flex items-center justify-between gap-2">
+            <h4 class="font-bold text-[#1C1E1B]">Terminal Setup &amp; Admin Commands</h4>
+            <span class="pill-stone text-[10px]">Operator Tools</span>
+          </div>
+          <ul class="space-y-1">
+            <li><strong class="text-[#1C1E1B]">Seed Database (<span class="font-semibold text-[#1D5C42]">seed</span>):</strong> Sets up database tables, loads skills, jobs, and courses; adding the demo-cohort option seeds 12 JKLU students with matches, plans, interviews, and pending approvals.</li>
+            <li><strong class="text-[#1C1E1B]">Offline Resume Match (<span class="font-semibold text-[#1D5C42]">demo</span>):</strong> Tests matching a single resume file against the built-in job catalog without a database.</li>
+            <li><strong class="text-[#1C1E1B]">Scrape &amp; Import Jobs (<span class="font-semibold text-[#1D5C42]">scrape-jobs</span> / <span class="font-semibold text-[#1D5C42]">ingest-output</span>):</strong> Fetches live Indian tech jobs by keyword and city or imports a saved job file.</li>
+            <li><strong class="text-[#1C1E1B]">Clear Live Jobs (<span class="font-semibold text-[#1D5C42]">purge-live-jobs</span>):</strong> Removes externally scraped jobs and resets temporary scraper caches.</li>
+            <li><strong class="text-[#1C1E1B]">Quality &amp; Model Warmup (<span class="font-semibold text-[#1D5C42]">eval-benchmark</span> / <span class="font-semibold text-[#1D5C42]">warm-cache</span>):</strong> Runs the 4-part system benchmark or pre-warms the local offline embedding model.</li>
+          </ul>
         </div>
       </div>
     </div>

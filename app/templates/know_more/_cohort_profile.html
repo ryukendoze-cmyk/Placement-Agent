@@ -1,4 +1,5 @@
-<section id="km-cohort-profile" class="km-section space-y-4" data-section="cohort-profile">
+<section id="km-cohort-profile" class="km-section space-y-5" data-section="cohort-profile">
+  <!-- Domain Header -->
   <div class="editorial-card p-6">
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
@@ -6,319 +7,347 @@
           Domain 2 &middot; Cohort &amp; Profile
         </span>
         <h2 class="font-serif-display text-xl sm:text-2xl font-semibold text-[#1C1E1B] tracking-tight">
-          Cohort Directory, AI Resume Onboarding, Taxonomy &amp; Student Profiles
+          Home Cohort Directory, AI Resume Onboarding &amp; Student Profiles
         </h2>
         <p class="text-sm text-[#5C5A52] mt-1 max-w-3xl">
-          Role-scoped cohort workspace, multi-format resume ingestion with PII scrubbing and prompt-injection defense, 124-skill taxonomy grounding, verification chips, single-use re-upload gating, and deterministic Resume X-Ray + AI bullet rewriting.
+          Browse and filter students by role, onboard new candidates from any resume format with automatic privacy masking, inspect verified skill badges, manage one-time student resume updates, and audit resume bullet strength.
         </p>
       </div>
     </div>
 
-    <div class="mt-4 pt-4 border-t border-[#ECEAE2] flex flex-wrap items-center gap-2 text-[11px] font-mono">
-      <span class="px-2.5 py-1 rounded-full bg-[#EFECE4] text-[#4A483F] font-semibold">Process Flow:</span>
-      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#D5D2C6] text-[#1C1E1B]">1. Cohort Filter / Select</span>
+    <div class="mt-4 pt-4 border-t border-[#ECEAE2] flex flex-wrap items-center gap-2 text-[11px]">
+      <span class="px-2.5 py-1 rounded-full bg-[#EFECE4] text-[#4A483F] font-semibold">How It Flows:</span>
+      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#D5D2C6] text-[#1C1E1B]">1. Find or Select Student</span>
       <span class="text-[#8E9690]">&rarr;</span>
-      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#D5D2C6] text-[#1C1E1B]">2. Resume Parse &amp; PII Scrub</span>
+      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#D5D2C6] text-[#1C1E1B]">2. Upload &amp; Mask Private Info</span>
       <span class="text-[#8E9690]">&rarr;</span>
-      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#D5D2C6] text-[#1C1E1B]">3. AI + Taxonomy Grounding</span>
+      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#D5D2C6] text-[#1C1E1B]">3. AI Skill Mapping (124 Skills)</span>
       <span class="text-[#8E9690]">&rarr;</span>
-      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#D5D2C6] text-[#1C1E1B]">4. Vector Upsert &amp; Chips</span>
+      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#D5D2C6] text-[#1C1E1B]">4. Verified Skill Badges</span>
       <span class="text-[#8E9690]">&rarr;</span>
-      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#D5D2C6] text-[#1C1E1B]">5. Re-upload Gate &amp; X-Ray</span>
+      <span class="px-2.5 py-1 rounded-full bg-[#FAF9F5] border border-[#D5D2C6] text-[#1C1E1B]">5. Resume Refresh &amp; X-Ray</span>
     </div>
   </div>
 
-  <!-- Card 1: Home Cohort Directory -->
+  <!-- Card 01: Home Workspace & Cohort Directory -->
   <details class="km-card editorial-card overflow-hidden" open
            data-roles="student faculty_mentor tpo_admin"
-           data-keywords="cohort directory home index search branch gpa filter reset showing count profile matches plan faculty mentor department scoped strict auth">
+           data-keywords="home cohort directory workspace student faculty mentor tpo admin search branch gpa filter reset showing count profile matches plan">
     <summary class="px-6 py-4 cursor-pointer flex flex-wrap items-center justify-between gap-3 hover:bg-[#FAF9F5] transition-colors">
       <div class="flex items-center gap-3">
         <span class="mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">01</span>
         <div>
-          <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Home Cohort Directory (<code class="mono text-xs">GET /</code>, <code class="mono text-xs">GET /api/students</code>)</h3>
-          <p class="text-xs text-[#5C5A52]">Role-scoped landing workspace, live client-side filtering, and per-student quick actions in <code class="mono">app/templates/index.html</code>.</p>
+          <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Home Cohort Directory &amp; Role Views</h3>
+          <p class="text-xs text-[#5C5A52]">What each user sees on the Home screen, plus live search, branch/GPA filters, and student quick actions.</p>
         </div>
       </div>
-      <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
-        <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">student</span>
-        <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">faculty_mentor</span>
-        <span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43]">tpo_admin</span>
+      <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-medium">
+        <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">Student</span>
+        <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">Faculty Mentor</span>
+        <span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43]">TPO Admin</span>
       </div>
     </summary>
-    <div class="px-6 pb-6 pt-3 border-t border-[#ECEAE2] space-y-4">
+
+    <div class="px-6 pb-6 pt-4 border-t border-[#ECEAE2] space-y-5">
+      <!-- Role-based view cards -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-        <div class="rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] p-3.5">
-          <div class="font-semibold text-[#1C1E1B] mb-1">Student View (<code class="mono">role == 'student'</code>)</div>
+        <div class="rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-1.5">
+          <div class="font-semibold text-[#1C1E1B]">Student View</div>
           <p class="text-[#5C5A52] leading-relaxed">
-            Title: <strong>My Placement Workspace</strong> (<code class="mono">My Profile &amp; Quick Navigation</code>). In <code class="mono">strict</code> auth mode, <code class="mono">GET /</code> returns a <code class="mono">303</code> redirect to <code class="mono">/students/{own_sid}</code> when the student record exists. Otherwise renders <code class="mono">lg:col-span-12</code> scoped to the signed-in student with <code class="mono">#cohort-filters</code> and onboarding hidden.
+            Opens <strong>My Placement Workspace</strong> (<em>My Profile &amp; Quick Navigation</em>), showing only your own card with shortcuts to your Profile, Matches, and Plan. In strict sign-in mode, opening Home takes you straight to your Profile page. The filter bar and onboarding box are hidden.
           </p>
         </div>
-        <div class="rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] p-3.5">
-          <div class="font-semibold text-[#1C1E1B] mb-1">Faculty Mentor View (<code class="mono">role == 'faculty_mentor'</code>)</div>
+        <div class="rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-1.5">
+          <div class="font-semibold text-[#1C1E1B]">Faculty Mentor View</div>
           <p class="text-[#5C5A52] leading-relaxed">
-            Title: <strong>Department Mentee Directory</strong> (<code class="mono">Department Mentees</code>). <code class="mono">_tpl()</code> and <code class="mono">GET /api/students</code> scope rows to the mentor's normalized department (<code class="mono">user.department</code> or demo <code class="mono">x-demo-department</code> header). Renders full-width (<code class="mono">lg:col-span-12</code>) with filter toolbar.
+            Opens <strong>Department Mentee Directory</strong> (<em>Department Mentees</em>), automatically filtered to students in your assigned department. Displays the full-width mentee list along with the search, branch, and GPA filter bar.
           </p>
         </div>
-        <div class="rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] p-3.5">
-          <div class="font-semibold text-[#1C1E1B] mb-1">TPO Admin View (<code class="mono">role == 'tpo_admin'</code>)</div>
+        <div class="rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-1.5">
+          <div class="font-semibold text-[#1C1E1B]">TPO Admin View</div>
           <p class="text-[#5C5A52] leading-relaxed">
-            Title: <strong>Student Cohort Directory</strong> (<code class="mono">All candidates</code>). Displays the full alphabetical cohort in <code class="mono">lg:col-span-7</code> alongside the <code class="mono">lg:col-span-5</code> AI Resume Onboarding panel and status pills (<code class="mono">Cohort: N</code>, <code class="mono">AI Extraction: online</code>, <code class="mono">Taxonomy: 124 skills</code>).
+            Opens <strong>Student Cohort Directory</strong> (<em>All candidates</em>) with every student sorted alphabetically on the left, the <strong>AI Resume Onboarding</strong> panel on the right, and live status pills (<span class="font-medium text-[#1C1E1B]">Cohort: N</span>, <span class="font-medium text-[#1B5E43]">AI Extraction: online</span>, <span class="font-medium text-[#4A483F]">Taxonomy: 124 skills</span>).
           </p>
         </div>
       </div>
 
-      <div class="overflow-x-auto">
-        <table class="km-table w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="border-b border-[#E5E3DC] text-[#5C5A52] font-mono uppercase text-[11px]">
-              <th class="py-2 pr-4">Control / ID / Route</th>
-              <th class="py-2 pr-4">Type &amp; Scope</th>
-              <th class="py-2">Behavior &amp; Implementation</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[#ECEAE2] text-[#1C1E1B]">
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">#cohort-search</td>
-              <td class="py-2.5 pr-4">Search Input (<code class="mono">tpo_admin</code>, <code class="mono">faculty_mentor</code>)</td>
-              <td class="py-2.5 text-[#4A483F]">Fires <code class="mono">applyCohortFilters()</code> on <code class="mono">input</code>; case-insensitively matches <code class="mono">data-name</code>, <code class="mono">data-id</code>, or normalized <code class="mono">data-branch</code> on each <code class="mono">.cohort-row</code>.</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">#cohort-branch-filter</td>
-              <td class="py-2.5 pr-4">Select Dropdown</td>
-              <td class="py-2.5 text-[#4A483F]">Populated from <code class="mono">branch_options</code> (<code class="mono">CSE</code>, <code class="mono">AI&amp;DS</code>, <code class="mono">ECE</code>, <code class="mono">IT</code>, <code class="mono">EE</code>, <code class="mono">ME</code>, <code class="mono">CE</code>, <code class="mono">CHE</code>, <code class="mono">BT</code>); filters exact normalized <code class="mono">data-branch</code> on <code class="mono">change</code>.</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">#cohort-gpa-filter</td>
-              <td class="py-2.5 pr-4">Select Dropdown</td>
-              <td class="py-2.5 text-[#4A483F]">Threshold options: <code class="mono">All GPAs</code>, <code class="mono">&gt;= 6.0</code>, <code class="mono">&gt;= 7.0</code>, <code class="mono">&gt;= 7.5</code>, <code class="mono">&gt;= 8.0</code>, <code class="mono">&gt;= 8.5</code>; hides rows where <code class="mono">data-gpa &lt; minGpa</code>.</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">#cohort-reset-btn</td>
-              <td class="py-2.5 pr-4">Button</td>
-              <td class="py-2.5 text-[#4A483F]">Hidden unless at least one filter is active; clears search, branch, and GPA inputs and re-runs <code class="mono">applyCohortFilters()</code>.</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">#cohort-showing-count &amp; #cohort-filter-empty</td>
-              <td class="py-2.5 pr-4">Live Counter &amp; Empty State</td>
-              <td class="py-2.5 text-[#4A483F]">Updates text to <code class="mono">Showing X of Y</code>; reveals <code class="mono">#cohort-filter-empty</code> when <code class="mono">total &gt; 0 &amp;&amp; shown === 0</code>.</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">Profile / Matches / Plan</td>
-              <td class="py-2.5 pr-4">Row Quick-Action Links</td>
-              <td class="py-2.5 text-[#4A483F]">Each <code class="mono">.cohort-row</code> displays avatar monogram, normalized branch, year (<code class="mono">Y{year}</code>), GPA badge, and direct links to <code class="mono">/students/{id}</code>, <code class="mono">/students/{id}/matches</code>, and <code class="mono">/students/{id}/plan</code>.</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">GET /api/students</td>
-              <td class="py-2.5 pr-4">JSON API (<code class="mono">students.py:list_students</code>)</td>
-              <td class="py-2.5 text-[#4A483F]">Accepts <code class="mono">q</code>, <code class="mono">branch</code>, <code class="mono">min_gpa</code>; enforces RBAC scoping, sorts via <code class="mono">sort_students_alphabetically()</code>, and returns <code class="mono">has_resume</code> and <code class="mono">resume_reupload_unlocked</code> flags.</td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Visual Control Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+        <div class="rounded-xl border border-[#E5E3DC] bg-white p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <input type="text" readonly value="Search by name, ID, or branch..." aria-label="Search preview"
+                   class="km-ui-input flex-1 min-w-[11rem] text-xs border border-[#D5D2C6] bg-[#FAF9F5] rounded-full px-3.5 py-1.5 text-[#5C5A52] pointer-events-none" />
+            <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F] text-[10px] font-semibold">TPO Admin &amp; Faculty Mentor</span>
+          </div>
+          <p class="text-[#5C5A52] leading-relaxed">
+            <strong>Where:</strong> Top of the Home student list. <strong>What it does:</strong> Filters the roster instantly as you type, matching student name, student ID, or branch code.
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-[#E5E3DC] bg-white p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="km-ui-input inline-flex items-center justify-between gap-3 text-xs border border-[#D5D2C6] bg-[#FAF9F5] rounded-full px-3.5 py-1.5 text-[#1C1E1B] font-medium">
+              <span>All Branches</span>
+              <span class="text-[#7A776E]">&#9662;</span>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F] text-[10px] font-semibold">TPO Admin &amp; Faculty Mentor</span>
+          </div>
+          <p class="text-[#5C5A52] leading-relaxed">
+            <strong>Where:</strong> Filter bar on Home. <strong>What it does:</strong> Narrows the list to one official branch (<span class="font-medium text-[#1C1E1B]">CSE</span>, <span class="font-medium text-[#1C1E1B]">AI&amp;DS</span>, <span class="font-medium text-[#1C1E1B]">ECE</span>, <span class="font-medium text-[#1C1E1B]">IT</span>, <span class="font-medium text-[#1C1E1B]">EE</span>, <span class="font-medium text-[#1C1E1B]">ME</span>, <span class="font-medium text-[#1C1E1B]">CE</span>, <span class="font-medium text-[#1C1E1B]">CHE</span>, or <span class="font-medium text-[#1C1E1B]">BT</span>).
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-[#E5E3DC] bg-white p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="km-ui-input inline-flex items-center justify-between gap-3 text-xs border border-[#D5D2C6] bg-[#FAF9F5] rounded-full px-3.5 py-1.5 text-[#1C1E1B] font-medium">
+              <span>All GPAs</span>
+              <span class="text-[#7A776E]">&#9662;</span>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F] text-[10px] font-semibold">TPO Admin &amp; Faculty Mentor</span>
+          </div>
+          <p class="text-[#5C5A52] leading-relaxed">
+            <strong>Where:</strong> Filter bar on Home. <strong>What it does:</strong> Shows only students meeting a minimum GPA threshold (<span class="font-medium text-[#1C1E1B]">&gt;= 6.0</span>, <span class="font-medium text-[#1C1E1B]">&gt;= 7.0</span>, <span class="font-medium text-[#1C1E1B]">&gt;= 7.5</span>, <span class="font-medium text-[#1C1E1B]">&gt;= 8.0</span>, or <span class="font-medium text-[#1C1E1B]">&gt;= 8.5 GPA</span>).
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-[#E5E3DC] bg-white p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="km-ui-btn-secondary inline-flex items-center px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white text-[#4A483F] text-xs font-semibold">Reset Filters</span>
+              <span class="px-2.5 py-1 rounded-full bg-[#EFECE4] text-[#4A483F] text-[11px] font-medium">Showing X of Y</span>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F] text-[10px] font-semibold">TPO Admin &amp; Faculty Mentor</span>
+          </div>
+          <p class="text-[#5C5A52] leading-relaxed">
+            <strong>Where:</strong> Filter bar &amp; directory header. <strong>What it does:</strong> <em>Reset Filters</em> appears only when a search, branch, or GPA filter is active and clears all filters in one click. <em>Showing X of Y</em> updates live as you filter.
+          </p>
+        </div>
+
+        <div class="md:col-span-2 rounded-xl border border-[#E5E3DC] bg-white p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="km-ui-btn-secondary inline-flex items-center px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white text-[#1C1E1B] text-xs font-medium">Profile</span>
+              <span class="km-ui-btn-primary inline-flex items-center px-3 py-1.5 rounded-full bg-[#1D5C42] text-white text-xs font-semibold">Matches</span>
+              <span class="km-ui-btn-secondary inline-flex items-center px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white text-[#1C1E1B] text-xs font-medium">Plan</span>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] text-[10px] font-semibold">All Roles</span>
+          </div>
+          <p class="text-[#5C5A52] leading-relaxed">
+            <strong>Where:</strong> Right side of every student row on Home (next to their initials, branch, year, and GPA). <strong>What it does:</strong> Opens that student's <strong>Profile</strong> (skills &amp; resume tools), <strong>Matches</strong> (ranked job openings), or <strong>Plan</strong> (personalized upskilling roadmap) in one click.
+          </p>
+        </div>
       </div>
     </div>
   </details>
 
-  <!-- Card 2: AI Resume Onboarding & Extraction Pipeline -->
+  <!-- Card 02: AI Resume Onboarding -->
   <details class="km-card editorial-card overflow-hidden" open
-           data-roles="tpo_admin faculty_mentor"
-           data-keywords="upload resume onboarding extract ai-preview ai-skills upload-btn create_student_core pii scrub sanitize_untrusted_text extract_resume_with_ai taxonomy branches normalize_branch vector embedding">
+           data-roles="tpo_admin"
+           data-keywords="ai resume onboarding upload drag drop pdf docx txt md png jpg preview auto fill pii privacy 124 skills taxonomy branch normalization">
     <summary class="px-6 py-4 cursor-pointer flex flex-wrap items-center justify-between gap-3 hover:bg-[#FAF9F5] transition-colors">
       <div class="flex items-center gap-3">
         <span class="mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">02</span>
         <div>
-          <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">AI Resume Onboarding &amp; Extraction Pipeline (<code class="mono text-xs">POST /upload</code>, <code class="mono text-xs">POST /api/resumes/extract</code>, <code class="mono text-xs">POST /api/students</code>)</h3>
-          <p class="text-xs text-[#5C5A52]">Drag-and-drop multi-format upload, live preview auto-fill, LLM + deterministic taxonomy grounding, branch normalization, and vector indexing.</p>
+          <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">AI Resume Onboarding</h3>
+          <p class="text-xs text-[#5C5A52]">Drop in a resume to auto-fill student details, mask private contact info, and map skills to the 124-skill catalog.</p>
         </div>
       </div>
-      <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
-        <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">faculty_mentor (extract)</span>
-        <span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43]">tpo_admin (onboard)</span>
+      <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-medium">
+        <span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43]">TPO Admin Only</span>
       </div>
     </summary>
-    <div class="px-6 pb-6 pt-3 border-t border-[#ECEAE2] space-y-4">
-      <div class="overflow-x-auto">
-        <table class="km-table w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="border-b border-[#E5E3DC] text-[#5C5A52] font-mono uppercase text-[11px]">
-              <th class="py-2 pr-4">Element / Endpoint / Function</th>
-              <th class="py-2 pr-4">Location / Guard</th>
-              <th class="py-2">Behavior &amp; Pipeline Details</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[#ECEAE2] text-[#1C1E1B]">
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">input[name="file"]</td>
-              <td class="py-2.5 pr-4"><code class="mono">index.html</code> (<code class="mono">tpo_admin</code>)</td>
-              <td class="py-2.5 text-[#4A483F]">Drag-and-drop dropzone accepting <code class="mono">.pdf,.docx,.txt,.text,.md,.png,.jpg,.jpeg</code>; backend enforces <code class="mono">SUPPORTED_SUFFIXES</code> and 5 MB <code class="mono">MAX_RESUME_BYTES</code> cap via <code class="mono">_read_capped()</code> (HTTP <code class="mono">413</code> if exceeded).</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">Metadata Inputs + #upload-branch-select</td>
-              <td class="py-2.5 pr-4"><code class="mono">index.html</code></td>
-              <td class="py-2.5 text-[#4A483F]"><code class="mono">name</code> (text), <code class="mono">branch</code> (<code class="mono">&lt;select&gt;</code> with <code class="mono">branch_options</code>), <code class="mono">year</code> (number, default <code class="mono">3</code>), <code class="mono">gpa</code> (number, <code class="mono">step="0.01"</code>, default <code class="mono">0</code>).</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">#ai-preview &amp; #ai-skills</td>
-              <td class="py-2.5 pr-4"><code class="mono">POST /api/resumes/extract</code> (<code class="mono">faculty_mentor</code>, <code class="mono">tpo_admin</code>)</td>
-              <td class="py-2.5 text-[#4A483F]">On file <code class="mono">change</code>, posts <code class="mono">FormData</code> to stateless <code class="mono">extract_resume()</code>; auto-fills blank <code class="mono">name</code>, <code class="mono">branch</code> (exact or substring option match), <code class="mono">year</code>, and <code class="mono">gpa</code> (if <code class="mono">0</code>), then un-hides <code class="mono">#ai-preview</code> with <code class="mono">s.name — s.level</code> items.</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">#upload-btn</td>
-              <td class="py-2.5 pr-4"><code class="mono">POST /upload</code> (<code class="mono">tpo_admin</code>)</td>
-              <td class="py-2.5 text-[#4A483F]">On form submit, disables button (<code class="mono">opacity-75 cursor-not-allowed</code>) and shows spinner + <code class="mono">Parsing with AI... Please wait</code>. Calls <code class="mono">create_student_core()</code> and redirects (<code class="mono">303</code>) to <code class="mono">/students/{sid}</code>.</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">POST /api/students</td>
-              <td class="py-2.5 pr-4"><code class="mono">students.py:create_student</code> (<code class="mono">tpo_admin</code>)</td>
-              <td class="py-2.5 text-[#4A483F]">Supports both <code class="mono">application/json</code> (creates student + embeds <code class="mono">"{name} {norm_branch}"</code>) and <code class="mono">multipart/form-data</code> (delegates to <code class="mono">create_student_core()</code>, returns <code class="mono">201</code> with <code class="mono">id</code>, <code class="mono">name</code>, <code class="mono">skills</code>, <code class="mono">skill_count</code>).</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">create_student_core()</td>
-              <td class="py-2.5 pr-4"><code class="mono">app/api/routes/students.py</code></td>
-              <td class="py-2.5 text-[#4A483F]">1) <code class="mono">parse_resume_bytes()</code>; 2) <code class="mono">scrub_for_llm()</code> (PII count); 3) <code class="mono">sanitize_untrusted_text(source="resume")</code> (logs <code class="mono">security.prompt_injection_blocked</code> if flagged); 4) <code class="mono">extract_resume_with_ai()</code>; 5) <code class="mono">normalize_branch()</code>; 6) persists <code class="mono">Student</code> + <code class="mono">StudentSkill</code> rows &amp; <code class="mono">student.resume_uploaded</code> audit; 7) <code class="mono">ctx.vector_store.upsert("student", sid, ctx.embedder.embed(text))</code>.</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">extract_resume_with_ai()</td>
-              <td class="py-2.5 pr-4"><code class="mono">app/skills/extract.py</code></td>
-              <td class="py-2.5 text-[#4A483F]">Calls LLM with <code class="mono">EXTRACT_RESUME_SYSTEM</code>, resolves skills via <code class="mono">_resolve_skill()</code>, enforces anti-hallucination <code class="mono">_grounded()</code> check, reconciles proficiency (<code class="mono">_reconcile_level</code> across <code class="mono">basic</code>/<code class="mono">intermediate</code>/<code class="mono">advanced</code>), merges omitted skills via <code class="mono">_skill_lines()</code> + <code class="mono">_contextual_level()</code>, and falls back to <code class="mono">_contextual_extract_resume()</code> if LLM is absent/errors/invalid JSON. Also exposes <code class="mono">extract_skills_with_llm()</code>, <code class="mono">extract_skills()</code>, and <code class="mono">level_for()</code>.</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">load_taxonomy() &amp; normalize_branch()</td>
-              <td class="py-2.5 pr-4"><code class="mono">app/taxonomy/taxonomy.py</code> &amp; <code class="mono">branches.py</code></td>
-              <td class="py-2.5 text-[#4A483F]"><code class="mono">Taxonomy</code> loads <code class="mono">data/skills.json</code> (124 skills, <code class="mono">resolve()</code> alias map). <code class="mono">BRANCH_ALIASES</code> + <code class="mono">_LOOKUP</code> normalize degree/branch variants (e.g., <code class="mono">B.Tech CSE</code>, <code class="mono">AIML</code>) to canonical codes (<code class="mono">CSE</code>, <code class="mono">AI&amp;DS</code>, <code class="mono">ECE</code>, <code class="mono">IT</code>, <code class="mono">EE</code>, <code class="mono">ME</code>, <code class="mono">CE</code>, <code class="mono">CHE</code>, <code class="mono">BT</code>); <code class="mono">is_branch_eligible()</code> evaluates job eligibility.</td>
-            </tr>
-          </tbody>
-        </table>
+
+    <div class="px-6 pb-6 pt-4 border-t border-[#ECEAE2] space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+        <div class="rounded-xl border border-[#E5E3DC] bg-white p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="km-ui-input inline-flex items-center gap-2 rounded-xl border border-dashed border-[#C7C4B8] bg-[#FAF9F5] px-3.5 py-2 text-xs text-[#5C5A52]">
+              <span>Drag &amp; drop or click to select</span>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] text-[10px] font-semibold">TPO Admin</span>
+          </div>
+          <p class="text-[#5C5A52] leading-relaxed">
+            <strong>Where:</strong> Top of the <em>AI Resume Onboarding</em> card on Home. <strong>What it does:</strong> Accepts <strong>PDF, DOCX, TXT, MD, PNG, or JPG</strong> resumes up to <strong>5 MB</strong>.
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-[#E5E3DC] bg-white p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F2F7F4] border border-[#C8E4D5] text-[#1B5E43] text-xs font-semibold">
+              AI-detected skills
+            </span>
+            <span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] text-[10px] font-semibold">Automatic Preview</span>
+          </div>
+          <p class="text-[#5C5A52] leading-relaxed">
+            <strong>Where:</strong> Appears automatically right below the Name, Branch, Year, and GPA fields as soon as you pick a file. <strong>What it does:</strong> Pre-fills any blank <strong>Name</strong>, <strong>Branch</strong>, <strong>Year</strong>, and <strong>GPA</strong> fields and lists each detected skill with its proficiency level before you submit.
+          </p>
+        </div>
+
+        <div class="md:col-span-2 rounded-xl border border-[#E5E3DC] bg-white p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="km-ui-btn-primary inline-flex items-center px-4 py-2 rounded-full bg-[#1D5C42] text-white text-xs font-semibold">Upload &amp; Run AI Extraction</span>
+              <span class="text-[11px] text-[#5C5A52]">&rarr; switches to <span class="font-medium text-[#1C1E1B]">Parsing with AI... Please wait</span></span>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] text-[10px] font-semibold">TPO Admin</span>
+          </div>
+          <p class="text-[#5C5A52] leading-relaxed">
+            <strong>Where:</strong> Bottom of the <em>AI Resume Onboarding</em> card. <strong>What it does:</strong> Reads the file, masks personal contact details (email, phone, links) before AI sees them, blocks any hidden prompt instructions, maps skills onto JKLU's <strong>124-skill catalog</strong>, standardizes branch names (such as turning "B.Tech CSE" into <strong>CSE</strong>), indexes the profile for smart job matching, and opens the new student's Profile page.
+          </p>
+        </div>
       </div>
     </div>
   </details>
 
-  <!-- Card 3: Student Profile & Skill Verification Chips -->
+  <!-- Card 03: Student Profile & Skill Badges -->
   <details class="km-card editorial-card overflow-hidden" open
            data-roles="student faculty_mentor tpo_admin"
-           data-keywords="student profile skill chips verification verified claimed needs_reverification unverified confidence evidence provenance delete student delete_student_core">
+           data-keywords="student profile view job matches upskilling plan mock interview technical competencies verified claimed needs re-verification unverified re-verify skill pii redacted remove candidate profile">
     <summary class="px-6 py-4 cursor-pointer flex flex-wrap items-center justify-between gap-3 hover:bg-[#FAF9F5] transition-colors">
       <div class="flex items-center gap-3">
         <span class="mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">03</span>
         <div>
-          <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Student Profile &amp; Skill Verification Chips (<code class="mono text-xs">GET /students/{sid}</code>, <code class="mono text-xs">_skill_chips.html</code>)</h3>
-          <p class="text-xs text-[#5C5A52]">Executive header, categorized skill chips with verification badges and provenance tooltips, and cascading staff-only deletion.</p>
+          <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Student Profile, Skill Badges &amp; Removal</h3>
+          <p class="text-xs text-[#5C5A52]">Top navigation shortcuts, privacy badge, verified vs. claimed skill chips, and safe profile removal.</p>
         </div>
       </div>
-      <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
-        <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">student</span>
-        <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">faculty_mentor</span>
-        <span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43]">tpo_admin</span>
+      <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-medium">
+        <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">Student</span>
+        <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">Faculty Mentor</span>
+        <span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43]">TPO Admin</span>
       </div>
     </summary>
-    <div class="px-6 pb-6 pt-3 border-t border-[#ECEAE2] space-y-4">
+
+    <div class="px-6 pb-6 pt-4 border-t border-[#ECEAE2] space-y-5">
+      <!-- Top Navigation & Privacy -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-        <div class="rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] p-3.5 space-y-1.5">
-          <div class="font-semibold text-[#1C1E1B]">Verification Badges &amp; Provenance (<code class="mono">_skill_chips.html</code>)</div>
-          <ul class="space-y-1 text-[#4A483F] list-disc pl-4">
-            <li><span class="font-mono font-semibold text-[#1B5E43]">verified</span>: Green badge (<code class="mono">Verified (score)</code>) when verified in mock interview or evidence contains <code class="mono">interview verified</code>.</li>
-            <li><span class="font-mono font-semibold text-[#5C5A52]">claimed</span>: Neutral badge (<code class="mono">Claimed</code>) for resume-extracted skills awaiting interview verification.</li>
-            <li><span class="font-mono font-semibold text-[#8F5B00]">needs_reverification</span>: Amber badge (<code class="mono">Needs Re-verification</code>) + <code class="mono">Re-verify Skill</code> link to <code class="mono">/students/{sid}/interviews</code>.</li>
-            <li><span class="font-mono font-semibold text-[#9E2A20]">unverified</span>: Red badge (<code class="mono">Unverified</code>) for interview remedial gaps + <code class="mono">Re-verify Skill</code> link.</li>
-          </ul>
-        </div>
-        <div class="rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] p-3.5 space-y-1.5">
-          <div class="font-semibold text-[#1C1E1B]">Evidence, Confidence &amp; API Payload (<code class="mono">_skill_payload</code>)</div>
-          <p class="text-[#4A483F] leading-relaxed">
-            Skills are grouped by taxonomy category via <code class="mono">_group_skills()</code> and rendered inside <code class="mono">#skill-chips</code> with proficiency badges (<code class="mono">advanced</code>, <code class="mono">intermediate</code>, <code class="mono">basic</code>), mention counts (<code class="mono">xN</code>), and native <code class="mono">title</code> tooltips displaying extracted evidence lines.
+        <div class="rounded-xl border border-[#E5E3DC] bg-white p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="km-ui-btn-primary inline-flex items-center px-3.5 py-1.5 rounded-full bg-[#1D5C42] text-white text-xs font-semibold">View Job Matches</span>
+              <span class="km-ui-btn-secondary inline-flex items-center px-3.5 py-1.5 rounded-full border border-[#D5D2C6] bg-white text-[#1C1E1B] text-xs font-semibold">Upskilling Plan</span>
+              <span class="km-ui-btn-secondary inline-flex items-center px-3.5 py-1.5 rounded-full border border-[#D5D2C6] bg-white text-[#1C1E1B] text-xs font-semibold">Mock Interview</span>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] text-[10px] font-semibold">All Roles</span>
+          </div>
+          <p class="text-[#5C5A52] leading-relaxed">
+            <strong>Where:</strong> Top-right of the Student Profile header card (alongside the student's Branch, Year, GPA, Executive Summary, and optional <em>N PII redacted</em> privacy shield badge). <strong>What it does:</strong> Jumps directly to ranked job matches, the personalized study plan, or an interactive mock interview for that student.
           </p>
-          <p class="text-[#4A483F] leading-relaxed">
-            <code class="mono">GET /api/students/{sid}</code> and <code class="mono">GET /api/students/{sid}/skills</code> expose <code class="mono">confidence</code> (float, default <code class="mono">0.5</code>), <code class="mono">last_verified_score</code>, <code class="mono">source</code> (<code class="mono">"resume"</code>), <code class="mono">verification_status</code>, and <code class="mono">evidence</code>.
+        </div>
+
+        <div class="rounded-xl border border-[#E5E3DC] bg-white p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="km-ui-btn-danger inline-flex items-center px-3.5 py-1.5 rounded-full bg-[#FDF0ED] text-[#9E2A20] border border-[#F5D0C8] text-xs font-semibold">Remove Candidate Profile</span>
+            <span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] text-[10px] font-semibold">TPO Admin (Staff View)</span>
+          </div>
+          <p class="text-[#5C5A52] leading-relaxed">
+            <strong>Where:</strong> Bottom of the right-hand <em>Resume Refresh</em> card (hidden from students). <strong>What it does:</strong> Prompts for confirmation, then permanently deletes the student along with all their job matches, applications, upskilling plans, and interview records.
           </p>
         </div>
       </div>
 
-      <div class="overflow-x-auto">
-        <table class="km-table w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="border-b border-[#E5E3DC] text-[#5C5A52] font-mono uppercase text-[11px]">
-              <th class="py-2 pr-4">Control / Route</th>
-              <th class="py-2 pr-4">Guard / Scope</th>
-              <th class="py-2">Behavior</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[#ECEAE2] text-[#1C1E1B]">
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">Header Quick Actions</td>
-              <td class="py-2.5 pr-4"><code class="mono">profile.html</code></td>
-              <td class="py-2.5 text-[#4A483F]">Displays PII redaction badge (<code class="mono">{N} PII redacted</code> when <code class="mono">&gt; 0</code>), Executive Summary, and links to <strong>View Job Matches</strong>, <strong>Upskilling Plan</strong>, and <strong>Mock Interview</strong>.</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">#delete-profile-btn &amp; POST /students/{sid}/delete</td>
-              <td class="py-2.5 pr-4"><code class="mono">require_role("tpo_admin")</code> + <code class="mono">enforce_student_scope</code></td>
-              <td class="py-2.5 text-[#4A483F]">Rendered only when <code class="mono">role != 'student'</code>; prompts via <code class="mono">window.confirmAction()</code>, submits <code class="mono">#delete-profile-form</code>, calls <code class="mono">delete_student_core()</code>, and redirects (<code class="mono">303</code>) to <code class="mono">/</code>.</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">DELETE /api/students/{sid}</td>
-              <td class="py-2.5 pr-4"><code class="mono">require_role("tpo_admin")</code> + <code class="mono">enforce_student_scope</code></td>
-              <td class="py-2.5 text-[#4A483F]">JSON endpoint calling <code class="mono">delete_student_core()</code>: cascades deletes across <code class="mono">JobApplication</code>, <code class="mono">JobMatch</code>, <code class="mono">StudentSkill</code>, <code class="mono">ProgressEvent</code>, <code class="mono">Interview</code>, <code class="mono">PlanItem</code>, and <code class="mono">UpskillPlan</code>, nulls <code class="mono">AgentRun.student_id</code>, deletes <code class="mono">Student</code>, and logs <code class="mono">student.deleted</code> in <code class="mono">AuditLog</code>.</td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Technical Competencies Skill Badges -->
+      <div class="rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] p-4 space-y-3 text-xs">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="font-semibold text-[#1C1E1B]">Technical Competencies &amp; Verification Badges</div>
+          <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <span class="px-2.5 py-0.5 rounded-full bg-[#1D5C42] text-white font-semibold">Advanced</span>
+            <span class="px-2.5 py-0.5 rounded-full bg-[#E3F2EA] border border-[#C8E4D5] text-[#1B5E43] font-semibold">Intermediate</span>
+            <span class="px-2.5 py-0.5 rounded-full bg-[#EFECE4] border border-[#E2DEC9] text-[#4A483F] font-semibold">Basic</span>
+          </div>
+        </div>
+        <p class="text-[#5C5A52] leading-relaxed">
+          Skills are grouped by category. Each chip shows the skill name, how many times it appeared in the resume (such as <span class="font-medium text-[#1C1E1B]">x2</span>), its proficiency level, a hover tooltip with the exact resume evidence, and one of these verification badges:
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <div class="rounded-xl border border-[#C8E4D5] bg-white p-3 space-y-1">
+            <span class="inline-block px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5] text-[10px] font-semibold">Verified</span>
+            <p class="text-[#5C5A52] leading-relaxed">Proven in a mock interview (displays the interview score when available).</p>
+          </div>
+          <div class="rounded-xl border border-[#D5D2C6] bg-white p-3 space-y-1">
+            <span class="inline-block px-2 py-0.5 rounded-full bg-[#FAF9F5] text-[#6E6C64] border border-[#D5D2C6] text-[10px] font-semibold">Claimed</span>
+            <p class="text-[#5C5A52] leading-relaxed">Detected from the resume, not yet tested in a mock interview.</p>
+          </div>
+          <div class="rounded-xl border border-[#F2D59B] bg-white p-3 space-y-1">
+            <div class="flex items-center gap-1.5">
+              <span class="inline-block px-2 py-0.5 rounded-full bg-[#FEF2D6] text-[#8F5B00] border border-[#F2D59B] text-[10px] font-semibold">Needs Re-verification</span>
+            </div>
+            <p class="text-[#5C5A52] leading-relaxed">Flagged during a mock interview for a follow-up check. Includes a <span class="underline font-semibold text-[#8F5B00]">Re-verify Skill</span> link.</p>
+          </div>
+          <div class="rounded-xl border border-[#F5D0C8] bg-white p-3 space-y-1">
+            <div class="flex items-center gap-1.5">
+              <span class="inline-block px-2 py-0.5 rounded-full bg-[#FDECE9] text-[#9E2A20] border border-[#F5D0C8] text-[10px] font-semibold">Unverified</span>
+            </div>
+            <p class="text-[#5C5A52] leading-relaxed">Marked as a remedial gap after an interview. Includes a <span class="underline font-semibold text-[#9E2A20]">Re-verify Skill</span> link.</p>
+          </div>
+        </div>
       </div>
     </div>
   </details>
 
-  <!-- Card 4: Resume Re-upload Gate, Resume X-Ray & AI Bullet Improver -->
+  <!-- Card 04: Resume Refresh, X-Ray & AI Bullet Improver -->
   <details class="km-card editorial-card overflow-hidden" open
            data-roles="student faculty_mentor tpo_admin"
-           data-keywords="resume reupload gate htmx hx-post resume-reupload-request hitl approval enforce_resume_reupload_gate consume_resume_reupload_unlock xray ats improve-bullets weak bullets">
+           data-keywords="resume refresh upload extract re-upload re-extract locked request tpo permission pending approval x-ray ats score ai bullet improver audit resume bullets">
     <summary class="px-6 py-4 cursor-pointer flex flex-wrap items-center justify-between gap-3 hover:bg-[#FAF9F5] transition-colors">
       <div class="flex items-center gap-3">
         <span class="mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">04</span>
         <div>
-          <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Resume Re-upload Gate, Resume X-Ray &amp; AI Bullet Improver</h3>
-          <p class="text-xs text-[#5C5A52]">HTMX in-place skill refresh, single-use student re-upload unlock workflow, deterministic ATS X-Ray, and zero-hallucination STAR bullet rewrites.</p>
+          <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Resume Refresh, X-Ray &amp; AI Bullet Improver</h3>
+          <p class="text-xs text-[#5C5A52]">In-place skill refresh, one-time student unlock requests, ATS readiness scoring, and grounded bullet rewrites.</p>
         </div>
       </div>
-      <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
-        <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">student (1-time unlock)</span>
-        <span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43]">tpo_admin (direct)</span>
+      <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-medium">
+        <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F]">Student (1-Time Unlock)</span>
+        <span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43]">TPO Admin (Anytime)</span>
       </div>
     </summary>
-    <div class="px-6 pb-6 pt-3 border-t border-[#ECEAE2] space-y-4">
-      <div class="overflow-x-auto">
-        <table class="km-table w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="border-b border-[#E5E3DC] text-[#5C5A52] font-mono uppercase text-[11px]">
-              <th class="py-2 pr-4">Feature / Control / Route</th>
-              <th class="py-2 pr-4">Functions &amp; Guards</th>
-              <th class="py-2">Behavior &amp; Workflow</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[#ECEAE2] text-[#1C1E1B]">
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">HTMX Re-upload (<code class="mono">hx-post="/students/{sid}/resume"</code>)</td>
-              <td class="py-2.5 pr-4"><code class="mono">pages.py:reupload</code>, <code class="mono">create_student_core_resume()</code>, <code class="mono">POST /api/students/{sid}/resume</code></td>
-              <td class="py-2.5 text-[#4A483F]">Targets <code class="mono">#skill-chips</code> (<code class="mono">hx-swap="innerHTML"</code>); <code class="mono">#reupload-btn</code> shows <code class="mono">Extracting...</code> spinner on <code class="mono">htmx:beforeRequest</code>. Re-parses, scrubs PII, sanitizes, replaces <code class="mono">StudentSkill</code> rows, updates vector store, and refreshes persisted <code class="mono">JobMatch</code> rows via <code class="mono">_rank_and_persist()</code> if matches exist.</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">Student Re-upload Lock &amp; Request (<code class="mono">#resume-locked-card</code>, <code class="mono">#reupload-request-form</code>)</td>
-              <td class="py-2.5 pr-4"><code class="mono">POST /api/students/{sid}/resume-reupload-request</code> (<code class="mono">student</code>, <code class="mono">tpo_admin</code>)</td>
-              <td class="py-2.5 text-[#4A483F]">Once a student has a stored resume, uploads lock to preserve audit integrity. Submitting <code class="mono">#reupload-request-reason</code> + <code class="mono">#request-reupload-btn</code> creates an <code class="mono">ApprovalRequest</code> (<code class="mono">kind="resume_reupload_request"</code>, <code class="mono">status="pending_review"</code>; HTTP <code class="mono">409</code> if duplicate pending) and logs <code class="mono">student.resume_reupload_requested</code>; UI displays <code class="mono">#reupload-pending-banner</code> until TPO approves.</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">Single-Use Gate Enforcement</td>
-              <td class="py-2.5 pr-4"><code class="mono">enforce_resume_reupload_gate()</code> &amp; <code class="mono">consume_resume_reupload_unlock()</code></td>
-              <td class="py-2.5 text-[#4A483F]">After TPO approval sets <code class="mono">resume_reupload_unlocked=True</code>, the student sees the unlocked upload form. Non-<code class="mono">tpo_admin</code> callers without an unlock receive HTTP <code class="mono">403</code>. Upon successful re-upload, <code class="mono">consume_resume_reupload_unlock()</code> resets <code class="mono">resume_reupload_unlocked=False</code> and logs <code class="mono">student.resume_reupload_consumed</code>.</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">Resume X-Ray (<code class="mono">GET /api/students/{sid}/resume/xray</code>)</td>
-              <td class="py-2.5 pr-4"><code class="mono">students.py:resume_xray</code> &rarr; <code class="mono">app/resume/xray.py:xray_resume()</code></td>
-              <td class="py-2.5 text-[#4A483F]">Deterministic (no-LLM) ATS readiness score (<code class="mono">0–100</code>) weighted across <code class="mono">impact_quantification</code> (30%), <code class="mono">action_verb_strength</code> (25%), <code class="mono">skill_density</code> (25%), and <code class="mono">section_completeness</code> (20%), plus detected <code class="mono">sections</code>, <code class="mono">links</code>, and <code class="mono">metrics</code>.</td>
-            </tr>
-            <tr>
-              <td class="py-2.5 pr-4 font-mono">AI Bullet Improver (<code class="mono">POST /api/students/{sid}/resume/improve-bullets</code>)</td>
-              <td class="py-2.5 pr-4"><code class="mono">students.py:improve_resume_bullets</code> &rarr; <code class="mono">pick_weak_bullets()</code> + <code class="mono">improve_weak_bullets()</code></td>
-              <td class="py-2.5 text-[#4A483F]">Selects up to 3 weakest bullets (25–300 chars, non-header/contact/skill-list, missing metrics or action verbs) and prompts <code class="mono">ctx.llm</code> (<code class="mono">IMPROVE_BULLETS_SYSTEM</code>) constrained strictly to <code class="mono">present_skills</code> (zero-hallucination). Returns <code class="mono">{"ats", "improvements"}</code> (HTTP <code class="mono">503</code> if LLM is unconfigured).</td>
-            </tr>
-          </tbody>
-        </table>
+
+    <div class="px-6 pb-6 pt-4 border-t border-[#ECEAE2] space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+        <div class="rounded-xl border border-[#E5E3DC] bg-white p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="km-ui-btn-primary inline-flex items-center px-3.5 py-1.5 rounded-full bg-[#1D5C42] text-white text-xs font-semibold">Upload &amp; Extract Resume</span>
+              <span class="km-ui-btn-primary inline-flex items-center px-3.5 py-1.5 rounded-full bg-[#1D5C42] text-white text-xs font-semibold">Re-upload &amp; Re-extract</span>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] text-[10px] font-semibold">All Roles (When Unlocked)</span>
+          </div>
+          <p class="text-[#5C5A52] leading-relaxed">
+            <strong>Where:</strong> Right-hand <em>Resume Refresh</em> card on the Student Profile. <strong>What it does:</strong> Students with no resume yet see <em>Upload &amp; Extract Resume</em>; TPO Admins (and unlocked students) see <em>Re-upload &amp; Re-extract</em>. Shows <span class="font-medium text-[#1C1E1B]">Extracting...</span> while updating skill badges in place and refreshing any existing job matches.
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-[#E5E3DC] bg-white p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <input type="text" readonly value="Reason for Resume Update (optional)" aria-label="Reason preview"
+                     class="km-ui-input text-xs border border-[#D5D2C6] bg-[#FAF9F5] rounded-xl px-3 py-1.5 text-[#5C5A52] pointer-events-none" />
+              <span class="km-ui-btn-primary inline-flex items-center px-3.5 py-1.5 rounded-full bg-[#1D5C42] text-white text-xs font-semibold">Request TPO Permission</span>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F] text-[10px] font-semibold">Student (Locked State)</span>
+          </div>
+          <p class="text-[#5C5A52] leading-relaxed">
+            <strong>Where:</strong> <em>Resume Refresh</em> card after a student's first resume is processed (shows <strong>Resume Locked After Initial Verification</strong>). <strong>What it does:</strong> Sends a one-time unlock request to the TPO Approvals queue and displays a <strong>Pending TPO Approval</strong> banner. Once approved, the student can upload one updated resume, after which the box automatically re-locks.
+          </p>
+        </div>
+
+        <div class="md:col-span-2 rounded-xl border border-[#E5E3DC] bg-white p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="km-ui-btn-secondary inline-flex items-center px-3.5 py-1.5 rounded-full border border-[#D5D2C6] bg-white text-[#1C1E1B] text-xs font-semibold">Audit Resume Bullets</span>
+              <span class="px-2.5 py-0.5 rounded-full bg-[#E3F2EA] text-[#1B5E43] text-[11px] font-semibold">Resume X-Ray &amp; AI Bullet Improver</span>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-[#EFECE4] text-[#4A483F] text-[10px] font-semibold">Agent Brain Quick Action</span>
+          </div>
+          <p class="text-[#5C5A52] leading-relaxed">
+            <strong>Where:</strong> Inside the <strong>Agent Brain</strong> drawer (for students) or by asking the AI assistant to audit your resume. <strong>What it does:</strong>
+          </p>
+          <ul class="list-disc pl-5 text-[#5C5A52] space-y-1">
+            <li><strong>Resume X-Ray:</strong> Calculates a <strong>0&ndash;100 ATS readiness score</strong> across four pillars &mdash; <em>Impact Quantification</em> (30%), <em>Action Verb Strength</em> (25%), <em>Skill Density</em> (25%), and <em>Section Completeness</em> (20%) &mdash; and checks detected sections (Education, Projects, Experience, Achievements) and profile links.</li>
+            <li><strong>AI Bullet Improver:</strong> Finds up to 3 weak bullet points (missing numbers or strong action verbs) and rewrites them into impact-focused STAR-method bullets using <strong>only</strong> skills and projects already in the resume, never inventing new skills or metrics.</li>
+          </ul>
+        </div>
       </div>
     </div>
   </details>

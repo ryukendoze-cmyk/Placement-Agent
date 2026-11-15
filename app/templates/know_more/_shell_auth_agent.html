@@ -1,360 +1,389 @@
-<section id="km-shell-auth" class="km-section space-y-4" data-section="shell-auth">
+<section id="km-shell-auth" class="km-section space-y-5" data-section="shell-auth">
+  <!-- Domain Header -->
   <div class="editorial-card p-6 space-y-4">
     <div class="flex flex-wrap items-start justify-between gap-3">
-      <div class="space-y-1">
-        <span class="pill-sage mono text-[10px] uppercase tracking-wider">Domain 01 &middot; Core Platform</span>
+      <div class="space-y-1.5">
+        <span class="pill-sage text-[10px] uppercase tracking-wider font-semibold">Section 2 &middot; Platform Navigation, Sign-In &amp; AI Assistant</span>
         <h2 class="font-serif-display text-xl sm:text-2xl font-semibold text-[#1C1E1B]">
-          Global Shell, Auth &amp; RBAC, Security Guardrails, Agent Brain &amp; Multi-Platform Packaging
+          Navigation, Sign-In, Agent Brain &amp; Multi-Device Access
         </h2>
         <p class="text-xs sm:text-sm text-[#5C5A52] max-w-3xl leading-relaxed">
-          Covers the persistent sidebar/topbar chrome, <kbd class="mono px-1.5 py-0.5 rounded bg-[#EFECE4] text-[11px]">Ctrl+K</kbd> command bar, Obsidian Dark Mode, JKLU Offline SSO, strict/demo RBAC middleware, ReAct Agent Brain SSE drawer, zero-hallucination citation verifier, enterprise security modules, and PWA/Electron/Capacitor shells.
+          A visual, everyday guide to every button, search shortcut, sign-in option, and safety feature across the JKLU CareerOS workspace—from switching themes and jumping to students to inspecting the live AI Agent Brain.
         </p>
       </div>
       <div class="flex flex-wrap gap-1.5">
-        <span class="pill-stone mono text-[10px]">base.html</span>
-        <span class="pill-stone mono text-[10px]">auth.py</span>
-        <span class="pill-stone mono text-[10px]">agent/</span>
-        <span class="pill-stone mono text-[10px]">security/</span>
+        <span class="pill-stone text-[11px]">Everyone</span>
+        <span class="pill-sage text-[11px]">Visual UI Guide</span>
       </div>
     </div>
 
     <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-[#E5E3DC] text-[11px]">
-      <span class="font-semibold text-[#5C5A52] mr-1">Process Flow:</span>
-      <span class="pill-sage">1. Request &rarr; Strict/Demo Middleware</span>
+      <span class="font-semibold text-[#5C5A52] mr-1">Everyday Flow:</span>
+      <span class="pill-sage">1. Sign In with @jklu.edu.in</span>
       <span class="text-[#7A776E]">&rarr;</span>
-      <span class="pill-stone">2. HMAC Session &amp; Role Scope</span>
+      <span class="pill-stone">2. Pick Student or Role View</span>
       <span class="text-[#7A776E]">&rarr;</span>
-      <span class="pill-stone">3. Shell Render &amp; Theme Sync</span>
+      <span class="pill-stone">3. Jump Anywhere with Ctrl+K</span>
       <span class="text-[#7A776E]">&rarr;</span>
-      <span class="pill-stone">4. PII/Injection Sanitization</span>
-      <span class="text-[#7A776E]">&rarr;</span>
-      <span class="pill-sage">5. ReAct Plan &rarr; Execute &rarr; Verify &rarr; Audit</span>
+      <span class="pill-sage">4. Inspect Live AI Steps in Agent Brain</span>
     </div>
   </div>
 
-  <!-- Card 1: Left Sidebar & Topbar Shell -->
+  <!-- Card 1.1: Left Sidebar, Topbar, Quick Search & Dark Mode -->
   <details class="km-card editorial-card overflow-hidden" open
            data-roles="student,faculty_mentor,tpo_admin,public"
-           data-keywords="sidebar topbar shell menu-btn switch-student student-identity-badge command-input ctrl+k purge copilot approval audit admin home know more role-pill demo-role-bar theme-toggle obsidian dark mode chart.js CareerOSTheme open-drawer toast-root confirmAction">
+           data-keywords="sidebar topbar navigation menu quick search ctrl k cmd k dark mode light mode active student department mentees role switcher student faculty tpo admin jklu portal sign out">
     <summary class="px-6 py-4 cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 bg-[#FAF9F5] border-b border-[#E5E3DC] hover:bg-[#F4F3EC] transition-colors">
       <div class="flex items-center gap-2.5">
-        <span class="mono text-xs font-bold px-2 py-0.5 rounded-md bg-[#E3F2EA] text-[#1B5E43]">1.1</span>
-        <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Left Sidebar, Topbar Shell, Command Bar &amp; Obsidian Theme</h3>
+        <span class="text-xs font-bold px-2.5 py-0.5 rounded-md bg-[#E3F2EA] text-[#1B5E43]">1.1</span>
+        <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Left Sidebar, Topbar, Quick Search &amp; Dark Mode</h3>
       </div>
       <div class="flex items-center gap-1.5">
-        <span class="pill-stone text-[10px]">All Roles</span>
-        <span class="mono text-[10px] text-[#5C5A52]">base.html &middot; theme.js &middot; theme.css</span>
+        <span class="pill-stone text-[10px]">Everyone</span>
       </div>
     </summary>
+
     <div class="p-6 space-y-5 text-xs sm:text-sm text-[#1C1E1B]">
-      <div>
-        <h4 class="text-[11px] font-bold uppercase tracking-wider text-[#5C5A52] mb-2">Shell Controls, Navigation Links &amp; Modals</h4>
-        <div class="overflow-x-auto">
-          <table class="km-table w-full text-left border-collapse text-xs">
-            <thead>
-              <tr class="border-b border-[#E5E3DC] text-[#5C5A52] uppercase text-[10px]">
-                <th class="py-2 pr-3">Control / Element</th>
-                <th class="py-2 pr-3">Role Visibility</th>
-                <th class="py-2">Behavior &amp; Implementation</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-[#EFECE4]">
-              <tr>
-                <td class="py-2 pr-3 mono font-semibold">#menu-btn &amp; #sidebar-backdrop</td>
-                <td class="py-2 pr-3">All (&le;900px)</td>
-                <td class="py-2">Toggles mobile slide-over <code>#sidebar.open</code> and backdrop; focuses first link on open; <code>Escape</code> key closes sidebar or Agent Brain drawer.</td>
-              </tr>
-              <tr>
-                <td class="py-2 pr-3 mono font-semibold">#student-identity-badge</td>
-                <td class="py-2 pr-3"><code>student</code></td>
-                <td class="py-2">Displays authenticated student name, branch pill, and active emerald indicator in sidebar header.</td>
-              </tr>
-              <tr>
-                <td class="py-2 pr-3 mono font-semibold">#switch-student</td>
-                <td class="py-2 pr-3"><code>faculty_mentor</code>, <code>tpo_admin</code></td>
-                <td class="py-2">Dropdown navigating to <code>/students/{id}</code> or <code>/</code>. Faculty mentors see only mentees matching their <code>department</code> (<code>fdept</code>).</td>
-              </tr>
-              <tr>
-                <td class="py-2 pr-3 mono font-semibold">Student Workspace Nav</td>
-                <td class="py-2 pr-3">Student (or active <code>sid</code>)</td>
-                <td class="py-2"><code>Home</code> (<code>/</code>, hidden for <code>student</code> in <code>strict</code> mode), <code>Profile</code> (<code>/students/{sid}</code>), <code>Matches</code> (<code>.../matches</code>), <code>Plan</code> (<code>.../plan</code>), <code>Progress</code> (<code>.../progress</code>), <code>Mock Interview</code> (<code>.../interviews</code>).</td>
-              </tr>
-              <tr>
-                <td class="py-2 pr-3 mono font-semibold">Platform Nav Links</td>
-                <td class="py-2 pr-3">Role-gated</td>
-                <td class="py-2"><code>Placement Copilot</code> (<code>/copilot</code>, all roles); <code>Analytics</code> / <code>Department Analytics</code> (<code>/admin</code>), <code>Approvals</code> (<code>/admin/approvals</code>), <code>Placement Policies</code> (<code>/admin/policies</code>) for faculty &amp; TPO; <code>Audit trail</code> (<code>/admin/audit</code>), <code>Scraper Controls</code> (<code>#nav-scraper-controls</code> &rarr; <code>#scrape</code> / <code>#open-scrape-modal</code>), and <code>Know More</code> (<code>/know-more</code>) for <code>tpo_admin</code> only.</td>
-              </tr>
-              <tr>
-                <td class="py-2 pr-3 mono font-semibold">Footer Auth Links</td>
-                <td class="py-2 pr-3">All</td>
-                <td class="py-2"><code>JKLU Portal</code> (<code>GET /login</code>) and <code>Sign Out</code> form (<code>POST /auth/logout</code>).</td>
-              </tr>
-              <tr>
-                <td class="py-2 pr-3 mono font-semibold">#topbar-user-identity</td>
-                <td class="py-2 pr-3">All (md+)</td>
-                <td class="py-2">Topbar pill showing signed-in <code>name</code> (or active role) and institutional <code>email</code>.</td>
-              </tr>
-              <tr>
-                <td class="py-2 pr-3 mono font-semibold">#role-pill &amp; #demo-role-bar</td>
-                <td class="py-2 pr-3">When <code>demo_role_switch</code> &amp; not <code>copilot</code></td>
-                <td class="py-2">Calls <code>switchDemoRole(role)</code> &rarr; <code>POST /api/auth/switch-role</code>. Redirects <code>student</code> away from <code>/admin</code>, <code>faculty_mentor</code> away from <code>/admin/audit</code>, and non-<code>tpo_admin</code> away from <code>/know-more</code>.</td>
-              </tr>
-              <tr>
-                <td class="py-2 pr-3 mono font-semibold">#theme-toggle</td>
-                <td class="py-2 pr-3">All</td>
-                <td class="py-2">Toggles Obsidian Dark Mode (<code>html.dark</code> + <code>data-theme="dark"</code>), persists <code>localStorage["careeros-theme"]</code>, updates <code>meta[name="theme-color"]</code> (<code>#090C10</code> / <code>#1D5C42</code>), dispatches <code>careeros:themechange</code>, syncs across tabs via <code>storage</code> event, and re-colors all Chart.js instances via <code>CareerOSTheme.syncCharts()</code> (<code>theme.js</code>, <code>theme.css</code>).</td>
-              </tr>
-              <tr>
-                <td class="py-2 pr-3 mono font-semibold">#open-drawer</td>
-                <td class="py-2 pr-3">All</td>
-                <td class="py-2">Opens slide-over <code>#agent-drawer</code> with pulsing emerald indicator (<code>.pulse-dot</code>) and loads <code>AgentBrain.load()</code>.</td>
-              </tr>
-              <tr>
-                <td class="py-2 pr-3 mono font-semibold">#toast-root &amp; confirmAction</td>
-                <td class="py-2 pr-3">All</td>
-                <td class="py-2"><code>window.toast(msg, kind, ttlMs)</code> renders non-blocking <code>success</code>/<code>error</code>/<code>info</code> toasts (<code>app.js</code>); <code>window.confirmAction(msg, onConfirm)</code> renders <code>#career-os-confirm-modal</code> replacing native browser dialogs.</td>
-              </tr>
-            </tbody>
-          </table>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Quick Search (Ctrl+K) -->
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="km-ui-input inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white text-xs text-[#7A776E] max-w-full">
+              <span>Jump to a student, page or action&hellip;</span>
+              <kbd class="px-1.5 py-0.5 rounded-full border border-[#D5D2C6] bg-[#F4F3EC] text-[10px] font-semibold text-[#5C5A52]">Ctrl K</kbd>
+            </div>
+            <span class="pill-stone text-[10px]">Everyone</span>
+          </div>
+          <p class="text-[11px] text-[#5C5A52]"><strong class="text-[#1C1E1B]">Where to find it:</strong> Top Bar &rarr; Left / Center search bar (or press <kbd class="px-1 py-0.5 rounded bg-[#EFECE4] text-[10px]">Ctrl+K</kbd> / <kbd class="px-1 py-0.5 rounded bg-[#EFECE4] text-[10px]">Cmd+K</kbd> anywhere)</p>
+          <div class="text-xs text-[#4A483F] leading-relaxed space-y-1.5">
+            <p><strong class="text-[#1C1E1B]">What happens when you use it:</strong> Type a keyword and press Enter to jump straight to any screen or run an admin cleanup:</p>
+            <ul class="list-disc pl-4 space-y-0.5 text-[11px] text-[#5C5A52]">
+              <li><strong>copilot</strong> &rarr; Opens Placement Copilot (Everyone)</li>
+              <li><strong>home</strong> &rarr; Opens the Home cohort directory (Everyone)</li>
+              <li><strong>approval</strong> &rarr; Opens Approvals queue (Faculty &amp; TPO Admin)</li>
+              <li><strong>admin</strong> or <strong>analytic</strong> &rarr; Opens Cohort Analytics (Faculty &amp; TPO Admin)</li>
+              <li><strong>audit</strong> &rarr; Opens the Audit Trail ledger (TPO Admin only)</li>
+              <li><strong>know more</strong>, <strong>knowmore</strong>, <strong>guide</strong>, <strong>manual</strong>, or <strong>docs</strong> &rarr; Opens this Guide (TPO Admin only)</li>
+              <li><strong>purge</strong>, <strong>clear live</strong>, or <strong>remove live</strong> &rarr; Removes all scraped live market jobs after a confirmation pop-up while keeping on-campus jobs safe (TPO Admin only)</li>
+              <li><strong>Any student&rsquo;s name</strong> &rarr; Jumps directly to that student&rsquo;s profile page</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Dark Mode / Light Mode Toggle -->
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <button type="button" class="km-ui-toggle inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white text-[#1C1E1B]" tabindex="-1">
+              <span aria-hidden="true">&#9790;</span>
+              <span>Dark Mode</span>
+              <span class="text-[#7A776E]">/</span>
+              <span>Light Mode</span>
+            </button>
+            <span class="pill-stone text-[10px]">Everyone</span>
+          </div>
+          <p class="text-[11px] text-[#5C5A52]"><strong class="text-[#1C1E1B]">Where to find it:</strong> Top Bar &rarr; Right side (also available in the top-right corner of the Sign-In page)</p>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            <strong class="text-[#1C1E1B]">What happens when you click it:</strong> Switches the entire portal between warm light mode and dark mode, remembers your choice across browser tabs and future visits, and automatically recolors all analytics charts so labels remain crisp and readable.
+          </p>
+        </div>
+
+        <!-- Role Preview Switcher -->
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="km-ui-btn-secondary inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EFECE4] border border-[#E2DEC9] text-xs font-semibold text-[#1C1E1B]">
+              <span class="text-[10px] uppercase text-[#6E6C64]">Role:</span>
+              <span class="px-2 py-0.5 rounded-full bg-[#1D5C42] text-white text-[11px]">Student</span>
+              <span class="text-[#5C5A52]">|</span>
+              <span>Faculty</span>
+              <span class="text-[#5C5A52]">|</span>
+              <span>TPO Admin</span>
+            </span>
+            <span class="pill-stone text-[10px]">Demo Mode</span>
+          </div>
+          <p class="text-[11px] text-[#5C5A52]"><strong class="text-[#1C1E1B]">Where to find it:</strong> Top Bar &rarr; Right side (and Left Sidebar &rarr; Bottom on smaller screens)</p>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            <strong class="text-[#1C1E1B]">What happens when you click it:</strong> Switches your preview role instantly without signing out. If you are viewing a TPO Admin-only page like Audit Trail or Know More and switch to Student or Faculty, it safely redirects you back to Home or Analytics. Automatically hidden when Strict institutional sign-in lock is enabled or while on Placement Copilot.
+          </p>
+        </div>
+
+        <!-- Agent Brain Trigger -->
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <button type="button" class="km-ui-btn-primary inline-flex items-center gap-2 text-xs font-semibold px-3.5 py-1.5 rounded-full bg-[#1D5C42] text-white" tabindex="-1">
+              <span>Agent Brain</span>
+              <span class="w-2 h-2 rounded-full bg-[#34D399]" aria-hidden="true"></span>
+            </button>
+            <span class="pill-stone text-[10px]">Everyone</span>
+          </div>
+          <p class="text-[11px] text-[#5C5A52]"><strong class="text-[#1C1E1B]">Where to find it:</strong> Top Bar &rarr; Far right</p>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            <strong class="text-[#1C1E1B]">What happens when you click it:</strong> Opens the slide-out Agent Brain panel on the right side of the screen and loads your latest AI reasoning traces, verified citations, and live goal runner. Press <kbd class="px-1 py-0.5 rounded bg-[#EFECE4] text-[10px]">Escape</kbd> or click the close button anytime to dismiss it.
+          </p>
+        </div>
+
+        <!-- Active Student / Department Mentees Dropdown -->
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="km-ui-input inline-flex items-center justify-between gap-3 px-3 py-1.5 rounded-xl bg-[#182B22] text-[#E2ECE6] border border-[#284235] text-xs font-medium">
+              <span>Active student / Department mentees</span>
+              <span aria-hidden="true">&#9662;</span>
+            </div>
+            <span class="pill-sage text-[10px]">Faculty &amp; TPO Admin</span>
+          </div>
+          <p class="text-[11px] text-[#5C5A52]"><strong class="text-[#1C1E1B]">Where to find it:</strong> Left Sidebar &rarr; Top section (below the JKLU CareerOS logo)</p>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            <strong class="text-[#1C1E1B]">What happens when you use it:</strong> Lets staff pick any student to inspect their Profile, Matches, Plan, Progress, and Mock Interviews. Faculty Mentors only see mentees from their own department, while TPO Admins see the full cohort. Students see a locked green &ldquo;Logged in as&rdquo; identity card instead.
+          </p>
+        </div>
+
+        <!-- Sidebar Navigation Links -->
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap gap-1.5">
+              <span class="km-ui-btn-secondary px-2.5 py-1 rounded-lg bg-[#182B22] text-[#D5E0DA] text-[11px] font-medium">Home</span>
+              <span class="km-ui-btn-secondary px-2.5 py-1 rounded-lg bg-[#182B22] text-[#D5E0DA] text-[11px] font-medium">Profile &ndash; Mock Interview</span>
+              <span class="km-ui-btn-secondary px-2.5 py-1 rounded-lg bg-[#182B22] text-[#D5E0DA] text-[11px] font-medium">Placement Copilot</span>
+              <span class="km-ui-btn-secondary px-2.5 py-1 rounded-lg bg-[#182B22] text-[#D5E0DA] text-[11px] font-medium">Analytics &amp; Approvals</span>
+            </div>
+            <span class="pill-stone text-[10px]">Role-Gated</span>
+          </div>
+          <p class="text-[11px] text-[#5C5A52]"><strong class="text-[#1C1E1B]">Where to find it:</strong> Left Sidebar &rarr; Main navigation list (tap the top-left menu icon on mobile)</p>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            <strong class="text-[#1C1E1B]">What happens when you click it:</strong> Opens each workspace page. Everyone sees Placement Copilot and Student Workspace links (Profile, Matches, Plan, Progress, Mock Interview). Faculty &amp; TPO Admin also see Analytics (or Department Analytics), Approvals, and Placement Policies. Only TPO Admin sees Audit trail, Scraper Controls, and Know More.
+          </p>
+        </div>
+
+        <!-- JKLU Portal Footer Link -->
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="km-ui-btn-secondary inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#182B22] text-[#D5E0DA] text-xs font-medium">
+              <span>JKLU Portal</span>
+            </span>
+            <span class="pill-stone text-[10px]">Everyone</span>
+          </div>
+          <p class="text-[11px] text-[#5C5A52]"><strong class="text-[#1C1E1B]">Where to find it:</strong> Left Sidebar &rarr; Bottom footer</p>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            <strong class="text-[#1C1E1B]">What happens when you click it:</strong> Takes you to the JKLU Institutional Sign-In portal so you can switch accounts or sign in with another <span class="font-medium text-[#1D5C42]">@jklu.edu.in</span> email.
+          </p>
+        </div>
+
+        <!-- Sign Out Button -->
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <button type="button" class="km-ui-btn-danger inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7F231B] text-white text-xs font-semibold" tabindex="-1">
+              <span>Sign Out</span>
+            </button>
+            <span class="pill-stone text-[10px]">Everyone</span>
+          </div>
+          <p class="text-[11px] text-[#5C5A52]"><strong class="text-[#1C1E1B]">Where to find it:</strong> Left Sidebar &rarr; Bottom footer (below JKLU Portal)</p>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            <strong class="text-[#1C1E1B]">What happens when you click it:</strong> Safely ends your institutional session, clears your sign-in cookies, records the sign-out event in the Audit Trail, and returns you to the Sign-In page.
+          </p>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- Card 1.2: JKLU Institutional Sign-In & Security Modes -->
+  <details class="km-card editorial-card overflow-hidden" open
+           data-roles="student,faculty_mentor,tpo_admin,public"
+           data-keywords="sign in login institutional account jklu email pin fast login judge demo personas strict mode demo mode session sign out security">
+    <summary class="px-6 py-4 cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 bg-[#FAF9F5] border-b border-[#E5E3DC] hover:bg-[#F4F3EC] transition-colors">
+      <div class="flex items-center gap-2.5">
+        <span class="text-xs font-bold px-2.5 py-0.5 rounded-md bg-[#E3F2EA] text-[#1B5E43]">1.2</span>
+        <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">JKLU Institutional Sign-In &amp; Access Modes</h3>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="pill-stone text-[10px]">Everyone</span>
+      </div>
+    </summary>
+
+    <div class="p-6 space-y-5 text-xs sm:text-sm text-[#1C1E1B]">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Sign in with JKLU Institutional Account -->
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <button type="button" class="km-ui-btn-primary inline-flex items-center justify-center px-4 py-2 rounded-full bg-[#1D5C42] text-white text-xs font-semibold" tabindex="-1">
+              Sign in with JKLU Institutional Account
+            </button>
+            <span class="pill-stone text-[10px]">Everyone</span>
+          </div>
+          <p class="text-[11px] text-[#5C5A52]"><strong class="text-[#1C1E1B]">Where to find it:</strong> Sign-In Page &rarr; Main form below Institutional email &amp; PIN</p>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            <strong class="text-[#1C1E1B]">What happens when you click it:</strong> Checks that your email ends with <strong>@jklu.edu.in</strong> and verifies your institutional PIN securely offline (no external internet login required). Once verified, it opens your role&rsquo;s home workspace and records the sign-in in the audit ledger.
+          </p>
+        </div>
+
+        <!-- Fast Login & Judge Demo Personas -->
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <button type="button" class="km-ui-btn-primary inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#1D5C42] text-white text-xs font-semibold" tabindex="-1">
+              <span>Fast Login</span>
+              <span aria-hidden="true">&rarr;</span>
+            </button>
+            <span class="pill-stone text-[10px]">Demo Mode Only</span>
+          </div>
+          <p class="text-[11px] text-[#5C5A52]"><strong class="text-[#1C1E1B]">Where to find it:</strong> Sign-In Page &rarr; 1-Click Judge Demo Personas, Student personas list, and Institutional role fast login</p>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            <strong class="text-[#1C1E1B]">What happens when you click it:</strong> Signs you in immediately as a pre-configured Student, Faculty Mentor, or TPO Admin persona for quick evaluation—no manual typing needed. These cards are automatically hidden whenever Strict institutional lock is turned on.
+          </p>
         </div>
       </div>
 
-      <div>
-        <h4 class="text-[11px] font-bold uppercase tracking-wider text-[#5C5A52] mb-2">Command Bar (<code class="mono">#command-input</code> &middot; <kbd class="mono px-1.5 py-0.5 rounded bg-[#EFECE4]">Ctrl+K</kbd> / <kbd class="mono px-1.5 py-0.5 rounded bg-[#EFECE4]">Cmd+K</kbd>)</h4>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
-          <div class="p-3 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC]">
-            <p class="font-semibold mb-1">Navigation Keywords</p>
-            <ul class="space-y-1 text-[#5C5A52]">
-              <li><code class="mono font-semibold text-[#1C1E1B]">copilot</code> &rarr; <code>/copilot</code> (all roles)</li>
-              <li><code class="mono font-semibold text-[#1C1E1B]">home</code> &rarr; <code>/</code> (all roles)</li>
-              <li><code class="mono font-semibold text-[#1C1E1B]">approval</code> &rarr; <code>/admin/approvals</code> (faculty/TPO only)</li>
-              <li><code class="mono font-semibold text-[#1C1E1B]">admin</code>, <code class="mono font-semibold text-[#1C1E1B]">analytic</code> &rarr; <code>/admin</code> (faculty/TPO only)</li>
-              <li><code class="mono font-semibold text-[#1C1E1B]">audit</code> &rarr; <code>/admin/audit</code> (<code>tpo_admin</code> only)</li>
-              <li><code class="mono font-semibold text-[#1C1E1B]">know more</code>, <code class="mono font-semibold text-[#1C1E1B]">knowmore</code>, <code class="mono font-semibold text-[#1C1E1B]">guide</code>, <code class="mono font-semibold text-[#1C1E1B]">manual</code>, <code class="mono font-semibold text-[#1C1E1B]">docs</code> &rarr; <code>/know-more</code> (<code>tpo_admin</code> only)</li>
-            </ul>
+      <!-- Demo Mode vs Strict Mode & Session Safety -->
+      <div class="p-4 rounded-2xl bg-[#F2F7F4] border border-[#C8E4D5] space-y-2">
+        <p class="text-xs font-bold text-[#1B5E43]">Demo Mode vs. Strict Institutional Mode</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-[#4A483F] leading-relaxed">
+          <div>
+            <p class="font-semibold text-[#1C1E1B]">Demo Mode (Evaluation &amp; Training)</p>
+            <p>Shows the Top Bar role switcher and 1-Click Fast Login persona cards so reviewers can test Student, Faculty, and TPO Admin views effortlessly.</p>
           </div>
-          <div class="p-3 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC]">
-            <p class="font-semibold mb-1">Actions &amp; Student Jump</p>
-            <ul class="space-y-1 text-[#5C5A52]">
-              <li><code class="mono font-semibold text-[#1C1E1B]">purge</code>, <code class="mono font-semibold text-[#1C1E1B]">clear live</code>, <code class="mono font-semibold text-[#1C1E1B]">remove live</code> &rarr; <code>tpo_admin</code> only; invokes <code>window.purgeAllLiveJobs()</code> or <code>confirmAction</code> + <code>DELETE /api/jobs/live</code>.</li>
-              <li><span class="font-semibold text-[#1C1E1B]">Student Name Substring</span> &rarr; matches options in <code>#switch-student</code> and navigates directly to <code>/students/{id}</code>.</li>
-            </ul>
+          <div>
+            <p class="font-semibold text-[#1C1E1B]">Strict Mode (Production Lock)</p>
+            <p>Requires valid <strong>@jklu.edu.in</strong> email + PIN sign-in for every page, hides all Fast Login and role-switcher shortcuts, locks students out of other students&rsquo; profiles, and enforces automatic session sign-out on logout.</p>
           </div>
         </div>
       </div>
     </div>
   </details>
 
-  <!-- Card 2: JKLU Institutional Portal & Auth Modes -->
+  <!-- Card 1.3: Agent Brain Slide-Out Panel & Safety Guardrails -->
   <details class="km-card editorial-card overflow-hidden" open
            data-roles="student,faculty_mentor,tpo_admin,public"
-           data-keywords="login auth logout switch-role personas.json pbkdf2 sha256 pin demo strict auth_mode rbac_strict_and_audit_middleware _PUBLIC_EXACT _PUBLIC_PREFIXES signed cookie ps06_session ps06_role auth.denied">
+           data-keywords="agent brain run agent refresh reply audit log goal presets plan execute verify recover grounding citations privacy pii redaction prompt injection">
     <summary class="px-6 py-4 cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 bg-[#FAF9F5] border-b border-[#E5E3DC] hover:bg-[#F4F3EC] transition-colors">
       <div class="flex items-center gap-2.5">
-        <span class="mono text-xs font-bold px-2 py-0.5 rounded-md bg-[#E3F2EA] text-[#1B5E43]">1.2</span>
-        <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">JKLU Institutional Portal, Auth Modes &amp; Strict Middleware</h3>
+        <span class="text-xs font-bold px-2.5 py-0.5 rounded-md bg-[#E3F2EA] text-[#1B5E43]">1.3</span>
+        <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Agent Brain Slide-Out Panel &amp; AI Safety Checks</h3>
       </div>
       <div class="flex items-center gap-1.5">
-        <span class="pill-stone text-[10px]">Public + Auth</span>
-        <span class="mono text-[10px] text-[#5C5A52]">login.html &middot; auth.py &middot; main.py</span>
+        <span class="pill-stone text-[10px]">Everyone</span>
       </div>
     </summary>
-    <div class="p-6 space-y-5 text-xs sm:text-sm text-[#1C1E1B]">
-      <div class="overflow-x-auto">
-        <table class="km-table w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="border-b border-[#E5E3DC] text-[#5C5A52] uppercase text-[10px]">
-              <th class="py-2 pr-3">Route / Component</th>
-              <th class="py-2 pr-3">Handler / Source</th>
-              <th class="py-2">Behavior &amp; Validation Rules</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[#EFECE4]">
-            <tr>
-              <td class="py-2 pr-3 mono font-semibold">GET /login</td>
-              <td class="py-2 pr-3 mono">auth.login_page</td>
-              <td class="py-2">Renders <code>auth/login.html</code> with <code>#jklu-login</code> (<code>#email</code>, <code>#pin</code>) and <code>#theme-toggle</code>. When <code>show_demo_controls</code> (<code>demo_role_switch &amp;&amp; auth_mode != "strict"</code>), exposes <code>#judge-personas</code> (<code>.judge-persona-btn</code>), <code>#student-personas</code> (<code>.student-fast-btn</code>), and <code>#fast-login</code> (<code>.fast-role-btn</code>).</td>
-            </tr>
-            <tr>
-              <td class="py-2 pr-3 mono font-semibold">POST /auth/login</td>
-              <td class="py-2 pr-3 mono">auth.auth_login</td>
-              <td class="py-2">Enforces <code>@jklu.edu.in</code> domain (403 otherwise). Verifies PIN via <code>_verify_pin()</code> using <code>pbkdf2_sha256$&lt;iters&gt;$&lt;salt&gt;$&lt;hash&gt;</code> + <code>hmac.compare_digest</code> against <code>data/personas.json</code> (or <code>demo_pin</code> <code>"2026"</code>). Auto-provisions Rohit Shetty via <code>_ensure_rohit_shetty()</code> if absent. Sets signed <code>ps06_session</code> + legacy <code>ps06_role</code> cookies (<code>httponly=True</code> in <code>strict</code> mode, <code>samesite="lax"</code>) and logs <code>auth.login</code>.</td>
-            </tr>
-            <tr>
-              <td class="py-2 pr-3 mono font-semibold">POST /auth/logout</td>
-              <td class="py-2 pr-3 mono">auth.auth_logout</td>
-              <td class="py-2">Logs <code>auth.logout</code> (pseudonymized via <code>mask_email</code>), deletes <code>ps06_session</code> and <code>ps06_role</code> cookies, and returns <code>303</code> redirect to <code>/login</code>.</td>
-            </tr>
-            <tr>
-              <td class="py-2 pr-3 mono font-semibold">POST /api/auth/switch-role</td>
-              <td class="py-2 pr-3 mono">auth.switch_role</td>
-              <td class="py-2">Switches active role &amp; claims; returns <code>403</code> in <code>strict</code> mode when <code>demo_role_switch=False</code>. Logs <code>auth.role_switched</code> (or <code>auth.denied</code>).</td>
-            </tr>
-            <tr>
-              <td class="py-2 pr-3 mono font-semibold">GET /api/auth/role</td>
-              <td class="py-2 pr-3 mono">auth.get_role</td>
-              <td class="py-2">Returns resolved <code>role</code>, valid <code>roles</code> tuple, and serialized <code>CurrentUser</code> (or <code>null</code> in open demo mode).</td>
-            </tr>
-            <tr>
-              <td class="py-2 pr-3 mono font-semibold">rbac_strict_and_audit_middleware</td>
-              <td class="py-2 pr-3 mono">main.py</td>
-              <td class="py-2">In <code>auth_mode="strict"</code>, blocks unauthenticated non-public routes (<code>401 JSON</code> for <code>/api/*</code>, <code>303 &rarr; /login</code> for HTML). Public allowlist: <code>_PUBLIC_EXACT</code> (<code>/login</code>, <code>/healthz</code>, <code>/readyz</code>, <code>/manifest.webmanifest</code>, <code>/sw.js</code>, <code>/api/campus-drives/public-jnf</code>) and <code>_PUBLIC_PREFIXES</code> (<code>/auth/</code>, <code>/static/</code>, <code>/jnf/</code>, <code>/api/campus-drives/public-jnf/</code>). Audits 401/403 responses via <code>_audit_auth_denied_rate_limited()</code> (10s window per actor/path/status).</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </details>
 
-  <!-- Card 3: Agent Brain & Reasoning Trace Drawer -->
-  <details class="km-card editorial-card overflow-hidden" open
-           data-roles="student,faculty_mentor,tpo_admin"
-           data-keywords="agent brain reasoning trace drawer sse stream telemetry orchestrator tools verifier react plan execute verify recover grounding citations hitl awaiting_input">
-    <summary class="px-6 py-4 cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 bg-[#FAF9F5] border-b border-[#E5E3DC] hover:bg-[#F4F3EC] transition-colors">
-      <div class="flex items-center gap-2.5">
-        <span class="mono text-xs font-bold px-2 py-0.5 rounded-md bg-[#E3F2EA] text-[#1B5E43]">1.3</span>
-        <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Agent Brain Drawer, SSE Streaming &amp; ReAct Orchestrator</h3>
-      </div>
-      <div class="flex items-center gap-1.5">
-        <span class="pill-stone text-[10px]">All Authenticated</span>
-        <span class="mono text-[10px] text-[#5C5A52]">agent_brain.js &middot; agent.py &middot; orchestrator.py</span>
-      </div>
-    </summary>
     <div class="p-6 space-y-5 text-xs sm:text-sm text-[#1C1E1B]">
-      <div>
-        <h4 class="text-[11px] font-bold uppercase tracking-wider text-[#5C5A52] mb-2">Drawer UI Controls (<code class="mono">_agent_drawer_body.html</code> &amp; <code class="mono">agent_brain.js</code>)</h4>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
-          <div class="p-3 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-1">
-            <p class="font-semibold">Telemetry Strip &amp; Trace Selector</p>
-            <p class="text-[#5C5A52]"><code>#drawer-telemetry-strip</code> displays <code>#ab-stat-provider</code>, <code>#ab-stat-grounding</code>, <code>#ab-stat-latency</code>, and <code>#ab-stat-tokens</code>, plus <code>#drawer-workflow-badge</code> and <code>tpo_admin</code>-only <code>#drawer-audit-link</code>. <code>#drawer-run-select</code> &amp; <code>#drawer-refresh</code> load up to 30 recent runs.</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Custom Goal Box + Run Agent -->
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="km-ui-input px-2.5 py-1.5 rounded-xl border border-[#D5D2C6] bg-white text-[11px] text-[#7A776E]">Ask autonomous agent&hellip;</span>
+              <button type="button" class="km-ui-btn-primary px-3.5 py-1.5 rounded-full bg-[#1D5C42] text-white text-xs font-semibold" tabindex="-1">Run Agent</button>
+            </div>
+            <span class="pill-stone text-[10px]">Everyone</span>
           </div>
-          <div class="p-3 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-1">
-            <p class="font-semibold">Goal Runner, Grounding &amp; HITL Clarification</p>
-            <p class="text-[#5C5A52]"><code>#drawer-goal</code> + <code>#drawer-run</code> + role-aware <code>#drawer-quick-goals</code> (including <em>Simulate Error &rarr; Fallback Recovery</em> for staff). <code>#drawer-grounding-box</code> shows <code>#drawer-grounding-pill</code>, <code>#drawer-fallback-pill</code>, <code>#drawer-verified-pills</code>, and <code>#drawer-unverified-pills</code>. <code>#drawer-clarify-box</code> handles <code>awaiting_input</code> runs via <code>#drawer-clarify-input</code> + <code>#drawer-clarify-send</code>.</p>
+          <p class="text-[11px] text-[#5C5A52]"><strong class="text-[#1C1E1B]">Where to find it:</strong> Agent Brain Slide-Out Panel &rarr; Goal input row</p>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            <strong class="text-[#1C1E1B]">What happens when you click it:</strong> Starts a live AI workflow and streams each step in real time: <strong>Plan &rarr; Execute &rarr; Verify &rarr; Recover</strong>. You can watch every tool it calls, how long each step took, and whether a backup step automatically recovered from any tool error.
+          </p>
+        </div>
+
+        <!-- 1-Click Goal Presets -->
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap gap-1.5">
+              <span class="km-ui-btn-secondary px-2.5 py-1 rounded-full border border-[#D5D2C6] bg-white text-[11px] font-semibold">Rank Jobs &amp; Gaps</span>
+              <span class="km-ui-btn-secondary px-2.5 py-1 rounded-full border border-[#D5D2C6] bg-white text-[11px] font-semibold">Cohort Bottlenecks</span>
+            </div>
+            <span class="pill-stone text-[10px]">Role-Tailored</span>
           </div>
+          <p class="text-[11px] text-[#5C5A52]"><strong class="text-[#1C1E1B]">Where to find it:</strong> Agent Brain Slide-Out Panel &rarr; Quick goal pills below the input box</p>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            <strong class="text-[#1C1E1B]">What happens when you click it:</strong> Runs a ready-made workflow with one click. Students see <em>Rank Jobs &amp; Gaps</em>, <em>Check Drive Eligibility</em>, and <em>Audit Resume Bullets</em>. Faculty &amp; TPO Admin see <em>Cohort Bottlenecks</em>, <em>Rank Student &amp; Plan</em>, and <em>Simulate Error &rarr; Fallback Recovery</em>.
+          </p>
+        </div>
+
+        <!-- Trace Selector & Refresh -->
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="km-ui-input px-2.5 py-1 rounded-xl border border-[#D5D2C6] bg-white text-[11px] text-[#5C5A52]">Trace selector &#9662;</span>
+              <button type="button" class="km-ui-btn-secondary px-2.5 py-1 rounded-xl border border-[#D5D2C6] bg-white text-xs font-semibold text-[#1C1E1B]" tabindex="-1">Refresh</button>
+            </div>
+            <span class="pill-stone text-[10px]">Everyone</span>
+          </div>
+          <p class="text-[11px] text-[#5C5A52]"><strong class="text-[#1C1E1B]">Where to find it:</strong> Agent Brain Slide-Out Panel &rarr; Above the goal box</p>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            <strong class="text-[#1C1E1B]">What happens when you click it:</strong> Lets you switch between past AI runs (from Agent Brain, Placement Copilot, or Smart Job Descriptions) and reload the latest Provider, Grounding score, Latency, and Token/Cost stats.
+          </p>
+        </div>
+
+        <!-- Human Clarification Reply -->
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="km-ui-input px-2.5 py-1 rounded-xl border border-[#E5C97B] bg-white text-[11px] text-[#5C5A52]">Enter clarification&hellip;</span>
+              <button type="button" class="km-ui-btn-primary px-3 py-1 rounded-xl bg-[#92400E] text-white text-xs font-semibold" tabindex="-1">Reply</button>
+            </div>
+            <span class="pill-stone text-[10px]">Everyone</span>
+          </div>
+          <p class="text-[11px] text-[#5C5A52]"><strong class="text-[#1C1E1B]">Where to find it:</strong> Agent Brain Slide-Out Panel &rarr; Appears automatically in amber when the agent pauses for input</p>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            <strong class="text-[#1C1E1B]">What happens when you click it:</strong> Sends your answer back to the paused AI run so it can resume with the exact context you provided instead of guessing.
+          </p>
+        </div>
+
+        <!-- Audit Log Link -->
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-3 md:col-span-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="km-ui-btn-secondary inline-flex items-center px-2.5 py-1 rounded-lg bg-white border border-[#DCE4DE] text-xs font-semibold text-[#1D5C42]">
+              Audit Log
+            </span>
+            <span class="pill-sage text-[10px]">TPO Admin only</span>
+          </div>
+          <p class="text-[11px] text-[#5C5A52]"><strong class="text-[#1C1E1B]">Where to find it:</strong> Agent Brain Slide-Out Panel &rarr; Top-right of the observability banner</p>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            <strong class="text-[#1C1E1B]">What happens when you click it:</strong> Opens the tamper-evident Audit Trail filtered directly to the selected AI run so administrators can inspect every recorded action and verification check.
+          </p>
         </div>
       </div>
 
-      <div>
-        <h4 class="text-[11px] font-bold uppercase tracking-wider text-[#5C5A52] mb-2">Agent API Endpoints (<code class="mono">app/api/routes/agent.py</code>)</h4>
-        <div class="overflow-x-auto">
-          <table class="km-table w-full text-left border-collapse text-xs">
-            <thead>
-              <tr class="border-b border-[#E5E3DC] text-[#5C5A52] uppercase text-[10px]">
-                <th class="py-2 pr-3">Endpoint</th>
-                <th class="py-2 pr-3">Rate Limit / Scope</th>
-                <th class="py-2">Behavior</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-[#EFECE4]">
-              <tr>
-                <td class="py-2 pr-3 mono font-semibold">POST /api/agent/run</td>
-                <td class="py-2 pr-3"><code>agent_run</code> (30/60s) &middot; Student-scoped</td>
-                <td class="py-2">Runs <code>run_agent()</code> synchronously, returning HTTP <code>201</code> with <code>AgentRun</code> + ordered <code>AgentStep</code> trace.</td>
-              </tr>
-              <tr>
-                <td class="py-2 pr-3 mono font-semibold">POST /api/agent/run/stream</td>
-                <td class="py-2 pr-3"><code>agent_run</code> (30/60s) &middot; SSE</td>
-                <td class="py-2">Streams <code>run_agent_stream()</code> events in real time: <code>run_started</code>, <code>plan_created</code>, <code>step_started</code>, <code>step_completed</code>, <code>verification_done</code>, <code>awaiting_input</code>, <code>complete</code>, <code>error</code>.</td>
-              </tr>
-              <tr>
-                <td class="py-2 pr-3 mono font-semibold">GET /api/agent/runs &amp; /{run_id}</td>
-                <td class="py-2 pr-3">Student-scoped (403 on mismatch)</td>
-                <td class="py-2">Lists up to 100 recent runs (<code>limit=30</code> default) or fetches a single trace with steps and <code>audit_trace_url</code>.</td>
-              </tr>
-              <tr>
-                <td class="py-2 pr-3 mono font-semibold">POST /api/agent/runs/{run_id}/reply</td>
-                <td class="py-2 pr-3"><code>enforce_student_scope</code></td>
-                <td class="py-2">Resumes an <code>awaiting_input</code> run via <code>resume_agent_run()</code>, recording a <code>user_reply</code> step and re-planning.</td>
-              </tr>
-              <tr>
-                <td class="py-2 pr-3 mono font-semibold">GET /api/agent/telemetry</td>
-                <td class="py-2 pr-3">Student-scoped</td>
-                <td class="py-2">Aggregates <code>total_runs</code>, <code>avg_grounding_score</code>, <code>fallback_count</code>, <code>avg_latency_ms</code>, and LLM provider token/cost totals.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="p-3.5 rounded-xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-2 text-xs">
-        <p class="font-semibold text-[#1C1E1B]">ReAct Engine, 18-Tool Registry &amp; Zero-Hallucination Verifier (<code class="mono">orchestrator.py</code>, <code class="mono">tools.py</code>, <code class="mono">verifier.py</code>)</p>
-        <ul class="list-disc pl-5 space-y-1 text-[#5C5A52]">
-          <li><strong>Plan &rarr; Execute &rarr; Verify &rarr; Recover:</strong> <code>_sanitize_goal_text()</code> scrubs PII and blocks prompt injections; <code>_plan()</code> generates 2&ndash;5 steps (with <code>_fallback_plan()</code> safety net). <code>_execute_loop_iter()</code> resolves <code>$first</code>/<code>$last</code>/<code>$prev</code>/<code>$&lt;tool&gt;.&lt;key&gt;</code> refs, enforces server-side <code>_inject_role_args()</code>, caps execution at <code>MAX_EXECUTED_STEPS=8</code> and dynamic replanning at <code>MAX_INJECTED_STEPS=3</code>, and retries failed calls once via <code>_repair_failed_step()</code> (<code>TASK: repair_step</code>; never retries <code>PermissionError</code>).</li>
-          <li><strong>18 Registered Tools (<code>TOOL_REGISTRY</code> + <code>TOOL_ALIASES</code>):</strong> <code>inspect_student_profile</code>, <code>rank_and_explain_jobs</code>, <code>simulate_skill_acquisition</code>, <code>search_placement_policy_rag</code>, <code>search_course_catalog</code>, <code>generate_prerequisite_roadmap</code>, <code>audit_resume_bullets</code>, <code>query_cohort_bottlenecks</code>, <code>draft_cohort_intervention</code>, <code>propose_hitl_approval</code>, <code>check_drive_eligibility</code>, <code>persist_upskilling_plan</code>, <code>inspect_interview_history</code>, <code>search_live_market_jobs</code>, <code>purge_live_market_jobs</code> (TPO/Faculty only), <code>ask_clarifying_question</code>, <code>submit_drive_application</code>, <code>simulate_placement_drive</code>.</li>
-          <li><strong>Grounding Verifier (<code>verifier.py</code>):</strong> <code>build_known_entities()</code> + <code>verify_text()</code> / <code>verify_json()</code> validate every <code>job-</code>, <code>course-</code>, <code>SOP-</code>, <code>run-</code>, <code>appr-</code>, <code>stu-</code>, <code>int-</code>, and <code>plan-</code> ID plus URLs and <code>verify_sop_numeric_claims()</code> (SOP-01/03/04/05/10/14 thresholds). Unverified tokens are annotated inline as <code>[UNVERIFIED: x]</code> and scored via <code>grounding_score</code>.</li>
+      <!-- Plain-English Safety & Privacy Checks -->
+      <div class="p-4 rounded-2xl bg-[#F2F7F4] border border-[#C8E4D5] space-y-2">
+        <p class="text-xs font-bold text-[#1B5E43]">Built-In Safety &amp; Privacy Checks (Always On)</p>
+        <ul class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-[#4A483F] leading-relaxed">
+          <li><strong class="text-[#1C1E1B]">No Fake Numbers or Claims:</strong> Every score, policy rule, and job reference is cross-checked against real database records and official placement rules, showing verified badges in Agent Brain.</li>
+          <li><strong class="text-[#1C1E1B]">Personal Info Protection:</strong> Phone numbers, emails, Aadhaar/PAN numbers, and street addresses are automatically masked before resumes are stored or sent to any AI model.</li>
+          <li><strong class="text-[#1C1E1B]">Tamper &amp; Injection Defense:</strong> Hidden instructions inside uploaded resumes, scraped job posts, or interview answers are automatically blocked and logged before reaching the AI.</li>
         </ul>
       </div>
     </div>
   </details>
 
-  <!-- Card 4: Enterprise Security & Multi-Platform Packaging -->
+  <!-- Card 1.4: Offline PWA, Desktop App & Mobile App -->
   <details class="km-card editorial-card overflow-hidden" open
            data-roles="student,faculty_mentor,tpo_admin,public"
-           data-keywords="rbac pii redaction guardrails prompt injection ratelimit audit pwa sw.js manifest.webmanifest desktop electron mobile capacitor cors backfill_memory_vectors">
+           data-keywords="offline pwa installable desktop app windows electron mobile app android offline fallback">
     <summary class="px-6 py-4 cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 bg-[#FAF9F5] border-b border-[#E5E3DC] hover:bg-[#F4F3EC] transition-colors">
       <div class="flex items-center gap-2.5">
-        <span class="mono text-xs font-bold px-2 py-0.5 rounded-md bg-[#E3F2EA] text-[#1B5E43]">1.4</span>
-        <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Enterprise Security Modules &amp; PWA / Desktop / Mobile Packaging</h3>
+        <span class="text-xs font-bold px-2.5 py-0.5 rounded-md bg-[#E3F2EA] text-[#1B5E43]">1.4</span>
+        <h3 class="font-serif-display text-base font-semibold text-[#1C1E1B]">Offline PWA, Desktop App &amp; Mobile App</h3>
       </div>
       <div class="flex items-center gap-1.5">
-        <span class="pill-stone text-[10px]">Security &amp; Packaging</span>
-        <span class="mono text-[10px] text-[#5C5A52]">app/security/* &middot; sw.js &middot; desktop/ &middot; mobile/</span>
+        <span class="pill-stone text-[10px]">Everyone</span>
       </div>
     </summary>
-    <div class="p-6 space-y-5 text-xs sm:text-sm text-[#1C1E1B]">
-      <div class="overflow-x-auto">
-        <table class="km-table w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="border-b border-[#E5E3DC] text-[#5C5A52] uppercase text-[10px]">
-              <th class="py-2 pr-3">Module / Platform</th>
-              <th class="py-2 pr-3">Key Symbols / Files</th>
-              <th class="py-2">Capabilities &amp; Enforcement</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[#EFECE4]">
-            <tr>
-              <td class="py-2 pr-3 font-semibold">RBAC &amp; Row-Level Security</td>
-              <td class="py-2 pr-3 mono">app/security/rbac.py</td>
-              <td class="py-2"><code>ROLES</code> hierarchy (<code>student &lt; faculty_mentor &lt; tpo_admin</code> via <code>_IMPLIES</code>). <code>CurrentUser</code> binds <code>student_id</code> strictly to <code>student</code>. <code>encode_session</code> / <code>decode_session</code> sign cookies with HMAC-SHA256 + <code>iat</code>/<code>exp</code>. <code>require_role()</code> &amp; <code>enforce_student_scope(request, sid)</code> block cross-student and cross-department access (403).</td>
-            </tr>
-            <tr>
-              <td class="py-2 pr-3 font-semibold">PII Redaction &amp; Pseudonymization</td>
-              <td class="py-2 pr-3 mono">app/security/pii.py</td>
-              <td class="py-2"><code>detect_pii</code>, <code>redact_pii</code>, <code>scrub_for_llm</code> strip <code>EMAIL</code>, <code>AADHAAR</code>, <code>PAN</code>, <code>PHONE</code>, and <code>ADDRESS</code> into <code>[REDACTED_&lt;KIND&gt;]</code> before storage or LLM calls. <code>mask_email</code>, <code>audit_actor_ref</code>, <code>sanitize_audit_entry</code> hash emails into irreversible <code>id-&lt;8hex&gt;</code> refs.</td>
-            </tr>
-            <tr>
-              <td class="py-2 pr-3 font-semibold">Prompt-Injection Guardrails</td>
-              <td class="py-2 pr-3 mono">app/security/guardrails.py</td>
-              <td class="py-2"><code>sanitize_untrusted_text()</code> neutralizes 11 regex injection patterns (<code>[REDACTED_INJECTION_ATTEMPT]</code>) and triggers <code>security.prompt_injection_blocked</code> audits. <code>wrap_untrusted_xml()</code> escapes closing tags; <code>verify_extracted_skill_grounding()</code> enforces SOP-08 resume skill grounding.</td>
-            </tr>
-            <tr>
-              <td class="py-2 pr-3 font-semibold">Sliding-Window Rate Limiter</td>
-              <td class="py-2 pr-3 mono">app/security/ratelimit.py</td>
-              <td class="py-2">Thread-safe <code>RateLimiter</code> keyed by <code>(identity, bucket)</code> with <code>DEFAULT_LIMITS</code>: <code>jobs_scrape</code> (10/60s), <code>agent_run</code> (30/60s), <code>copilot_ask</code> (60/60s). <code>check_rate_limit()</code> returns HTTP <code>429</code> + <code>Retry-After</code> when <code>rate_limit_enabled=True</code>.</td>
-            </tr>
-            <tr>
-              <td class="py-2 pr-3 font-semibold">Append-Only Audit &amp; Startup</td>
-              <td class="py-2 pr-3 mono">audit.py &middot; main.py</td>
-              <td class="py-2"><code>log_audit()</code> stages immutable <code>AuditLog</code> rows guarded by <code>install_audit_guard</code> SQLAlchemy listeners. <code>main.py</code> configures <code>CORSMiddleware</code> (localhost + <code>capacitor://localhost</code>) and runs <code>backfill_memory_vectors(ctx)</code> on startup.</td>
-            </tr>
-            <tr>
-              <td class="py-2 pr-3 font-semibold">PWA Offline Shell</td>
-              <td class="py-2 pr-3 mono">sw.js &middot; manifest.webmanifest</td>
-              <td class="py-2"><code>jklu-careeros-v2</code> precaches vendored JS/CSS/icons (cache-first), never caches <code>/api/</code> or <code>/auth/</code>, and uses network-only (<code>no-store</code>) for navigation with an offline HTML fallback so role HTML never leaks across sign-outs.</td>
-            </tr>
-            <tr>
-              <td class="py-2 pr-3 font-semibold">Desktop (Electron v45)</td>
-              <td class="py-2 pr-3 mono">desktop/main.js &middot; preload.js</td>
-              <td class="py-2"><code>jklu-careeros-desktop</code> (<code>in.edu.jklu.careeros.desktop</code>) auto-spawns <code>uv run uvicorn app.api.__main__:app</code> on port <code>8010</code>, persists URL in <code>careeros-settings.json</code>, exposes <code>window.careerosDesktop</code> IPC bridge, and builds Windows portable/NSIS installers.</td>
-            </tr>
-            <tr>
-              <td class="py-2 pr-3 font-semibold">Mobile (Capacitor v6.2 Android)</td>
-              <td class="py-2 pr-3 mono">mobile/capacitor.config.json</td>
-              <td class="py-2"><code>jklu-careeros-mobile</code> (<code>in.edu.jklu.careeros</code>) wraps <code>www/</code> for Android with <code>cleartext: true</code>, <code>allowMixedContent: true</code>, and <code>cap:sync</code> / <code>cap:open</code> scripts.</td>
-            </tr>
-          </tbody>
-        </table>
+
+    <div class="p-6 text-xs sm:text-sm text-[#1C1E1B]">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-2">
+          <span class="pill-sage text-[10px]">Installable Browser App (PWA)</span>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Install JKLU CareerOS directly from your browser&rsquo;s address bar. Visual assets, fonts, and charts load instantly from local cache, while sensitive sign-in and role pages are never cached so switching accounts or signing out stays completely private. If your connection drops, a clean offline notice appears.
+          </p>
+        </div>
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-2">
+          <span class="pill-stone text-[10px]">Windows Desktop App</span>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Runs JKLU CareerOS as a standalone Windows desktop application (available as a portable app or installer) with a branded startup splash screen and full access to the same placement portal.
+          </p>
+        </div>
+        <div class="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E5E3DC] space-y-2">
+          <span class="pill-stone text-[10px]">Mobile App (Android)</span>
+          <p class="text-xs text-[#4A483F] leading-relaxed">
+            Packages the responsive JKLU CareerOS experience as a native mobile app so students and staff can check job matches, upskill plans, and approvals on the go.
+          </p>
+        </div>
       </div>
     </div>
   </details>
