@@ -1,0 +1,577 @@
+/* JKLU CareerOS - Obsidian Dark Theme (v2)
+ * Light Mode preserves the exact original warm cream / forest editorial palette.
+ * Dark Mode (`html.dark`) activates a dedicated Obsidian Slate + Luminous Emerald palette
+ * with high-contrast WCAG AA/AAA text across every card, modal, chip, table, input, and chart.
+ */
+
+/* Theme toggle icons */
+.theme-icon-sun { display: none; }
+.theme-icon-moon { display: inline-block; }
+html.dark .theme-icon-sun { display: inline-block; }
+html.dark .theme-icon-moon { display: none; }
+
+html.dark {
+  color-scheme: dark;
+  --bg-editorial: #090C10;
+  --bg-card: #12171F;
+  --bg-subtle: #181F29;
+  --border-warm: #252E3D;
+  --border-strong: #323E52;
+  --text-ink: #F0F6FC;
+  --text-muted: #95A2B3;
+  --text-soft: #7D8B9D;
+  --brand-green: #059669;
+  --brand-green-hover: #10B981;
+  --brand-green-tint: #0E2920;
+  --brand-green-text: #6EE7B7;
+  --coral-tint: #2B1216;
+  --coral-text: #FDA4AF;
+}
+
+/* Native inputs/checkboxes adapt cleanly in dark mode */
+html.dark input[type="checkbox"],
+html.dark input[type="radio"] {
+  accent-color: #10B981;
+  color-scheme: dark;
+}
+
+/* Core Obsidian Canvas & App Chrome */
+html.dark body {
+  background-color: #090C10;
+  color: #F0F6FC;
+}
+
+html.dark #sidebar {
+  background-color: #0D1117;
+  border-color: #1F2633;
+  color: #D0D7DE;
+}
+html.dark #sidebar .nav-section {
+  color: #7D8B9D;
+}
+html.dark #sidebar .nav-link {
+  color: #B4C0CE;
+}
+html.dark #sidebar .nav-link:hover {
+  background-color: #161D27;
+  color: #FFFFFF;
+}
+html.dark #sidebar .nav-link.active {
+  background-color: #103A2B;
+  border-color: #10B981;
+  color: #FFFFFF;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.18);
+}
+html.dark #sidebar .border-\[\#21362B\],
+html.dark #sidebar .border-\[\#284235\],
+html.dark #sidebar .border-\[\#2B4638\] {
+  border-color: #1F2735;
+}
+html.dark #sidebar .bg-\[\#182B22\],
+html.dark #sidebar .bg-\[\#21362B\] {
+  background-color: #141A23;
+  color: #E6EDF3;
+}
+html.dark #sidebar select {
+  background-color: #141A23;
+  border-color: #2A3446;
+  color: #F0F6FC;
+}
+html.dark #sidebar .text-\[\#8FA89B\],
+html.dark #sidebar .text-\[\#A5C0B2\] {
+  color: #95A2B3;
+}
+html.dark #sidebar .text-\[\#7CE2B3\] {
+  color: #34D399;
+}
+
+/* Topbar & Sticky Headers & Agent Drawer */
+html.dark #topbar,
+html.dark header.sticky,
+html.dark #agent-drawer,
+html.dark .bg-\[\#FAF9F5\]\/90 {
+  background-color: rgba(13, 17, 23, 0.92);
+  border-color: #212936;
+  color: #F0F6FC;
+}
+html.dark #agent-drawer .bg-\[\#122019\] {
+  background-color: #0D1117;
+  border-color: #212936;
+}
+
+/* Main Page Backgrounds */
+html.dark .bg-\[\#F4F3EC\],
+html.dark .bg-\[\#F4F3EC\]\/80,
+html.dark .bg-\[\#F5F3EC\] {
+  background-color: #090C10;
+}
+
+/* Primary Cards, Modals & Containers */
+html.dark .editorial-card,
+html.dark .match-card,
+html.dark .master-nav-item,
+html.dark .bg-white,
+html.dark .bg-white\/80,
+html.dark .bg-white\/90 {
+  background-color: #12171F;
+  border-color: #252E3D;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+/* Nested Sub-Panels */
+html.dark .bg-\[\#FAF9F5\],
+html.dark .bg-\[\#FAF9F5\]\/60,
+html.dark .bg-\[\#FAF9F5\]\/70,
+html.dark .bg-\[\#FAF8F5\],
+html.dark .bg-\[\#F9F8F4\],
+html.dark .bg-\[\#FBFBF9\],
+html.dark .bg-\[\#F6F8F6\],
+html.dark .bg-\[\#FAFDFB\],
+html.dark .bg-\[\#FCFBF8\] {
+  background-color: #181F29;
+  border-color: #283242;
+}
+
+/* Gradient backgrounds (e.g. hero/feature cards) */
+html.dark .from-\[\#F2F7F4\] {
+  --tw-gradient-from: #142220 var(--tw-gradient-from-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+html.dark .via-white {
+  --tw-gradient-via: #12171F var(--tw-gradient-via-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via), var(--tw-gradient-to);
+}
+html.dark .to-\[\#FAF9F5\] {
+  --tw-gradient-to: #161C26 var(--tw-gradient-to-position);
+}
+
+/* Modal overlays */
+html.dark .bg-\[\#122019\]\/60,
+html.dark .bg-\[\#1A211D\]\/45,
+html.dark .bg-black\/40,
+html.dark .bg-black\/50 {
+  background-color: rgba(4, 6, 10, 0.78);
+}
+
+/* Interactive Card & List Hovers */
+html.dark .master-nav-item:hover,
+html.dark .hover\:bg-\[\#FCFBF8\]:hover,
+html.dark .hover\:bg-\[\#FAF9F5\]:hover,
+html.dark .hover\:bg-\[\#F4F3EC\]:hover,
+html.dark .hover\:bg-\[\#F2F7F4\]:hover,
+html.dark .hover\:bg-\[\#E5E1D6\]:hover {
+  background-color: #1E2736;
+}
+
+html.dark .master-nav-item.active-master {
+  background-color: #142422;
+  border-color: #10B981;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.35), 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+html.dark .hover\:bg-\[\#E3F2EA\]:hover,
+html.dark .hover\:bg-\[\#E3F2EA\]\/50:hover {
+  background-color: #123629;
+}
+
+html.dark .hover\:bg-\[\#FDF0ED\]:hover,
+html.dark .hover\:bg-\[\#FBE4DF\]:hover {
+  background-color: #3D181E;
+}
+
+/* Primary Buttons (Emerald on Obsidian) */
+html.dark .btn-primary-pill {
+  background-color: #059669;
+  border-color: #10B981;
+  color: #FFFFFF;
+}
+html.dark .btn-primary-pill:hover {
+  background-color: #10B981;
+  border-color: #34D399;
+}
+
+html.dark .btn-secondary-pill,
+html.dark #theme-toggle {
+  background-color: #1B222D;
+  color: #F0F6FC;
+  border-color: #313C4E;
+}
+html.dark .btn-secondary-pill:hover,
+html.dark #theme-toggle:hover {
+  background-color: #252E3D;
+  border-color: #46556E;
+  color: #FFFFFF;
+}
+
+html.dark .bg-\[\#1D5C42\],
+html.dark .bg-\[\#154531\],
+html.dark .bg-\[\#174A35\],
+html.dark .bg-\[\#2E7D5B\] {
+  background-color: #059669;
+  color: #FFFFFF;
+}
+html.dark .hover\:bg-\[\#154531\]:hover {
+  background-color: #10B981;
+}
+
+/* Neutral Stone Chips, Progress Tracks & Shortcut Keys */
+html.dark .bg-\[\#EFECE4\],
+html.dark .bg-\[\#E2DEC9\],
+html.dark .bg-\[\#E5E1D6\],
+html.dark .bg-\[\#E5E3DC\],
+html.dark .bg-\[\#F2EFE9\],
+html.dark .pill-stone,
+html.dark .bar-track,
+html.dark .badge-1,
+html.dark #command-bar kbd {
+  background-color: #1E2532;
+  border-color: #303B4E;
+  color: #D6DEE8;
+}
+
+/* Emerald / Mint Tinted Surfaces (ALL opacity variants included!) */
+html.dark .bg-\[\#E3F2EA\],
+html.dark .bg-\[\#E3F2EA\]\/40,
+html.dark .bg-\[\#E3F2EA\]\/50,
+html.dark .bg-\[\#E3F2EA\]\/60,
+html.dark .bg-\[\#E3F2EA\]\/70,
+html.dark .bg-\[\#F2F7F4\],
+html.dark .bg-\[\#EBF4EF\],
+html.dark .bg-\[\#F4FAF6\],
+html.dark .bg-\[\#D1EAD9\],
+html.dark .bg-\[\#DCECE3\],
+html.dark .pill-sage,
+html.dark .chip,
+html.dark .badge-0,
+html.dark .citation-pill,
+html.dark .turn-dot.done {
+  background-color: #0E2920;
+  border-color: #1D5944;
+  color: #6EE7B7;
+}
+html.dark .citation-pill:hover {
+  background-color: #059669;
+  border-color: #34D399;
+  color: #FFFFFF;
+}
+
+/* Cobalt / Blue Tinted Surfaces (ALL opacity variants included!) */
+html.dark .bg-\[\#EEF5FB\],
+html.dark .bg-\[\#EEF5FB\]\/70,
+html.dark .bg-\[\#E6F0FA\],
+html.dark .bg-\[\#F4F9FD\] {
+  background-color: #102038;
+  border-color: #254A7C;
+  color: #7DD3FC;
+}
+
+/* Crimson / Coral Tinted Surfaces */
+html.dark .bg-\[\#FDECE9\],
+html.dark .bg-\[\#FDF0ED\],
+html.dark .bg-\[\#FBECE9\],
+html.dark .bg-\[\#FDE8E8\],
+html.dark .bg-\[\#FDF2F0\],
+html.dark .bg-\[\#FDF3F2\],
+html.dark .bg-\[\#FBE4DF\],
+html.dark .bg-\[\#F5D8D2\],
+html.dark .bg-red-50,
+html.dark .pill-coral,
+html.dark .badge-2,
+html.dark .err {
+  background-color: #2B1216;
+  border-color: #6E242D;
+  color: #FDA4AF;
+}
+
+/* Amber / Warning Tinted Surfaces */
+html.dark .bg-\[\#FEF3C7\],
+html.dark .bg-\[\#FEF6E6\],
+html.dark .bg-\[\#FEF6E7\],
+html.dark .bg-\[\#FEF2D6\],
+html.dark .bg-\[\#FDF6EC\],
+html.dark .bg-\[\#FFFBEB\],
+html.dark .bg-amber-50,
+html.dark .bg-amber-50\/40 {
+  background-color: #261C0D;
+  border-color: #6E4B17;
+  color: #FCD34D;
+}
+
+/* Violet / Purple Tinted Surfaces */
+html.dark .bg-\[\#F3EEF8\] {
+  background-color: #1F1733;
+  border-color: #4C327A;
+  color: #D8B4FE;
+}
+
+/* Crisp Graphite Borders */
+html.dark .border-\[\#E5E3DC\],
+html.dark .border-\[\#E5E3DA\],
+html.dark .border-\[\#ECEAE2\],
+html.dark .border-\[\#EDEBE3\],
+html.dark .border-\[\#F0EEE7\],
+html.dark .border-\[\#F4F3EC\] {
+  border-color: #252E3D;
+}
+
+html.dark .border-\[\#D5D2C6\],
+html.dark .border-\[\#D4D1C7\],
+html.dark .border-\[\#E2DEC9\],
+html.dark .border-\[\#C7C4B8\],
+html.dark .border-\[\#C8C3B4\],
+html.dark .border-\[\#D8D4C7\],
+html.dark .border-\[\#D8D4C8\],
+html.dark .border-\[\#DCD9CE\],
+html.dark .border-\[\#E0DCD0\] {
+  border-color: #323E52;
+}
+
+html.dark .border-\[\#C8E4D5\],
+html.dark .border-\[\#DCE8E1\],
+html.dark .border-\[\#CFE4D8\],
+html.dark .border-\[\#D4E6DC\],
+html.dark .border-\[\#DCE4DE\] {
+  border-color: #1D5944;
+}
+
+html.dark .border-\[\#F5D0C8\],
+html.dark .border-\[\#F3D2CC\],
+html.dark .border-\[\#F4DFDF\],
+html.dark .border-\[\#F5B8B8\],
+html.dark .border-\[\#F5C6BF\],
+html.dark .border-\[\#F5D0CC\],
+html.dark .border-red-200 {
+  border-color: #6E242D;
+}
+
+html.dark .border-\[\#F2D59B\],
+html.dark .border-\[\#E5C97B\],
+html.dark .border-\[\#F0D9B5\],
+html.dark .border-\[\#F2C97D\],
+html.dark .border-\[\#F3D9A4\],
+html.dark .border-\[\#F5D08A\],
+html.dark .border-amber-200,
+html.dark .border-amber-300 {
+  border-color: #6E4B17;
+}
+
+html.dark .border-\[\#C8D9E8\],
+html.dark .border-\[\#C2DAF2\] {
+  border-color: #254A7C;
+}
+
+html.dark .border-\[\#DECFF0\] {
+  border-color: #4C327A;
+}
+
+/* High-Contrast Typography */
+html.dark .text-\[\#1C1E1B\],
+html.dark .text-\[\#1A211D\],
+html.dark .bar-val {
+  color: #F0F6FC;
+}
+
+html.dark .text-\[\#4A483F\],
+html.dark .text-\[\#4A4943\],
+html.dark .text-\[\#3B423E\],
+html.dark .text-\[\#353732\],
+html.dark .text-\[\#4A5550\],
+html.dark .text-\[\#4E645A\],
+html.dark .bar-label {
+  color: #D0D7DE;
+}
+
+html.dark .text-\[\#5C5A52\],
+html.dark .text-\[\#57605A\],
+html.dark .text-\[\#6E6C64\],
+html.dark .text-\[\#7A776E\],
+html.dark .text-\[\#767F79\],
+html.dark .text-\[\#8E9690\] {
+  color: #95A2B3;
+}
+
+html.dark .text-\[\#C7C4B8\],
+html.dark .text-\[\#B8B4A6\],
+html.dark .text-slate-400 {
+  color: #7D8B9D;
+}
+
+html.dark .text-\[\#1D5C42\],
+html.dark .text-\[\#1B5E43\],
+html.dark .text-\[\#164934\] {
+  color: #34D399;
+}
+
+html.dark .text-\[\#9E2A20\],
+html.dark .text-\[\#6B1A13\],
+html.dark .text-\[\#8A3B32\],
+html.dark .text-red-800 {
+  color: #FDA4AF;
+}
+
+html.dark .text-\[\#92400E\],
+html.dark .text-\[\#9A5B13\],
+html.dark .text-\[\#8F5B00\],
+html.dark .text-\[\#C88A32\],
+html.dark .text-\[\#4A3B12\],
+html.dark .text-\[\#5F3C00\],
+html.dark .text-\[\#6B4A10\],
+html.dark .text-\[\#7A4E00\],
+html.dark .text-\[\#B45309\],
+html.dark .text-\[\#D97706\],
+html.dark .text-amber-900,
+html.dark .text-amber-700,
+html.dark .text-amber-600 {
+  color: #FCD34D;
+}
+
+html.dark .text-\[\#16436E\],
+html.dark .text-\[\#1B5084\],
+html.dark .text-\[\#1E4B7A\],
+html.dark .text-\[\#2E3862\] {
+  color: #7DD3FC;
+}
+
+html.dark .text-\[\#5B2C82\] {
+  color: #D8B4FE;
+}
+
+html.dark .hover\:text-\[\#1C1E1B\]:hover {
+  color: #FFFFFF;
+}
+html.dark .hover\:text-\[\#1B5E43\]:hover,
+html.dark .hover\:text-\[\#1D5C42\]:hover {
+  color: #6EE7B7;
+}
+
+/* Primary green CTA buttons keep bright white labels */
+html.dark .bg-\[\#1D5C42\].text-white,
+html.dark .bg-\[\#1D5C42\] .text-white,
+html.dark button.bg-\[\#1D5C42\],
+html.dark a.bg-\[\#1D5C42\] {
+  color: #FFFFFF;
+}
+
+/* Form Inputs, Selects & Textareas */
+html.dark main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.dark main textarea,
+html.dark main select,
+html.dark #topbar input,
+html.dark #agent-drawer input,
+html.dark #agent-drawer textarea,
+html.dark #agent-drawer select,
+html.dark form input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.dark form textarea,
+html.dark form select,
+html.dark [role="dialog"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.dark [role="dialog"] textarea,
+html.dark [role="dialog"] select {
+  background-color: #0B0E14;
+  color: #F0F6FC;
+  border-color: #313D50;
+}
+
+html.dark main input:focus,
+html.dark main textarea:focus,
+html.dark main select:focus,
+html.dark #topbar input:focus,
+html.dark form input:focus,
+html.dark form textarea:focus,
+html.dark form select:focus,
+html.dark [role="dialog"] input:focus,
+html.dark [role="dialog"] textarea:focus,
+html.dark [role="dialog"] select:focus {
+  background-color: #080A0E;
+  border-color: #10B981;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #7D8B9D;
+}
+
+/* Interview Studio Turn Stepper */
+html.dark .turn-dot {
+  background: #181F29;
+  color: #95A2B3;
+  border-color: #313C4E;
+}
+html.dark .turn-dot.current {
+  background: #059669;
+  color: #FFFFFF;
+  border-color: #34D399;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.28);
+}
+
+/* Role Switcher Bar */
+html.dark #demo-role-bar .demo-role-btn:hover {
+  background-color: #273142;
+  color: #FFFFFF;
+}
+html.dark #demo-role-bar .demo-role-btn.bg-\[\#1D5C42\] {
+  background-color: #059669;
+  color: #FFFFFF;
+}
+
+/* Modal Content Containers */
+html.dark [role="dialog"] > div,
+html.dark #smart-jd-modal > div,
+html.dark #jnf-modal > div,
+html.dark #scrape-modal > div,
+html.dark #career-os-confirm-modal > div {
+  background-color: #12171F;
+  border-color: #2C3647;
+  color: #F0F6FC;
+}
+
+/* Tables */
+html.dark thead tr,
+html.dark thead th {
+  background-color: #181F29;
+  color: #D0D7DE;
+  border-color: #252E3D;
+}
+html.dark tbody tr {
+  border-color: #202836;
+}
+html.dark tbody tr:hover {
+  background-color: #171E28;
+}
+
+/* Dark Scrollbars */
+html.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+html.dark ::-webkit-scrollbar-track {
+  background: #090C10;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #2B3547;
+  border-radius: 9999px;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3B4961;
+}
+
+/* Always reset to crisp light paper when printing */
+@media print {
+  html.dark,
+  html.dark body,
+  html.dark main,
+  html.dark #summary,
+  html.dark .editorial-card,
+  html.dark .qa-turn-card {
+    background: #FFFFFF !important;
+    background-color: #FFFFFF !important;
+    color: #111827 !important;
+    border-color: #D1D5DB !important;
+    box-shadow: none !important;
+  }
+  html.dark .text-\[\#1C1E1B\],
+  html.dark .text-\[\#4A483F\],
+  html.dark .text-\[\#5C5A52\],
+  html.dark .text-\[\#6E6C64\] {
+    color: #1F2937 !important;
+  }
+}

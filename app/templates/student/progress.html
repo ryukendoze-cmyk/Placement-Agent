@@ -601,7 +601,7 @@
                 ],
                 backgroundColor: ["#1D5C42", "#C99A49", "#B9382C", "#D5D2C6"],
                 borderWidth: 1,
-                borderColor: "#FFFFFF"
+                borderColor: (window.CareerOSTheme && window.CareerOSTheme.get() === "dark") ? "#12171F" : "#FFFFFF"
               }
             ]
           },
@@ -613,6 +613,7 @@
           }
         });
       }
+      if (window.CareerOSTheme) window.CareerOSTheme.syncCharts();
     }
 
     function updateDomFromReport(report) {

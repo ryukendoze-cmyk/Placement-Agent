@@ -15,8 +15,31 @@
     .mono, code { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     .err { background: #FDF0ED; color: #9E2A20; border: 1px solid #F5D0C8; border-radius: .75rem; padding: .6rem .85rem; margin-bottom: 1rem; font-size: .875rem; }
   </style>
+  <link rel="stylesheet" href="/static/theme.css" />
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem("careeros-theme") === "dark") {
+          document.documentElement.classList.add("dark");
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      } catch (_e) {}
+    })();
+  </script>
 </head>
-<body class="bg-[#F4F3EC] text-[#1C1E1B] min-h-screen flex items-center justify-center px-4 py-8">
+<body class="bg-[#F4F3EC] text-[#1C1E1B] min-h-screen flex items-center justify-center px-4 py-8 relative">
+  <button id="theme-toggle" type="button" aria-pressed="false" aria-label="Switch to dark mode" title="Switch to dark mode"
+          class="fixed top-4 right-4 z-20 inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] shadow-xs transition-colors whitespace-nowrap cursor-pointer">
+    <svg class="theme-icon-moon w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+    <svg class="theme-icon-sun w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
+      <path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+    </svg>
+    <span class="theme-toggle-label">Dark Mode</span>
+  </button>
   <div class="w-full max-w-xl">
     <div class="flex items-center gap-3.5 mb-6 justify-center">
       <span class="bg-[#E3F2EA] border border-[#C8E4D5] text-[#1D5C42] rounded-2xl p-3 flex items-center justify-center">
@@ -231,5 +254,6 @@
       });
     })();
   </script>
+  <script src="/static/theme.js"></script>
 </body>
 </html>

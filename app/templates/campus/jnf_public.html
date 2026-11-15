@@ -21,6 +21,17 @@
       font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
   </style>
+  <link rel="stylesheet" href="/static/theme.css" />
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem("careeros-theme") === "dark") {
+          document.documentElement.classList.add("dark");
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      } catch (_e) {}
+    })();
+  </script>
 </head>
 <body class="min-h-screen bg-[#F4F3EC] text-[#1C1E1B] py-6 px-4 sm:py-10">
   <div class="max-w-3xl mx-auto space-y-6">
@@ -38,10 +49,24 @@
           <h1 class="font-serif-display text-xl sm:text-2xl font-semibold text-[#1C1E1B]">Recruiter Job Notification Form (JNF)</h1>
         </div>
       </div>
-      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">
-        <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
-        TPO Intake Portal
-      </span>
+      <div class="flex items-center gap-2.5">
+        <button id="theme-toggle" type="button" aria-pressed="false" aria-label="Switch to dark mode" title="Switch to dark mode"
+                class="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] transition-colors whitespace-nowrap cursor-pointer">
+          <svg class="theme-icon-moon w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+          <svg class="theme-icon-sun w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
+            <path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+          </svg>
+          <span class="theme-toggle-label hidden sm:inline">Dark Mode</span>
+        </button>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#E3F2EA] text-[#1B5E43] border border-[#C8E4D5]">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#1D5C42]"></span>
+          TPO Intake Portal
+        </span>
+      </div>
     </header>
 
     <!-- Error / Validation Banner -->
@@ -363,5 +388,6 @@
     }
   })();
   </script>
+  <script src="/static/theme.js"></script>
 </body>
 </html>

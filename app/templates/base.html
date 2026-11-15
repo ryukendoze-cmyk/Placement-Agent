@@ -260,6 +260,17 @@
     }
     #menu-btn { display: none; }
   </style>
+  <link rel="stylesheet" href="/static/theme.css" />
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem("careeros-theme") === "dark") {
+          document.documentElement.classList.add("dark");
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      } catch (_e) {}
+    })();
+  </script>
 </head>
 {% set active_role = role|default('tpo_admin') %}
 {% set target_sid = (current_user.student_id if current_user and current_user.student_id and current_user.student_id != 'demo-student' else '') or (user.student_id if user and user.student_id and user.student_id != 'demo-student' else '') or sid or (students[0].id if students and students|length > 0 else '') %}
@@ -491,6 +502,18 @@
           <button type="button" data-role-value="tpo_admin" class="demo-role-btn inline-flex items-center justify-center text-xs px-3 py-1 rounded-full font-medium transition-colors cursor-pointer whitespace-nowrap {% if active_role == 'tpo_admin' %}bg-[#1D5C42] text-white shadow-xs{% else %}text-[#4A483F] hover:text-[#1C1E1B] hover:bg-[#E5E1D6]{% endif %}">TPO Admin</button>
         </div>
         {% endif %}
+        <button id="theme-toggle" type="button" aria-pressed="false" aria-label="Switch to dark mode" title="Switch to dark mode"
+                class="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] transition-colors whitespace-nowrap shrink-0 cursor-pointer">
+          <svg class="theme-icon-moon w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+          <svg class="theme-icon-sun w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
+            <path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+          </svg>
+          <span class="theme-toggle-label hidden sm:inline">Dark Mode</span>
+        </button>
         <button id="open-drawer" type="button"
                 class="inline-flex items-center justify-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-full bg-[#1D5C42] hover:bg-[#154531] text-white transition-colors whitespace-nowrap shrink-0 cursor-pointer">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2"/><path d="M15 2v2"/><path d="M9 20v2"/><path d="M15 20v2"/><path d="M2 9h2"/><path d="M2 15h2"/><path d="M20 9h2"/><path d="M20 15h2"/></svg>
@@ -523,6 +546,7 @@
 
   <div id="toast-root" role="status" aria-live="polite"></div>
 
+  <script src="/static/theme.js"></script>
   <script src="/static/app.js"></script>
   <script src="/static/agent_brain.js"></script>
   <script>
