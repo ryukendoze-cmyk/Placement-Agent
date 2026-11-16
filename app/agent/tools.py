@@ -178,8 +178,10 @@ def _audit_resume_bullets(ctx, session, student_id: str, **_):
     present = []
     if ctx.llm is not None and text.strip():
         from ..models import StudentSkill
-        present = [ctx.taxonomy.get(r.skill_id).name
-                   for r in session.exec(_select(StudentSkill, student_id)).all()]
+        present = []
+        for r in session.exec(_select(StudentSkill, student_id)).all():
+            sk = ctx.taxonomy.get_opt(r.skill_id)
+            present.append(sk.name if sk is not None else r.skill_id)
     ats = xray_resume(text, ctx.taxonomy)
     improvements = improve_weak_bullets(text, present, ctx.llm, taxonomy=ctx.taxonomy) if ctx.llm else []
     return {"student_id": student_id, "ats": ats, "improvements": improvements}
@@ -265,12 +267,17 @@ def _persist_upskilling_plan(ctx, session, student_id: str, job_id: str | None =
     ss_rows = session.exec(_select(StudentSkill, student_id)).all()
     student_skills = {r.skill_id: list(r.evidence) for r in ss_rows}
     levels = {r.skill_id: r.level for r in ss_rows}
+    v_statuses = {
+        r.skill_id: (getattr(r, "verification_status", "claimed") or "claimed")
+        for r in ss_rows
+    }
     sv = ctx.vector_store.get("student", student_id)
     if sv is None:
         sv = ctx.embedder.embed(student.resume_text or "")
     ranked = rank_jobs([job], sv, student_skills, ctx.embedder, ctx.taxonomy,
                        vector_store=ctx.vector_store, job_vec_cache=ctx.job_vectors,
-                       top=1, levels=levels, student=student)
+                       top=1, levels=levels, verification_statuses=v_statuses,
+                       student=student, session=session)
     if not ranked:
         raise ValueError("failed to score target job")
     job_score = ranked[0][1]
@@ -281,13 +288,17 @@ def _persist_upskilling_plan(ctx, session, student_id: str, job_id: str | None =
 
     from ..models import PlanItem
     prior = session.get(UpskillPlan, plan_id)
-    if prior is not None:
-        session.execute(delete(PlanItem).where(PlanItem.plan_id == prior.id))
-        session.delete(prior)
-        session.commit()
+    try:
+        if prior is not None:
+            session.execute(delete(PlanItem).where(PlanItem.plan_id == prior.id))
+            session.delete(prior)
+            session.flush()
 
-    plan, items = build_plan(session, student_id, job, job_score, llm=ctx.llm,
-                             levels=levels)
+        plan, items = build_plan(session, student_id, job, job_score, llm=ctx.llm,
+                                 levels=levels)
+    except Exception:
+        session.rollback()
+        raise
     return {
         "plan_id": plan.id, "job_id": plan.job_id, "total_hours": plan.total_hours,
         "item_count": len(items),
@@ -397,7 +408,7 @@ def _search_live_market_jobs(ctx, session, student_id: str | None = None,
 
 def _purge_live_market_jobs(ctx, session, actor_role: str | None = None, **_):
     """Purge all live scraped job postings from the database and vector index."""
-    if actor_role is not None and str(actor_role).strip().lower() not in ("tpo_admin", "faculty_mentor"):
+    if str(actor_role or "").strip().lower() not in ("tpo_admin", "faculty_mentor"):
         raise PermissionError("purge_live_market_jobs requires faculty_mentor or tpo_admin privileges")
     from ..scraper.pipeline import purge_live_jobs
     count = purge_live_jobs(session, ctx=ctx, clear_output=True)

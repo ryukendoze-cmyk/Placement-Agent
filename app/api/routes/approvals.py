@@ -224,7 +224,9 @@ def execute_approved(session: Session, ctx, ap: ApprovalRequest) -> dict:
     elif kind == "proficiency_waiver":
         sid = payload.get("student_id")
         skill_id = payload.get("skill_id") or ap.target_id
-        new_level = payload.get("level") or payload.get("new_level") or "intermediate"
+        new_level = str(payload.get("level") or payload.get("new_level") or "intermediate").strip().lower()
+        if new_level not in ("basic", "intermediate", "advanced"):
+            raise HTTPException(400, f"invalid proficiency level: {new_level}")
         ss = session.exec(select(StudentSkill).where(StudentSkill.student_id == sid,
                                                      StudentSkill.skill_id == skill_id)).first()
         if ss is None:
@@ -257,37 +259,68 @@ def execute_approved(session: Session, ctx, ap: ApprovalRequest) -> dict:
     return summary
 
 
-def _faculty_approval_allowed(request: Request | None, session: Session, ap: ApprovalRequest) -> bool:
+_ALLOWED_APPROVAL_KINDS = {
+    "nomination",
+    "job_application_nomination",
+    "proficiency_waiver",
+    "eligibility_waiver",
+    "cohort_bootcamp_publish",
+    "campus_drive_publish",
+    "resume_reupload_request",
+}
+_ALLOWED_WAIVER_LEVELS = {"basic", "intermediate", "advanced"}
+
+
+def _norm_branch(value: str | None) -> str:
+    from app.taxonomy.branches import normalize_branch
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    return (normalize_branch(raw) or raw).strip().lower()
+
+
+def _faculty_approval_allowed(
+    request: Request | None,
+    session: Session,
+    ap: ApprovalRequest,
+    *,
+    students_by_id: dict[str, Student] | None = None,
+) -> bool:
     """Return True when the caller is not a faculty_mentor or the approval matches their department."""
     if request is None:
         return True
     user = get_current_user_optional(request)
     if user is None or user.role != "faculty_mentor":
         return True
-    dept = (user.department or "").strip().lower()
+    dept = _norm_branch(user.department)
     if not dept:
-        return True
+        return False
     payload = ap.payload or {}
     sid = payload.get("student_id")
     if not sid and ap.target_id and ap.target_id.startswith("stu-"):
         sid = ap.target_id
     if sid:
-        stu = session.get(Student, sid)
-        if stu is not None and (stu.branch or "").strip():
-            return stu.branch.strip().lower() == dept
+        stu = students_by_id.get(sid) if students_by_id is not None else session.get(Student, sid)
+        if stu is None:
+            return False
+        s_branch = _norm_branch(stu.branch)
+        return bool(s_branch and s_branch == dept)
     if ap.kind == "campus_drive_publish":
         cd_payload = payload.get("campus_drive") if isinstance(payload.get("campus_drive"), dict) else payload
         elig = cd_payload.get("eligibility") if isinstance(cd_payload.get("eligibility"), dict) else {}
         branches = elig.get("allowed_branches") or []
         if branches:
-            return any(str(b or "").strip().lower() == dept for b in branches)
-    return True
+            return any(_norm_branch(b) == dept for b in branches)
+        return False
+    if ap.kind == "cohort_bootcamp_publish":
+        return True
+    return False
 
 
 def _enforce_faculty_approval_scope(request: Request | None, session: Session, ap: ApprovalRequest) -> None:
     if not _faculty_approval_allowed(request, session, ap):
         user = get_current_user_optional(request) if request is not None else None
-        dept = user.department if user else "department"
+        dept = (user.department if user else None) or "department"
         raise HTTPException(
             403,
             f"Access denied: Faculty mentor ({dept}) may not act on out-of-department approvals",
@@ -296,34 +329,74 @@ def _enforce_faculty_approval_scope(request: Request | None, session: Session, a
 
 @router.get("/api/approvals")
 def list_approvals(status: str | None = None,
+                   limit: int = 100,
+                   offset: int = 0,
                    session: Session = Depends(get_session),
                    role: str = Depends(require_role("faculty_mentor", "tpo_admin")),
                    request: Request = None):  # type: ignore[assignment]
+    limit = max(1, min(int(limit), 200))
+    offset = max(0, int(offset))
     q = select(ApprovalRequest).order_by(ApprovalRequest.created_at.desc())
     if status:
         q = q.where(ApprovalRequest.status == status)
-    rows = session.exec(q).all()
-    return [_payload(a, session=session) for a in rows if _faculty_approval_allowed(request, session, a)]
+    rows = session.exec(q.offset(offset).limit(limit)).all()
+    if not rows:
+        return []
+    appr_ids = [r.id for r in rows]
+    linked_apps = session.exec(
+        select(JobApplication).where(JobApplication.approval_id.in_(appr_ids))
+    ).all()
+    apps_by_appr = {app.approval_id: app for app in linked_apps if app.approval_id}
+    sids = {
+        str((r.payload or {}).get("student_id") or (r.target_id if (r.target_id or "").startswith("stu-") else "")).strip()
+        for r in rows
+    } - {""}
+    students_by_id = (
+        {s.id: s for s in session.exec(select(Student).where(Student.id.in_(sids))).all()}
+        if sids else {}
+    )
+    out = []
+    for a in rows:
+        if not _faculty_approval_allowed(request, session, a, students_by_id=students_by_id):
+            continue
+        item = _payload(a)
+        linked = apps_by_appr.get(a.id)
+        if linked is not None:
+            item["application_id"] = linked.id
+            item["application_status"] = linked.status
+        out.append(item)
+    return out
 
 
 @router.post("/api/approvals", status_code=201)
 def create_approval(payload: dict,
+                    request: Request = None,  # type: ignore[assignment]
                     session: Session = Depends(get_session),
                     role: str = Depends(require_role("faculty_mentor", "tpo_admin"))):
     """Queue a new HITL request (e.g. Launch Bootcamp) for review."""
-    kind = str((payload or {}).get("kind") or "").strip()
+    if not isinstance(payload, dict):
+        raise HTTPException(422, "payload must be a JSON object")
+    kind = str(payload.get("kind") or "").strip()
     if not kind:
         raise HTTPException(400, "kind is required")
-    target_id = str((payload or {}).get("target_id") or "").strip()
-    title = str((payload or {}).get("title") or "").strip() or kind
-    summary = str((payload or {}).get("summary") or "").strip()
-    body = (payload or {}).get("payload") or {}
-    if not isinstance(body, dict):
-        body = {}
-    aid = f"apr-{uuid4().hex[:8]}"
+    if kind not in _ALLOWED_APPROVAL_KINDS:
+        raise HTTPException(422, f"invalid approval kind '{kind}'")
+    target_id = str(payload.get("target_id") or "").strip()
+    title = str(payload.get("title") or "").strip() or kind
+    summary = str(payload.get("summary") or "").strip()
+    raw_body = payload.get("payload")
+    if raw_body is not None and not isinstance(raw_body, dict):
+        raise HTTPException(422, "payload.payload must be an object")
+    body = raw_body or {}
+    if kind == "proficiency_waiver":
+        lvl = str(body.get("level") or body.get("new_level") or "intermediate").strip().lower()
+        if lvl not in _ALLOWED_WAIVER_LEVELS:
+            raise HTTPException(422, f"invalid proficiency level '{lvl}'")
+    aid = f"apr-{uuid4().hex[:12]}"
     ap = ApprovalRequest(id=aid, kind=kind, target_id=target_id, title=title,
                          summary=summary, payload=body, status="pending_review",
                          requested_by=role, created_at=datetime.now(timezone.utc))
+    _enforce_faculty_approval_scope(request, session, ap)
     session.add(ap)
     _audit(session, action="approval.requested", entity_type="approval",
            entity_id=aid, actor_role=role,
@@ -373,13 +446,22 @@ def approve(appr_id: str, payload: dict | None = None,
                 and not (ap.endorsed_by or "").strip()):
             raise HTTPException(
                 400, "faculty mentor endorsement required before TPO approval")
-        # Atomic HITL execution: set reviewed_by so execute_approved can record it
-        # on linked rows; if execution fails or raises, rollback completely so
-        # status NEVER flips to approved, record approval.approve_failed, and raise 400/409.
-        ap.reviewed_by = role
-        ap.review_note = note
-        ap.reviewed_at = datetime.now(timezone.utc)
-        session.add(ap)
+        # Atomic HITL execution: claim pending_review via conditional UPDATE before
+        # executing side effects so concurrent approvers serialize and never double-execute.
+        from sqlalchemy import update as _sa_update
+        now = datetime.now(timezone.utc)
+        claim = session.exec(
+            _sa_update(ApprovalRequest)
+            .where(ApprovalRequest.id == appr_id, ApprovalRequest.status == "pending_review")
+            .values(status="processing", reviewed_by=role, review_note=note, reviewed_at=now)
+        )
+        if getattr(claim, "rowcount", 0) != 1:
+            session.rollback()
+            fresh = session.get(ApprovalRequest, appr_id)
+            if fresh is not None and fresh.status == "approved":
+                return _payload(fresh, session=session)
+            raise HTTPException(409, "approval is already being processed or finalized")
+        session.refresh(ap)
         try:
             summary = execute_approved(session, ctx, ap)
         except HTTPException as he:
@@ -414,7 +496,7 @@ def approve(appr_id: str, payload: dict | None = None,
         ap.status = "approved"
         ap.reviewed_by = role
         ap.review_note = note
-        ap.reviewed_at = datetime.now(timezone.utc)
+        ap.reviewed_at = now
         session.add(ap)
         _audit(session, action="approval.approved", entity_type="approval",
                entity_id=ap.id, actor_role=role,

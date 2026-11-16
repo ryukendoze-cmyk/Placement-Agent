@@ -128,6 +128,8 @@
               <span class="mono text-[10px] px-2 py-0.5 rounded-full border border-[#D5D2C6] bg-white text-[#5C5A52]">DOCX</span>
               <span class="mono text-[10px] px-2 py-0.5 rounded-full border border-[#D5D2C6] bg-white text-[#5C5A52]">TXT</span>
               <span class="mono text-[10px] px-2 py-0.5 rounded-full border border-[#D5D2C6] bg-white text-[#5C5A52]">MD</span>
+              <span class="mono text-[10px] px-2 py-0.5 rounded-full border border-[#D5D2C6] bg-white text-[#5C5A52]">PNG</span>
+              <span class="mono text-[10px] px-2 py-0.5 rounded-full border border-[#D5D2C6] bg-white text-[#5C5A52]">JPG</span>
             </div>
           </div>
         </div>
@@ -184,6 +186,12 @@
   const uploadForm = document.querySelector('form[action="/upload"]');
   const uploadBtn = document.getElementById('upload-btn');
   if (uploadForm && uploadBtn) {
+    const origBtnHtml = uploadBtn.innerHTML;
+    window.addEventListener('pageshow', function () {
+      uploadBtn.disabled = false;
+      uploadBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+      uploadBtn.innerHTML = origBtnHtml;
+    });
     uploadForm.addEventListener('submit', function (e) {
       if (uploadBtn.disabled) {
         e.preventDefault();

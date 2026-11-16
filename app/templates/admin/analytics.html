@@ -495,12 +495,14 @@ const DATA = {{ analytics|tojson }};
 
   function download(name, mime, text) {
     var blob = new Blob([text], { type: mime });
+    var objUrl = URL.createObjectURL(blob);
     var a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
+    a.href = objUrl;
     a.download = name;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(objUrl); }, 1000);
   }
 
   var csvBtn = document.getElementById("export-csv");

@@ -26,8 +26,10 @@ import binascii
 import hashlib
 import hmac
 import json
+import threading
 import time
 from typing import Any, Literal
+from uuid import uuid4
 
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, field_validator
@@ -70,19 +72,74 @@ class CurrentUser(BaseModel):
         return v
 
 
+_REVOKED_LOCK = threading.Lock()
+_REVOKED_JTIS: dict[str, float] = {}
+_MAX_REVOKED_JTIS = 50_000
+
+
+def _prune_revoked_locked(now: float) -> None:
+    if len(_REVOKED_JTIS) >= _MAX_REVOKED_JTIS or (len(_REVOKED_JTIS) > 1024 and len(_REVOKED_JTIS) % 256 == 0):
+        expired = [j for j, exp_ts in _REVOKED_JTIS.items() if exp_ts <= now]
+        for j in expired:
+            _REVOKED_JTIS.pop(j, None)
+        while len(_REVOKED_JTIS) >= _MAX_REVOKED_JTIS:
+            _REVOKED_JTIS.pop(next(iter(_REVOKED_JTIS)), None)
+
+
+def revoke_session_token(value: str | None) -> bool:
+    """Revoke a signed session token's ``jti`` until its expiry timestamp."""
+    claims = decode_session(value)
+    if not claims:
+        return False
+    jti = str(claims.get("jti") or "").strip()
+    if not jti:
+        return False
+    now = time.time()
+    try:
+        exp_ts = float(claims.get("exp") or (now + 86400))
+    except (TypeError, ValueError):
+        exp_ts = now + 86400
+    with _REVOKED_LOCK:
+        _prune_revoked_locked(now)
+        _REVOKED_JTIS[jti] = exp_ts
+    return True
+
+
+def is_token_revoked(jti: str | None) -> bool:
+    if not jti:
+        return False
+    key = str(jti).strip()
+    if not key:
+        return False
+    now = time.time()
+    with _REVOKED_LOCK:
+        exp_ts = _REVOKED_JTIS.get(key)
+        if exp_ts is None:
+            return False
+        if exp_ts <= now:
+            _REVOKED_JTIS.pop(key, None)
+            return False
+        return True
+
+
 def encode_session(claims: dict[str, Any]) -> str:
     """Serialize a claim dict to a cryptographically signed ps06_session token.
 
-    Produces ``<base64url_payload>.<hmac_sha256_hex>`` (Milestone 15). ``iat`` and
-    ``exp`` (from ``settings.session_ttl_seconds``) are injected when absent so every
-    newly issued session is expirable and tamper-evident regardless of ``auth_mode``.
+    Produces ``<base64url_payload>.<hmac_sha256_hex>`` (Milestone 15). ``iat``,
+    ``exp`` (from ``settings.session_ttl_seconds``), and ``jti`` are injected when
+    absent/empty so every newly issued session is expirable, revocable, and
+    tamper-evident regardless of ``auth_mode``.
     """
     from ..config import settings
 
     payload = dict(claims)
     now = time.time()
-    payload.setdefault("iat", int(now))
-    payload.setdefault("exp", int(now) + int(settings.session_ttl_seconds))
+    if payload.get("iat") is None:
+        payload["iat"] = int(now)
+    if payload.get("exp") is None:
+        payload["exp"] = int(now) + int(settings.session_ttl_seconds)
+    if not str(payload.get("jti") or "").strip():
+        payload["jti"] = uuid4().hex[:16]
     raw = json.dumps(payload, separators=(",", ":"), sort_keys=True)
     payload_b64 = base64.urlsafe_b64encode(raw.encode("utf-8")).decode("ascii")
     sig = hmac.new(settings.session_secret_key.encode("utf-8"),
@@ -94,13 +151,13 @@ def decode_session(value: str | None) -> dict[str, Any] | None:
     """Parse a ps06_session cookie value back to a claim dict.
 
     Signed tokens (``<payload>.<sig>``) are verified with HMAC-SHA256 using
-    ``hmac.compare_digest`` (constant-time) and checked against ``exp``; tampered,
-    malformed, or expired tokens return ``None``.
+    ``hmac.compare_digest`` (constant-time) and checked against numeric ``exp`` and
+    revoked ``jti`` entries; tampered, malformed, missing-exp, revoked, or expired
+    tokens return ``None``.
 
-    Legacy unsigned base64url cookies (no ``.``) are accepted only in
-    ``settings.auth_mode == "demo"`` (backward compatibility with pre-Milestone-15
-    cookies and test helpers); ``auth_mode == "strict"`` rejects them outright so
-    only cryptographically signed sessions survive in production.
+    Legacy unsigned base64url cookies (no ``.``) are accepted only when
+    ``not _is_strict()`` (backward compatibility with pre-Milestone-15 cookies and
+    test helpers); strict mode rejects them outright.
 
     Returns ``None`` for absent / malformed / non-dict payloads rather than raising,
     so a corrupted cookie never 500s.
@@ -130,15 +187,15 @@ def decode_session(value: str | None) -> dict[str, Any] | None:
         if not isinstance(data, dict):
             return None
         exp = data.get("exp")
-        if exp is not None:
-            try:
-                if float(exp) < time.time():
-                    return None
-            except (TypeError, ValueError):
-                return None
+        if not isinstance(exp, (int, float)) or isinstance(exp, bool):
+            return None
+        if float(exp) < time.time():
+            return None
+        if is_token_revoked(data.get("jti")):
+            return None
         return data
     # Legacy unsigned token (no signature separator).
-    if str(getattr(settings, "auth_mode", "demo")) == "strict":
+    if _is_strict():
         return None
     try:
         decoded = base64.urlsafe_b64decode(value.encode("ascii", "ignore"))
@@ -278,11 +335,12 @@ _IMPLIES: dict[str, set[str]] = {
 }
 
 
-def require_role(*allowed: str):
+def require_role(*allowed: str, exact: bool = False):
     """FastAPI dependency: 401/403 unless the active role is permitted.
 
     - In strict mode, missing signed session raises 401.
     - If the caller declared a role (header/session/cookie) it must be allowed (403 otherwise).
+    - When ``exact=True``, only roles literally listed in ``allowed`` are permitted (no upward implication).
     - If no role was declared in demo mode, the request is allowed; the returned
       role is still the resolved default so handlers can log it.
     """
@@ -292,8 +350,10 @@ def require_role(*allowed: str):
         if _is_strict() and not role_explicitly_set(request):
             raise HTTPException(401, "Authentication required")
         role = current_role(request)
-        if role_explicitly_set(request) and not any(role_allows(role, a) for a in allowed):
-            raise HTTPException(403, f"role '{role}' is not permitted; requires one of {list(allowed)}")
+        if role_explicitly_set(request):
+            permitted = (role in allowed) if exact else any(role_allows(role, a) for a in allowed)
+            if not permitted:
+                raise HTTPException(403, f"role '{role}' is not permitted; requires one of {list(allowed)}")
         return role
 
     return _dep
@@ -305,8 +365,8 @@ def enforce_student_scope(request: Request, sid: str) -> None:
     Raises 403 when:
     - An explicitly-declared student identity tries to reach a record belonging to
       a different student.
-    - An explicitly-declared faculty_mentor with a department claim tries to reach
-      a student belonging to a different department.
+    - An explicitly-declared faculty_mentor lacks a department claim or tries to
+      reach a student belonging to a different/unknown department.
     TPO admins (and open demo mode with no declared identity) pass through.
     """
     user = get_current_user_optional(request)
@@ -318,22 +378,31 @@ def enforce_student_scope(request: Request, sid: str) -> None:
             "Access denied: Students may only access their own placement records",
         )
     if user.role == "faculty_mentor":
-        dept = (user.department or "").strip().lower()
-        if dept:
-            state = getattr(getattr(request, "app", None), "state", None)
-            ctx_obj = getattr(state, "ctx", None) if state is not None else None
-            engine = getattr(ctx_obj, "engine", None) if ctx_obj is not None else None
-            if engine is not None:
-                from sqlmodel import Session as _Session
+        from ..taxonomy.branches import normalize_branch
 
-                from app.models import Student as _Student
+        raw_dept = (user.department or "").strip()
+        dept = (normalize_branch(raw_dept) or raw_dept).strip().lower()
+        if not dept:
+            raise HTTPException(
+                403,
+                "Access denied: Faculty mentor department claim is required",
+            )
+        state = getattr(getattr(request, "app", None), "state", None)
+        ctx_obj = getattr(state, "ctx", None) if state is not None else None
+        engine = getattr(ctx_obj, "engine", None) if ctx_obj is not None else None
+        if engine is None:
+            raise HTTPException(403, "Access denied: Unable to verify student scope")
+        from sqlmodel import Session as _Session
 
-                with _Session(engine) as _db:
-                    stu = _db.get(_Student, sid)
-                if stu is not None:
-                    s_branch = (stu.branch or "").strip().lower()
-                    if s_branch and s_branch != dept:
-                        raise HTTPException(
-                            403,
-                            f"Access denied: Faculty mentor ({user.department}) may not access {stu.branch} student records",
-                        )
+        from app.models import Student as _Student
+
+        with _Session(engine) as _db:
+            stu = _db.get(_Student, sid)
+        if stu is not None:
+            raw_branch = (stu.branch or "").strip()
+            s_branch = (normalize_branch(raw_branch) or raw_branch).strip().lower()
+            if not s_branch or s_branch != dept:
+                raise HTTPException(
+                    403,
+                    f"Access denied: Faculty mentor ({user.department}) may not access {stu.branch or 'unknown'} student records",
+                )

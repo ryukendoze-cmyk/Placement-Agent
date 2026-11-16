@@ -1,3 +1,4 @@
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,10 +21,20 @@ class Settings(BaseSettings):
     session_secret_key: str = "ps06-jklu-careeros-dev-secret-key-change-in-prod-2026"
     session_ttl_seconds: int = 86400 * 7
     auth_mode: str = "demo"
-    demo_role_switch: bool = True
+    demo_role_switch: bool | None = None
     rate_limit_enabled: bool = False
+    trusted_proxies: list[str] = Field(default_factory=list)
     redis_url: str | None = None
     task_backend: str = "memory"      # memory | redis
+
+    @model_validator(mode="after")
+    def _resolve_auth_defaults(self) -> "Settings":
+        is_strict = str(self.auth_mode or "demo").strip().lower() == "strict"
+        if is_strict:
+            self.demo_role_switch = False
+        elif self.demo_role_switch is None:
+            self.demo_role_switch = True
+        return self
 
 
 settings = Settings()

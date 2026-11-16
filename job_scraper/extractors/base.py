@@ -147,9 +147,7 @@ class BaseExtractor(ABC):
         if not hay:
             return True
         if key == "remote":
-            # Remote listings always qualify; keep city listings too only if
-            # nothing better is found (handled by caller ordering).
-            return "remote" in hay or True
+            return "remote" in hay
         return any(v in hay for v in variants)
 
     @classmethod

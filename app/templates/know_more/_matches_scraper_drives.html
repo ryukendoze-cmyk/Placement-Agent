@@ -329,7 +329,7 @@
             <p class="text-xs text-[#4A483F] leading-relaxed">
               Tracks every submitted application and its current stage: <strong>Nominated (TPO Approved)</strong>,
               <strong>Tier 2: Awaiting TPO Approval</strong>, <strong>Tier 1: Awaiting Mentor Endorsement</strong>, or <strong>Rejected / Withdrawn</strong>.
-              Active applications include a <strong>Withdraw</strong> button so a student can pull back their request before completion.
+              Active pending applications include a <strong>Withdraw</strong> button so a student can pull back their request before final approval; once an application reaches <strong>Nominated (TPO Approved)</strong>, only a <strong>TPO Admin</strong> can withdraw it.
             </p>
           </div>
 
@@ -341,11 +341,11 @@
             </div>
             <div class="km-ui-meta">
               <span class="km-ui-breadcrumb">Job Matches &rarr; Starred Tray</span>
-              <span class="pill-stone">Visible when at least 1 job is starred</span>
+              <span class="pill-stone">Visible when at least 1 job is starred &middot; Student &amp; TPO Admin</span>
             </div>
             <p class="text-xs text-[#4A483F] leading-relaxed">
               Keeps starred roles in a quick-access tray along with their match percentage and current application status.
-              Click <strong>Open</strong> to jump straight to that job card in the detail viewer, or <strong>Unfavorite</strong> to remove the star.
+              Click <strong>Open</strong> to jump straight to that job card in the detail viewer, or <strong>Unfavorite</strong> (available to Students and TPO Admins) to remove the star.
             </p>
           </div>
         </div>
@@ -410,12 +410,13 @@
             <span class="km-ui-btn-secondary"><svg class="w-3.5 h-3.5 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg> Request Waiver (HITL)</span>
           </div>
           <div class="km-ui-meta">
-            <span class="km-ui-breadcrumb">Job Detail Card &rarr; Action Row</span>
+            <span class="km-ui-breadcrumb">Job Detail Card &rarr; Action Row (On-Campus Drives)</span>
             <span class="pill-stone">Student &amp; Staff on behalf of student</span>
           </div>
           <p class="text-xs text-[#4A483F] leading-relaxed">
+            Applies strictly to <strong>On-Campus drives</strong> visible in the student&rsquo;s workspace (external live market roles link out to their hiring portal instead).
             Label adapts automatically to eligibility: eligible students see <strong>Apply / Nominate</strong>; ineligible students see <strong>Request Waiver (HITL)</strong>.
-            A duplicate guard blocks re-applying while an active or approved application already exists for that job.
+            A duplicate guard blocks re-applying while an active or approved application already exists for that drive.
           </p>
         </div>
 
@@ -426,10 +427,11 @@
           </div>
           <div class="km-ui-meta">
             <span class="km-ui-breadcrumb">Left Job List &amp; Detail Action Row</span>
-            <span class="pill-stone">All authorized users</span>
+            <span class="pill-stone">Student &amp; TPO Admin</span>
           </div>
           <p class="text-xs text-[#4A483F] leading-relaxed">
-            Stars or unstars the opportunity across the left list, the detail card, the <strong>Favorites</strong> tab, and the <strong>Saved &amp; Favorited Opportunities</strong> panel.
+            Stars or unstars the opportunity across the left list, the detail card, the <strong>Favorites</strong> tab, and the <strong>Saved &amp; Favorited Opportunities</strong> panel
+            (available to Students and TPO Admins; Faculty Mentors cannot toggle favorites).
             Your stars stay saved even if you re-run matching.
           </p>
         </div>
@@ -443,10 +445,11 @@
           </div>
           <div class="km-ui-meta">
             <span class="km-ui-breadcrumb">Job Detail Card &rarr; Action Row &rarr; Remove Job Opportunity Pop-Up</span>
-            <span class="pill-stone">Student (Dismiss on live roles) &middot; Faculty &amp; TPO Admin (Remove)</span>
+            <span class="pill-stone">Student (Dismiss live roles) &middot; Faculty (Dismiss non-campus) &middot; TPO Admin (Remove)</span>
           </div>
           <p class="text-xs text-[#4A483F] leading-relaxed">
             Students see <strong>Dismiss</strong> on live market jobs to hide unwanted roles from their match stream.
+            Faculty Mentors cannot dismiss on-campus institutional drives, and permanent removal for all students is strictly <strong>TPO Admin only</strong>.
             TPO Admins see <strong>Remove</strong>, which opens the <strong>Remove Job Opportunity</strong> pop-up with two choices:
             <strong>Remove for this student only</strong> (dismisses from just this student's list) or
             <strong>Remove permanently for ALL students</strong> (deletes a closed or expired role from the entire placement catalog).
@@ -531,7 +534,7 @@
     class="km-card editorial-card overflow-hidden"
     open
     data-roles="student tpo_admin"
-    data-keywords="fetch live indian tech jobs scraper modal targeted roles suggested chips location active scraper providers jobspy rapid automation remoteok proxy api stealth harvester ashby greenhouse lever target boards maximum results fresher entry-level start scraping live progress view opportunities 404 link check usd to lpa"
+    data-keywords="fetch live indian tech jobs scraper modal targeted roles suggested chips location active scraper providers jobspy rapid automation anandanair tech board proxy api stealth harvester ashby greenhouse lever target boards maximum results fresher entry-level start scraping live progress view opportunities 404 link check usd to lpa"
   >
     <summary class="px-6 py-4 cursor-pointer flex flex-wrap items-center justify-between gap-3 bg-[#FAF9F5] hover:bg-[#F4F3EC] transition-colors select-none">
       <div class="flex items-center gap-3">
@@ -583,12 +586,12 @@
 
         <div class="km-ui-card">
           <div class="km-ui-preview">
-            <span class="pill-sage">&#9745; JobSpy Engine</span>
-            <span class="pill-sage">&#9745; Rapid Tech Scraper</span>
-            <span class="pill-stone">&#9744; Automation (RemoteOK)</span>
-            <span class="pill-stone">&#9744; Proxy API Gateway</span>
+            <span class="pill-sage">&#9745; JobSpy Engine (Naukri, LinkedIn, Indeed)</span>
+            <span class="pill-sage">&#9745; Rapid Tech Scraper (Codebasics Tech Engine)</span>
+            <span class="pill-stone">&#9744; Automation Scraper (Anandanair Tech Board)</span>
+            <span class="pill-stone">&#9744; Proxy API Gateway (Resilient Proxy)</span>
             <span class="pill-sage">&#9745; Stealth Harvester (8 Indian Portals)</span>
-            <span class="pill-sage">&#9745; Ashby &amp; Multi-ATS (146+ Firms)</span>
+            <span class="pill-sage">&#9745; Ashby &amp; Multi-ATS (146+ Tech Firms)</span>
           </div>
           <div class="km-ui-meta">
             <span class="km-ui-breadcrumb">Fetch Live Jobs Pop-Up &rarr; Active Scraper Providers &amp; Target Boards</span>
@@ -597,7 +600,7 @@
           <p class="text-xs text-[#4A483F] leading-relaxed">
             Pick which scraping engines and target boards (<strong>Naukri</strong>, <strong>LinkedIn</strong>, <strong>Indeed</strong>, <strong>Foundit</strong>,
             <strong>Internshala</strong>, <strong>Unstop</strong>, <strong>Instahyre</strong>, <strong>Hirist</strong>, <strong>Ashby HQ</strong>,
-            <strong>Greenhouse</strong>, <strong>Lever</strong>, plus <strong>RemoteOK</strong> under Automation Scraper) to query in parallel.
+            <strong>Greenhouse</strong>, <strong>Lever</strong>, plus <strong>Anandanair Tech Board</strong> under Automation Scraper) to query in parallel. Press <kbd class="px-1 py-0.5 rounded bg-[#EFECE4] text-[10px]">Escape</kbd> or click Cancel anytime to dismiss pop-up dialogs safely.
           </p>
         </div>
 

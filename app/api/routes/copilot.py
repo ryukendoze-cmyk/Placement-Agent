@@ -398,8 +398,12 @@ def _clean_job_ids(text: str) -> str:
     return cleaned
 
 
-def _enforce_copilot_student_scope(user, student_id: str | None) -> str | None:
-    """Enforce student row-level isolation with explicit 403 on cross-student requests."""
+def _enforce_copilot_student_scope(user, student_id: str | None, request: Request | None = None) -> str | None:
+    """Enforce student & faculty department row-level isolation with explicit 403."""
+    if student_id:
+        if request is not None:
+            from app.security.rbac import enforce_student_scope
+            enforce_student_scope(request, str(student_id).strip())
     if user is not None and user.role == "student":
         if student_id and user.student_id and student_id != user.student_id:
             raise HTTPException(
@@ -733,9 +737,15 @@ def _copilot_core(session, ctx, *, question: str, student_id: str | None,
                               history=history)
 
 
+def _copilot_synthesis_thread(ctx, **kwargs) -> dict:
+    """Run copilot synthesis with a dedicated short-lived Session on the worker thread."""
+    with Session(ctx.engine) as worker_session:
+        return _copilot_synthesis(worker_session, ctx, **kwargs)
+
+
 @router.post("/api/copilot/ask/stream")
 def copilot_ask_stream(payload: dict, request: Request,
-                       session: Session = Depends(get_session), ctx=Depends(get_ctx),
+                       ctx=Depends(get_ctx),
                        _rl: None = Depends(check_rate_limit("copilot_ask"))):
     """Stream the copilot answer as SSE (Milestone 17).
 
@@ -755,25 +765,27 @@ def copilot_ask_stream(payload: dict, request: Request,
     user = get_current_user_optional(request)
     if user is not None:
         actor_role = user.role
-    student_id = _enforce_copilot_student_scope(user, student_id)
-    question = _sanitize_copilot_question(
-        session, question, student_id=student_id, actor_role=actor_role
-    )
+    student_id = _enforce_copilot_student_scope(user, student_id, request=request)
+    with Session(ctx.engine) as pre_session:
+        question = _sanitize_copilot_question(
+            pre_session, question, student_id=student_id, actor_role=actor_role
+        )
 
     def event_stream():
         try:
-            # 1) Fast retrieval & context
-            search = search_sops(question, top_k=3, embedder=ctx.embedder)
-            sources = search.get("results", [])
-            student_context = _student_context(session, student_id, ctx=ctx)
-            eligibility = {}
-            if student_id and job_id:
-                try:
-                    eligibility = evaluate_student_eligibility(session, ctx, student_id, job_id)
-                except Exception:
-                    eligibility = {}
+            with Session(ctx.engine) as stream_session:
+                # 1) Fast retrieval & context
+                search = search_sops(question, top_k=3, embedder=ctx.embedder)
+                sources = search.get("results", [])
+                student_context = _student_context(stream_session, student_id, ctx=ctx)
+                eligibility = {}
+                if student_id and job_id:
+                    try:
+                        eligibility = evaluate_student_eligibility(stream_session, ctx, student_id, job_id)
+                    except Exception:
+                        eligibility = {}
 
-            trace = _build_copilot_trace(search, student_context)
+                trace = _build_copilot_trace(search, student_context)
 
             # Emit retrieval event IMMEDIATELY so the user UI sees Agent Step Trace right away!
             yield _sse_chunk("retrieval", {
@@ -787,7 +799,7 @@ def copilot_ask_stream(payload: dict, request: Request,
             import concurrent.futures
             executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
             future = executor.submit(
-                _copilot_synthesis, session, ctx,
+                _copilot_synthesis_thread, ctx,
                 question=question, student_id=student_id,
                 job_id=job_id, actor_role=actor_role,
                 sources=sources, student_context=student_context,
@@ -833,8 +845,6 @@ def copilot_ask_stream(payload: dict, request: Request,
         except Exception as e:  # pragma: no cover - never break the SSE frame
             logger.exception("copilot_ask_stream error: %s", e)
             yield _sse_chunk("error", {"message": str(e)})
-        finally:
-            session.close()
 
     return StreamingResponse(event_stream(), media_type="text/event-stream",
                              headers=SSE_HEADERS)
@@ -855,7 +865,7 @@ def copilot_ask(payload: dict, request: Request,
     user = get_current_user_optional(request)
     if user is not None:
         actor_role = user.role
-    student_id = _enforce_copilot_student_scope(user, student_id)
+    student_id = _enforce_copilot_student_scope(user, student_id, request=request)
 
     return _copilot_core(session, ctx, question=question, student_id=student_id,
                          job_id=job_id, actor_role=actor_role, history=history)
@@ -871,9 +881,6 @@ def copilot_page(request: Request, session: Session = Depends(get_session)):
     if role == "student":
         sid = user.student_id if user and user.student_id and user.student_id != "demo-student" else None
         st = session.get(Student, sid) if sid else None
-        if st is None:
-            all_s = sort_students_alphabetically(session.exec(select(Student)).all())
-            st = all_s[0] if all_s else None
         if st is not None:
             students = [st]
             student_name = st.name
@@ -883,9 +890,17 @@ def copilot_page(request: Request, session: Session = Depends(get_session)):
                 user.student_id = st.id
         else:
             students = []
-    elif role == "faculty_mentor" and dept:
-        all_s = sort_students_alphabetically(session.exec(select(Student)).all())
-        students = [s for s in all_s if s.branch and s.branch.upper() == dept.upper()]
+    elif role == "faculty_mentor":
+        if dept:
+            from app.taxonomy.branches import normalize_branch
+            dept_norm = (normalize_branch(dept) or dept).strip().lower()
+            all_s = sort_students_alphabetically(session.exec(select(Student)).all())
+            students = [
+                s for s in all_s
+                if (normalize_branch(s.branch or "") or str(s.branch or "")).strip().lower() == dept_norm
+            ]
+        else:
+            students = []
     else:
         students = sort_students_alphabetically(session.exec(select(Student)).all())
 

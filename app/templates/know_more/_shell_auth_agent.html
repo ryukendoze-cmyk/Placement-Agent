@@ -177,7 +177,7 @@
           </div>
           <p class="text-[11px] text-[#5C5A52]"><strong class="text-[#1C1E1B]">Where to find it:</strong> Left Sidebar &rarr; Bottom footer (below JKLU Portal)</p>
           <p class="text-xs text-[#4A483F] leading-relaxed">
-            <strong class="text-[#1C1E1B]">What happens when you click it:</strong> Safely ends your institutional session, clears your sign-in cookies, records the sign-out event in the Audit Trail, and returns you to the Sign-In page.
+            <strong class="text-[#1C1E1B]">What happens when you click it:</strong> Safely ends your institutional session, clears your sign-in cookies, immediately invalidates the active session token on the server so old cookies cannot be reused, records the sign-out event in the Audit Trail, and returns you to the Sign-In page.
           </p>
         </div>
       </div>
@@ -240,7 +240,7 @@
           </div>
           <div>
             <p class="font-semibold text-[#1C1E1B]">Strict Mode (Production Lock)</p>
-            <p>Requires valid <strong>@jklu.edu.in</strong> email + PIN sign-in for every page, hides all Fast Login and role-switcher shortcuts, locks students out of other students&rsquo; profiles, and enforces automatic session sign-out on logout.</p>
+            <p>Requires valid <strong>@jklu.edu.in</strong> email + PIN sign-in for every page, disables all Fast Login and role-switcher shortcuts, requires a custom session secret at startup, locks students out of other students&rsquo; profiles, supports request rate limiting, and enforces automatic session sign-out on logout.</p>
           </div>
         </div>
       </div>

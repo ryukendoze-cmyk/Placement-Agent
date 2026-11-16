@@ -265,7 +265,7 @@ def test_purge_live_market_jobs_tool(client_engine):
 
     ctx = c.app.state.ctx
     with Session(eng) as s:
-        res = call_tool("purge_live_market_jobs", ctx, s)
+        res = call_tool("purge_live_market_jobs", ctx, s, actor_role="tpo_admin")
         assert res["purged_count"] >= len(live_jids)
         assert "Purged" in res["message"]
 

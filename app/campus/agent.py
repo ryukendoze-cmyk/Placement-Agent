@@ -1,6 +1,7 @@
 """Agentic Campus JD parser orchestrator: Plan -> Act -> Validate -> Recover."""
 from __future__ import annotations
 
+import math
 import time
 from typing import Any
 from uuid import uuid4
@@ -176,6 +177,7 @@ def parse_campus_jd(
     session: Session | None = None,
     actor_role: str = "tpo_admin",
     origin: str = "tpo_smart_jd",
+    commit_audit: bool = True,
 ) -> dict[str, Any]:
     """Run Plan -> Act -> Validate -> Recover for campus JD extraction."""
     tid = trace_id or f"tr-{uuid4().hex[:8]}"
@@ -213,6 +215,7 @@ def parse_campus_jd(
                 "char_count": len(sanitized_text),
                 "injection_flags": inj_flags,
             },
+            commit=commit_audit,
         )
 
     attempts: list[dict[str, Any]] = []
@@ -357,6 +360,7 @@ def parse_campus_jd(
                 "engine_used": schema_out["parser_metadata"]["engine_used"],
                 "attempts": attempts,
             },
+            commit=commit_audit,
         )
         if fallback_reason is not None and fallback_reason != "forced_static":
             log_audit(
@@ -370,6 +374,7 @@ def parse_campus_jd(
                     "fallback_reason": fallback_reason,
                     "attempts": attempts,
                 },
+                commit=commit_audit,
             )
         log_audit(
             session,
@@ -384,6 +389,7 @@ def parse_campus_jd(
                 "confidence_score": schema_out["parser_metadata"]["confidence_score"],
                 "missing_fields_flagged": schema_out["parser_metadata"]["missing_fields_flagged"],
             },
+            commit=commit_audit,
         )
         log_audit(
             session,
@@ -396,6 +402,7 @@ def parse_campus_jd(
                 "eligibility": schema_out["eligibility"],
                 "defaults_applied": schema_out["parser_metadata"]["defaults_applied"],
             },
+            commit=commit_audit,
         )
         # Emit a traceable AgentRun + AgentStep episode so Smart JD parses appear in Agent Brain
         try:
@@ -538,6 +545,31 @@ def _resolve_canonical_skills(raw_skills: Any, taxonomy: Taxonomy) -> tuple[list
     return kept, rejected
 
 
+def _parse_opt_float(val: Any, name: str) -> float | None:
+    if val is None or str(val).strip() == "":
+        return None
+    if isinstance(val, bool):
+        raise ValueError(f"{name} must be a valid number")
+    try:
+        out = float(val)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a valid number") from exc
+    if not math.isfinite(out):
+        raise ValueError(f"{name} must be a finite number")
+    return out
+
+
+def _parse_opt_int(val: Any, name: str) -> int | None:
+    if val is None or str(val).strip() == "":
+        return None
+    if isinstance(val, bool):
+        raise ValueError(f"{name} must be a valid integer")
+    try:
+        return int(val)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a valid integer") from exc
+
+
 def validate_drive_payload(
     payload: dict[str, Any],
     taxonomy: Taxonomy,
@@ -564,34 +596,20 @@ def validate_drive_payload(
         if code in CANONICAL_BRANCHES and code not in branches:
             branches.append(code)
 
-    min_cgpa = raw_elig.get("min_cgpa")
-    if min_cgpa is not None and str(min_cgpa).strip() != "":
-        min_cgpa = round(float(min_cgpa), 2)
+    min_cgpa = _parse_opt_float(raw_elig.get("min_cgpa"), "min_cgpa")
+    if min_cgpa is not None:
+        min_cgpa = round(min_cgpa, 2)
         if min_cgpa <= 0:
             min_cgpa = None
-    else:
-        min_cgpa = None
 
-    max_backlogs = raw_elig.get("max_active_backlogs")
-    if max_backlogs is not None and str(max_backlogs).strip() != "":
-        max_backlogs = int(max_backlogs)
-    else:
-        max_backlogs = None
+    max_backlogs = _parse_opt_int(raw_elig.get("max_active_backlogs"), "max_active_backlogs")
+    grad_year = _parse_opt_int(raw_elig.get("graduation_year"), "graduation_year")
 
-    grad_year = raw_elig.get("graduation_year")
-    if grad_year is not None and str(grad_year).strip() != "":
-        grad_year = int(grad_year)
-    else:
-        grad_year = None
-
-    ctc_min = payload.get("ctc_lpa_min")
-    ctc_max = payload.get("ctc_lpa_max")
-    ctc_min = float(ctc_min) if ctc_min is not None and str(ctc_min).strip() != "" else None
-    ctc_max = float(ctc_max) if ctc_max is not None and str(ctc_max).strip() != "" else None
+    ctc_min = _parse_opt_float(payload.get("ctc_lpa_min"), "ctc_lpa_min")
+    ctc_max = _parse_opt_float(payload.get("ctc_lpa_max"), "ctc_lpa_max")
     salary_disclosed = bool(payload.get("salary_disclosed", ctc_max is not None or ctc_min is not None))
 
-    stipend = payload.get("stipend_inr_per_month")
-    stipend = int(stipend) if stipend is not None and str(stipend).strip() != "" else None
+    stipend = _parse_opt_int(payload.get("stipend_inr_per_month"), "stipend_inr_per_month")
 
     explicit: set[str] = set()
     if max_backlogs is not None:
@@ -642,12 +660,11 @@ def run_cohort_rematch(
     from dataclasses import asdict
     from datetime import datetime, timezone
 
-    from sqlalchemy import delete
     from sqlmodel import select
 
-    from app.matching.engine import job_eligibility
+    from app.matching.engine import is_job_visible_to_student, job_eligibility
     from app.matching.rank import rank_jobs
-    from app.models import CampusDrive, Job, JobMatch, Student, StudentSkill
+    from app.models import CampusDrive, Job, JobApplication, JobMatch, Student, StudentSkill
 
     with Session(ctx.engine) as s:
         job = s.get(Job, job_id)
@@ -682,9 +699,36 @@ def run_cohort_rematch(
             ).all()
             student_skills = {r.skill_id: list(r.evidence) for r in ss_rows}
             levels = {r.skill_id: r.level for r in ss_rows}
+            v_statuses = {
+                r.skill_id: (getattr(r, "verification_status", None) or "claimed")
+                for r in ss_rows
+            }
+
+            existing_matches = s.exec(
+                select(JobMatch).where(JobMatch.student_id == student.id)
+            ).all()
+            dismissed_job_ids = {
+                m.job_id
+                for m in existing_matches
+                if getattr(m, "band", None) == "dismissed"
+                or getattr(m, "score", 0) < 0
+                or (isinstance(m.breakdown, dict) and m.breakdown.get("dismissed"))
+            }
+            favorite_job_ids = {
+                m.job_id for m in existing_matches if getattr(m, "is_favorite", False)
+            } | {
+                a.job_id
+                for a in s.exec(
+                    select(JobApplication).where(JobApplication.student_id == student.id)
+                ).all()
+                if getattr(a, "is_favorite", False)
+            }
+
+            visible_jobs = [j for j in all_jobs if is_job_visible_to_student(j, student.id)]
+            active_jobs = [j for j in visible_jobs if j.id not in dismissed_job_ids]
 
             ranked = rank_jobs(
-                all_jobs,
+                active_jobs,
                 sv,
                 student_skills,
                 ctx.embedder,
@@ -694,9 +738,11 @@ def run_cohort_rematch(
                 top=None,
                 levels=levels,
                 student=student,
+                verification_statuses=v_statuses,
+                session=s,
             )
 
-            # Persist top 10 + ensure the new campus job is always included in JobMatch
+            # Persist top 10 + ensure the new campus job is always included in JobMatch (unless dismissed)
             persisted_pairs = list(ranked[:10])
             if not any(j.id == job.id for j, _ in persisted_pairs):
                 for j, js in ranked:
@@ -704,7 +750,11 @@ def run_cohort_rematch(
                         persisted_pairs.append((j, js))
                         break
 
-            s.execute(delete(JobMatch).where(JobMatch.student_id == student.id))
+            # Preserve dismissed JobMatch rows; replace active ones cleanly
+            for em in existing_matches:
+                if em.job_id not in dismissed_job_ids:
+                    s.delete(em)
+            s.flush()
             for j, js in persisted_pairs:
                 s.add(
                     JobMatch(
@@ -714,6 +764,7 @@ def run_cohort_rematch(
                         score=js.score,
                         band=js.band,
                         breakdown=asdict(js),
+                        is_favorite=(j.id in favorite_job_ids),
                     )
                 )
 
@@ -892,16 +943,17 @@ def publish_campus_drive(
 
     tq = getattr(ctx, "task_queue", None)
     cohort_summary: dict[str, Any] | None = None
-    if tq is not None:
-        def _rematch_task(payload: dict[str, Any]) -> dict[str, Any]:
-            return run_cohort_rematch(
-                ctx,
-                drive_id=payload["drive_id"],
-                job_id=payload["job_id"],
-                trace_id=payload["trace_id"],
-                actor_role=payload["actor_role"],
-            )
 
+    def _rematch_task(payload: dict[str, Any]) -> dict[str, Any]:
+        return run_cohort_rematch(
+            ctx,
+            drive_id=payload["drive_id"],
+            job_id=payload["job_id"],
+            trace_id=payload["trace_id"],
+            actor_role=payload["actor_role"],
+        )
+
+    if tq is not None:
         task_id = tq.submit(
             "campus_drive_cohort_rematch",
             _rematch_task,
@@ -923,17 +975,22 @@ def publish_campus_drive(
         from app.workers.task_queue import TaskQueueManager, TaskState
 
         tq = TaskQueueManager.from_settings(settings)
+        tq.register("campus_drive_cohort_rematch", _rematch_task)
         ctx.task_queue = tq
         task_id = uuid4().hex
-        with tq._lock:
-            tq._states[task_id] = TaskState(
-                task_id=task_id,
-                kind="campus_drive_cohort_rematch",
-                status="completed",
-                progress_pct=100,
-                result=cohort_summary,
-                completed_at=datetime.now(timezone.utc).isoformat(),
-            )
+        state = TaskState(
+            task_id=task_id,
+            kind="campus_drive_cohort_rematch",
+            status="completed",
+            progress_pct=100,
+            result=cohort_summary,
+            completed_at=datetime.now(timezone.utc).isoformat(),
+        )
+        if hasattr(tq, "record_state"):
+            tq.record_state(state)
+        else:
+            with tq._lock:
+                tq._states[task_id] = state
 
     out: dict[str, Any] = {
         "drive_id": drive.id,

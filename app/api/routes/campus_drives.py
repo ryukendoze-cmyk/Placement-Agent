@@ -12,10 +12,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from jinja2 import TemplateNotFound
 from sqlmodel import Session, select
+from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import get_ctx, get_session
 from app.api.routes import approvals as approvals_routes
 from app.campus.agent import (
+    _parse_opt_float,
+    _parse_opt_int,
     drive_to_dict,
     parse_campus_jd,
     validate_drive_payload,
@@ -178,6 +181,7 @@ def _persist_pending_drive(
         entity_id=drive.id,
         actor_role=actor_role,
         detail=detail,
+        commit=False,
     )
     session.commit()
     session.refresh(drive)
@@ -248,8 +252,8 @@ async def parse_jd_endpoint(
         simulate_failure = str(form.get("simulate_failure") or "none").strip()
         if upload is not None and hasattr(upload, "file") and getattr(upload, "filename", ""):
             suffix = Path(upload.filename or "").suffix.lower()
-            data = _read_capped_jd(upload)
-            raw_text = extract_jd_text(data, suffix)
+            data = await run_in_threadpool(_read_capped_jd, upload)
+            raw_text = await run_in_threadpool(extract_jd_text, data, suffix)
         elif text_val:
             raw_text = normalize_jd_text(text_val)
     else:
@@ -266,17 +270,20 @@ async def parse_jd_endpoint(
     if not raw_text.strip():
         raise HTTPException(400, "Either a JD file (.pdf, .docx, .txt) or non-empty text is required")
 
-    result = parse_campus_jd(
-        raw_text,
-        mode=force_parser,
-        simulate_failure=simulate_failure,
-        ctx=ctx,
-        session=session,
-        actor_role=role,
-        origin="tpo_smart_jd",
-    )
-    session.commit()
-    return result
+    def _run_parse() -> dict[str, Any]:
+        out = parse_campus_jd(
+            raw_text,
+            mode=force_parser,
+            simulate_failure=simulate_failure,
+            ctx=ctx,
+            session=session,
+            actor_role=role,
+            origin="tpo_smart_jd",
+        )
+        session.commit()
+        return out
+
+    return await run_in_threadpool(_run_parse)
 
 
 @router.post("/api/campus-drives", status_code=201)
@@ -295,7 +302,10 @@ def create_campus_drive(
     if not company or not role_title:
         raise HTTPException(400, "company and role_title are required")
 
-    validated = validate_drive_payload(body, ctx.taxonomy)
+    try:
+        validated = validate_drive_payload(body, ctx.taxonomy)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
 
     raw_id = str(body.get("id") or "").strip()
     if raw_id.startswith("cd-") and session.get(CampusDrive, raw_id) is None:
@@ -425,78 +435,101 @@ async def submit_public_jnf(
     token = form_data.get("token") or request.query_params.get("token")
     claims = _verify_jnf_token(token)
 
+    # Pre-validate numeric form fields before parsing JD or recording audit entries
+    nested_elig = form_data.get("eligibility") if isinstance(form_data.get("eligibility"), dict) else {}
+    try:
+        for fkey in ("ctc_lpa_min", "ctc_lpa_max"):
+            _parse_opt_float(form_data.get(fkey), fkey)
+        _parse_opt_int(form_data.get("stipend_inr_per_month"), "stipend_inr_per_month")
+        cgpa_val = nested_elig.get("min_cgpa") if "min_cgpa" in nested_elig else form_data.get("min_cgpa")
+        _parse_opt_float(cgpa_val, "min_cgpa")
+        for ikey in ("max_active_backlogs", "graduation_year"):
+            ival = nested_elig.get(ikey) if ikey in nested_elig else form_data.get(ikey)
+            _parse_opt_int(ival, ikey)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
     raw_text = ""
     if upload is not None and hasattr(upload, "file") and getattr(upload, "filename", ""):
         suffix = Path(upload.filename or "").suffix.lower()
-        data = _read_capped_jd(upload)
-        raw_text = extract_jd_text(data, suffix)
+        data = await run_in_threadpool(_read_capped_jd, upload)
+        raw_text = await run_in_threadpool(extract_jd_text, data, suffix)
     else:
         raw_text = normalize_jd_text(str(form_data.get("text") or form_data.get("raw_jd_text") or ""))
 
-    trace_id = f"tr-{uuid4().hex[:8]}"
-    base_doc: dict[str, Any] = {}
-    if raw_text.strip():
-        base_doc = parse_campus_jd(
-            raw_text,
-            mode="auto",
-            ctx=ctx,
-            trace_id=trace_id,
-            session=session,
-            actor_role="external_recruiter",
-            origin="recruiter_jnf",
+    def _process_jnf() -> dict[str, Any]:
+        trace_id = f"tr-{uuid4().hex[:8]}"
+        base_doc: dict[str, Any] = {}
+        if raw_text.strip():
+            base_doc = parse_campus_jd(
+                raw_text,
+                mode="auto",
+                ctx=ctx,
+                trace_id=trace_id,
+                session=session,
+                actor_role="external_recruiter",
+                origin="recruiter_jnf",
+                commit_audit=False,
+            )
+
+        # Overlay explicit structured recruiter fields if supplied
+        merged = dict(base_doc) if base_doc else {"eligibility": {}}
+        elig = dict(merged.get("eligibility") or {})
+        for key in ("company", "role_title", "location", "work_mode", "experience_level"):
+            val = str(form_data.get(key) or "").strip()
+            if val:
+                merged[key] = val
+        for key in ("ctc_lpa_min", "ctc_lpa_max", "stipend_inr_per_month"):
+            if form_data.get(key) not in (None, ""):
+                merged[key] = form_data.get(key)
+        if "salary_disclosed" in form_data and form_data.get("salary_disclosed") not in (None, ""):
+            merged["salary_disclosed"] = _parse_bool(form_data.get("salary_disclosed"))
+
+        # Nested eligibility or flat form keys
+        for ekey in ("min_cgpa", "max_active_backlogs", "graduation_year"):
+            val = nested_elig.get(ekey) if ekey in nested_elig else form_data.get(ekey)
+            if val not in (None, ""):
+                elig[ekey] = val
+        branches_val = (
+            nested_elig.get("allowed_branches")
+            if "allowed_branches" in nested_elig
+            else form_data.get("allowed_branches")
         )
+        if branches_val not in (None, ""):
+            elig["allowed_branches"] = _parse_list_field(branches_val)
+        merged["eligibility"] = elig
 
-    # Overlay explicit structured recruiter fields if supplied
-    merged = dict(base_doc) if base_doc else {"eligibility": {}}
-    elig = dict(merged.get("eligibility") or {})
-    for key in ("company", "role_title", "location", "work_mode", "experience_level"):
-        val = str(form_data.get(key) or "").strip()
-        if val:
-            merged[key] = val
-    for key in ("ctc_lpa_min", "ctc_lpa_max", "stipend_inr_per_month"):
-        if form_data.get(key) not in (None, ""):
-            merged[key] = form_data.get(key)
-    if "salary_disclosed" in form_data and form_data.get("salary_disclosed") not in (None, ""):
-        merged["salary_disclosed"] = _parse_bool(form_data.get("salary_disclosed"))
+        if form_data.get("required_skills") not in (None, ""):
+            merged["required_skills"] = _parse_list_field(form_data.get("required_skills"))
+        if form_data.get("preferred_skills") not in (None, ""):
+            merged["preferred_skills"] = _parse_list_field(form_data.get("preferred_skills"))
+        if raw_text.strip():
+            merged["raw_jd_text"] = raw_text
 
-    # Nested eligibility or flat form keys
-    nested_elig = form_data.get("eligibility") if isinstance(form_data.get("eligibility"), dict) else {}
-    for ekey in ("min_cgpa", "max_active_backlogs", "graduation_year"):
-        val = nested_elig.get(ekey) if ekey in nested_elig else form_data.get(ekey)
-        if val not in (None, ""):
-            elig[ekey] = val
-    branches_val = (
-        nested_elig.get("allowed_branches")
-        if "allowed_branches" in nested_elig
-        else form_data.get("allowed_branches")
-    )
-    if branches_val not in (None, ""):
-        elig["allowed_branches"] = _parse_list_field(branches_val)
-    merged["eligibility"] = elig
+        if not str(merged.get("company") or "").strip() or not str(merged.get("role_title") or "").strip():
+            session.rollback()
+            raise HTTPException(400, "company and role_title (or a JD containing them) are required")
 
-    if form_data.get("required_skills") not in (None, ""):
-        merged["required_skills"] = _parse_list_field(form_data.get("required_skills"))
-    if form_data.get("preferred_skills") not in (None, ""):
-        merged["preferred_skills"] = _parse_list_field(form_data.get("preferred_skills"))
-    if raw_text.strip():
-        merged["raw_jd_text"] = raw_text
+        try:
+            validated = validate_drive_payload(merged, ctx.taxonomy)
+        except ValueError as exc:
+            session.rollback()
+            raise HTTPException(400, str(exc))
 
-    if not str(merged.get("company") or "").strip() or not str(merged.get("role_title") or "").strip():
-        raise HTTPException(400, "company and role_title (or a JD containing them) are required")
+        drive, _ap = _persist_pending_drive(
+            session,
+            drive_id=base_doc.get("id") or f"cd-{uuid4().hex[:8]}",
+            trace_id=trace_id,
+            validated=validated,
+            origin="recruiter_jnf",
+            created_by="external_recruiter",
+            actor_role="external_recruiter",
+            audit_action="jnf.submitted",
+            extra_audit_detail={"jnf_id": claims.get("jnf_id")},
+        )
+        return drive_to_dict(drive)
 
-    validated = validate_drive_payload(merged, ctx.taxonomy)
-    drive, _ap = _persist_pending_drive(
-        session,
-        drive_id=base_doc.get("id") or f"cd-{uuid4().hex[:8]}",
-        trace_id=trace_id,
-        validated=validated,
-        origin="recruiter_jnf",
-        created_by="external_recruiter",
-        actor_role="external_recruiter",
-        audit_action="jnf.submitted",
-        extra_audit_detail={"jnf_id": claims.get("jnf_id")},
-    )
-    return drive_to_dict(drive)
+    return await run_in_threadpool(_process_jnf)
 
 
 @router.get("/api/campus-drives/{drive_id}")
@@ -542,7 +575,10 @@ def update_campus_drive(
     if not str(merged.get("company") or "").strip() or not str(merged.get("role_title") or "").strip():
         raise HTTPException(400, "company and role_title cannot be empty")
 
-    validated = validate_drive_payload(merged, ctx.taxonomy)
+    try:
+        validated = validate_drive_payload(merged, ctx.taxonomy)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
 
     drive.company = validated["company"]
     drive.role_title = validated["role_title"]

@@ -90,9 +90,10 @@ class TaskQueueManager:
     def _consumer_loop(self) -> None:
         while not self._stop_event.is_set():
             try:
-                item = self._redis.brpop(self._queue_name, timeout=1)
+                pop_fn = getattr(self._redis, "blpop", None) or getattr(self._redis, "brpop")
+                item = pop_fn(self._queue_name, timeout=1)
             except Exception as e:
-                logger.warning("task queue brpop failed (%s); retrying.", e)
+                logger.warning("task queue pop failed (%s); retrying.", e)
                 self._stop_event.wait(0.2)
                 continue
             if item is None:
@@ -100,14 +101,41 @@ class TaskQueueManager:
             _queue, raw = item
             try:
                 job = json.loads(raw)
-                if self._executor is not None:
-                    self._executor.submit(self._run, job["task_id"], job.get("kind"), job.get("payload"))
+                executor = self._executor
+                if executor is not None:
+                    try:
+                        executor.submit(self._run, job["task_id"], job.get("kind"), job.get("payload"))
+                    except RuntimeError:
+                        break
                 else:
                     self._run(job["task_id"], job.get("kind"), job.get("payload"))
             except Exception as e:
                 logger.warning("malformed task job dropped: %s", e)
 
     # -- public API ------------------------------------------------------------
+
+    def register(self, kind: str, fn: Callable) -> None:
+        """Register a handler for ``kind`` so restarted/remote workers can dispatch it."""
+        self._registry[kind] = fn
+
+    def record_state(self, state: TaskState) -> None:
+        """Persist an externally completed/tracked TaskState via the active backend."""
+        if self._redis is not None:
+            self._save_state(state)
+            self._redis.sadd(self._index_key, state.task_id)
+            return
+        with self._lock:
+            self._states[state.task_id] = state
+            self._evict_memory_states()
+
+    def _evict_memory_states(self) -> None:
+        if len(self._states) > 2000:
+            terminal = [
+                k for k, v in self._states.items()
+                if v.status in ("completed", "failed")
+            ]
+            for k in terminal[: len(self._states) - 1500]:
+                self._states.pop(k, None)
 
     def submit(self, kind: str, fn: Callable, payload: object = None) -> str:
         self._registry[kind] = fn
@@ -116,19 +144,27 @@ class TaskQueueManager:
         if self._redis is not None:
             self._save_state(state)
             self._redis.sadd(self._index_key, task_id)
+            if hasattr(self._redis, "expire"):
+                try:
+                    self._redis.expire(self._index_key, 86400)
+                except Exception:
+                    pass
+            if hasattr(self._redis, "scard") and hasattr(self._redis, "spop"):
+                try:
+                    if int(self._redis.scard(self._index_key)) > 2000:
+                        self._redis.spop(self._index_key, 250)
+                except Exception:
+                    pass
             self._redis.rpush(self._queue_name, json.dumps(
                 {"task_id": task_id, "kind": kind, "payload": payload}))
             return task_id
         with self._lock:
             self._states[task_id] = state
-            if len(self._states) > 2000:
-                terminal = [
-                    k for k, v in self._states.items()
-                    if v.status in ("completed", "failed")
-                ]
-                for k in terminal[: len(self._states) - 1500]:
-                    self._states.pop(k, None)
-        self._executor.submit(self._run, task_id, kind, payload)
+            self._evict_memory_states()
+        executor = self._executor
+        if executor is None:
+            raise RuntimeError("TaskQueueManager has been shut down")
+        executor.submit(self._run, task_id, kind, payload)
         return task_id
 
     def get(self, task_id: str) -> TaskState | None:
@@ -201,8 +237,13 @@ class TaskQueueManager:
                 self._save_state(state)
 
     def _save_state(self, state: TaskState) -> None:
-        self._redis.hset(f"{self._state_prefix}{state.task_id}",
-                         mapping={"data": json.dumps(state.to_dict())})
+        key = f"{self._state_prefix}{state.task_id}"
+        self._redis.hset(key, mapping={"data": json.dumps(state.to_dict())})
+        if hasattr(self._redis, "expire"):
+            try:
+                self._redis.expire(key, 86400)
+            except Exception:
+                pass
 
     def _load_state(self, task_id: str) -> TaskState | None:
         raw = self._redis.hget(f"{self._state_prefix}{task_id}", "data")

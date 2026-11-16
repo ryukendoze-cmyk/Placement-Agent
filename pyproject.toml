@@ -41,6 +41,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = [
     "integration: needs local PostgreSQL",
+    "live: makes live network calls against external portals or services",
 ]
 
 [tool.ruff]

@@ -1,10 +1,13 @@
 import logging
 import os
+import threading
 from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
+from sqlalchemy import update as sa_update
 from sqlmodel import Session, select
 
 from app.api.deps import get_ctx, get_session
@@ -39,6 +42,23 @@ INTERVIEW_PROMOTE_SCORE = 80
 INTERVIEW_REVERIFY_SCORE = 70
 INTERVIEW_REMEDIAL_SCORE = 45
 MAX_AUDIO_BYTES = 15 * 1024 * 1024
+
+_INTERVIEW_LOCKS_GUARD = threading.Lock()
+_INTERVIEW_LOCKS: dict[str, threading.Lock] = {}
+
+
+def _get_interview_lock(iid: str) -> threading.Lock:
+    """Return a per-interview lock serializing concurrent turn and finalize calls."""
+    with _INTERVIEW_LOCKS_GUARD:
+        lock = _INTERVIEW_LOCKS.get(iid)
+        if lock is None:
+            if len(_INTERVIEW_LOCKS) > 2048:
+                unlocked = [k for k, lk in _INTERVIEW_LOCKS.items() if not lk.locked()]
+                for k in unlocked[:1024]:
+                    _INTERVIEW_LOCKS.pop(k, None)
+            lock = threading.Lock()
+            _INTERVIEW_LOCKS[iid] = lock
+        return lock
 
 
 def _load_session_bank():
@@ -354,6 +374,16 @@ def _aggregate_speech(transcript: list) -> dict:
 
 def _finalize(session: Session, row: Interview, summary, turn=None,
               ctx=None, student=None, completion_reason="completed") -> JSONResponse:
+    # Atomically claim finalization so concurrent requests can never double-finalize.
+    claim = session.execute(
+        sa_update(Interview)
+        .where(Interview.id == row.id, Interview.finished.is_(False))
+        .values(finished=True)
+        .execution_options(synchronize_session=False)
+    )
+    if getattr(claim, "rowcount", 1) == 0:
+        session.rollback()
+        raise HTTPException(409, "interview already finished")
     plan = (row.feedback or {}).get("_verification")
     early = completion_reason == "ended_early"
     if early:
@@ -526,87 +556,89 @@ def start_interview(sid: str, request: Request, payload: dict | None = None,
 @router.post("/api/interviews/{iid}/answer")
 def answer_interview(iid: str, request: Request, payload: dict,
                      session: Session = Depends(get_session), ctx=Depends(get_ctx)):
-    row = session.get(Interview, iid)
-    if row is None:
-        raise HTTPException(404, "interview not found")
-    if row.student_id:
-        enforce_student_scope(request, row.student_id)
-    if row.finished:
-        raise HTTPException(409, "interview already finished")
-    from app.security.pii import scrub_for_llm
-    raw_text = (payload or {}).get("text") or (payload or {}).get("answer", "")
-    text, _ = scrub_for_llm(str(raw_text))
-    # M18.1: allow enabling adaptive follow-ups per-answer (also settable at creation).
-    adaptive = bool((payload or {}).get("adaptive_followup")) or bool(
-        getattr(row, "adaptive_followup", False))
-    s = _session(session, row, ctx, enable_followups=adaptive)
-    try:
-        turn = s.answer(text)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    # M18.3: acoustic telemetry for this turn (duration optional; typed => wpm 0).
-    raw_duration = (payload or {}).get("duration_seconds")
-    speech = analyze_speech_delivery(text, raw_duration)
-    # Attach telemetry to the exact turn just answered (before any appended follow-up turn).
-    answered_turns = s.answered
-    if answered_turns:
-        answered_turns[-1]["speech_analytics"] = speech
-    elif s.transcript:
-        s.transcript[-1]["speech_analytics"] = speech
-    if turn.injection_flags:
-        # M15: record the neutralized attempt (append-only audit row).
-        from app.security.audit import log_audit
-        log_audit(session, action="security.prompt_injection_blocked",
-                  entity_type="interview", entity_id=iid,
-                  actor_role="student",
-                  detail={"flags": turn.injection_flags,
-                          "student_id": row.student_id,
-                          "question_id": turn.question_id},
-                  commit=True)
-    try:
-        q_obj = (get_question(load_bank(), turn.question_id)
-                 if answered_turns and answered_turns[-1].get("question_source", "offline_bank") == "offline_bank" else None)
-        # Only record calibration telemetry for STATIC bank questions; transient
-        # dynamic ids (q-*-followup, q-resume-*) must never pollute the ledger.
-        if q_obj is not None and answered_turns[-1].get("question_source", "offline_bank") == "offline_bank":
-            QuestionTelemetryManager().record_answer_turn(
-                q_id=turn.question_id,
-                score=turn.score,
-                matched_kw=turn.matched_keywords,
-                expected_kw=list(q_obj.keywords),
-                difficulty=q_obj.difficulty,
-            )
-    except Exception:
-        pass
-    if turn.finished:
-        student = session.get(Student, row.student_id) if row.student_id else None
-        return _finalize(session, row, s.finish(), turn=turn, ctx=ctx, student=student)
-    nq = s.next_question()
-    if nq is None:
-        # question bank exhausted before MAX_TURNS: end gracefully instead of
-        # leaving the interview in a non-completable, non-finished state
-        student = session.get(Student, row.student_id) if row.student_id else None
-        return _finalize(session, row, s.finish(), turn=turn, ctx=ctx, student=student)
-    row.transcript = s.transcript
-    session.add(row)
-    session.commit()
-    return JSONResponse(content={
-        "finished": False,
-        "score": turn.score,
-        "feedback": turn.feedback,
-        "next_difficulty": turn.next_difficulty,
-        "rubric": turn.rubric,
-        "matched_keywords": turn.matched_keywords,
-        "missed_keywords": turn.missed_keywords,
-        "ideal_answer_hint": turn.ideal_answer_hint,
-        "injection_flags": turn.injection_flags,
-        "followup_probe": turn.followup_probe,
-        "error_recovered": turn.error_recovered,
-        "evaluation_source": answered_turns[-1].get("evaluation_source") if answered_turns else None,
-        "coverage": s.coverage,
-        "speech_analytics": speech,
-        "question": _public_question(s, nq),
-    })
+    with _get_interview_lock(iid):
+        session.expire_all()
+        row = session.get(Interview, iid)
+        if row is None:
+            raise HTTPException(404, "interview not found")
+        if row.student_id:
+            enforce_student_scope(request, row.student_id)
+        if row.finished:
+            raise HTTPException(409, "interview already finished")
+        from app.security.pii import scrub_for_llm
+        raw_text = (payload or {}).get("text") or (payload or {}).get("answer", "")
+        text, _ = scrub_for_llm(str(raw_text))
+        # M18.1: allow enabling adaptive follow-ups per-answer (also settable at creation).
+        adaptive = bool((payload or {}).get("adaptive_followup")) or bool(
+            getattr(row, "adaptive_followup", False))
+        s = _session(session, row, ctx, enable_followups=adaptive)
+        try:
+            turn = s.answer(text)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        # M18.3: acoustic telemetry for this turn (duration optional; typed => wpm 0).
+        raw_duration = (payload or {}).get("duration_seconds")
+        speech = analyze_speech_delivery(text, raw_duration)
+        # Attach telemetry to the exact turn just answered (before any appended follow-up turn).
+        answered_turns = s.answered
+        if answered_turns:
+            answered_turns[-1]["speech_analytics"] = speech
+        elif s.transcript:
+            s.transcript[-1]["speech_analytics"] = speech
+        if turn.injection_flags:
+            # M15: record the neutralized attempt (append-only audit row).
+            from app.security.audit import log_audit
+            log_audit(session, action="security.prompt_injection_blocked",
+                      entity_type="interview", entity_id=iid,
+                      actor_role="student",
+                      detail={"flags": turn.injection_flags,
+                              "student_id": row.student_id,
+                              "question_id": turn.question_id},
+                      commit=True)
+        try:
+            q_obj = (get_question(load_bank(), turn.question_id)
+                     if answered_turns and answered_turns[-1].get("question_source", "offline_bank") == "offline_bank" else None)
+            # Only record calibration telemetry for STATIC bank questions; transient
+            # dynamic ids (q-*-followup, q-resume-*) must never pollute the ledger.
+            if q_obj is not None and answered_turns[-1].get("question_source", "offline_bank") == "offline_bank":
+                QuestionTelemetryManager().record_answer_turn(
+                    q_id=turn.question_id,
+                    score=turn.score,
+                    matched_kw=turn.matched_keywords,
+                    expected_kw=list(q_obj.keywords),
+                    difficulty=q_obj.difficulty,
+                )
+        except Exception:
+            pass
+        if turn.finished:
+            student = session.get(Student, row.student_id) if row.student_id else None
+            return _finalize(session, row, s.finish(), turn=turn, ctx=ctx, student=student)
+        nq = s.next_question()
+        if nq is None:
+            # question bank exhausted before MAX_TURNS: end gracefully instead of
+            # leaving the interview in a non-completable, non-finished state
+            student = session.get(Student, row.student_id) if row.student_id else None
+            return _finalize(session, row, s.finish(), turn=turn, ctx=ctx, student=student)
+        row.transcript = s.transcript
+        session.add(row)
+        session.commit()
+        return JSONResponse(content={
+            "finished": False,
+            "score": turn.score,
+            "feedback": turn.feedback,
+            "next_difficulty": turn.next_difficulty,
+            "rubric": turn.rubric,
+            "matched_keywords": turn.matched_keywords,
+            "missed_keywords": turn.missed_keywords,
+            "ideal_answer_hint": turn.ideal_answer_hint,
+            "injection_flags": turn.injection_flags,
+            "followup_probe": turn.followup_probe,
+            "error_recovered": turn.error_recovered,
+            "evaluation_source": answered_turns[-1].get("evaluation_source") if answered_turns else None,
+            "coverage": s.coverage,
+            "speech_analytics": speech,
+            "question": _public_question(s, nq),
+        })
 
 
 @router.get("/api/interviews/{iid}")
@@ -645,15 +677,17 @@ def get_interview(iid: str, request: Request, session: Session = Depends(get_ses
 @router.post("/api/interviews/{iid}/finish")
 def finish_interview(iid: str, request: Request, session: Session = Depends(get_session), ctx=Depends(get_ctx)):
     """Explicit early exit: preserve unasked claims and report incomplete coverage."""
-    row = session.get(Interview, iid)
-    if row is None:
-        raise HTTPException(404, "interview not found")
-    if row.student_id:
-        enforce_student_scope(request, row.student_id)
-    if row.finished:
-        raise HTTPException(409, "interview already finished")
-    s = _session(session, row, ctx)
-    return _finalize(session, row, s.finish(), ctx=ctx, completion_reason="ended_early")
+    with _get_interview_lock(iid):
+        session.expire_all()
+        row = session.get(Interview, iid)
+        if row is None:
+            raise HTTPException(404, "interview not found")
+        if row.student_id:
+            enforce_student_scope(request, row.student_id)
+        if row.finished:
+            raise HTTPException(409, "interview already finished")
+        s = _session(session, row, ctx)
+        return _finalize(session, row, s.finish(), ctx=ctx, completion_reason="ended_early")
 
 
 @router.get("/interviews/{iid}")
@@ -714,6 +748,60 @@ def speech_analyze(
     return analyze_speech_delivery(text, (payload or {}).get("duration_seconds"))
 
 
+def _transcribe_audio_sync(audio_bytes: bytes, filename: str) -> tuple[str, str] | None:
+    """Run blocking Whisper / faster-whisper transcription off the event loop."""
+    from app.config import settings
+
+    if settings.llm_provider == "openai" and settings.openai_api_key:
+        try:
+            import io
+
+            from openai import OpenAI
+
+            client = OpenAI(api_key=settings.openai_api_key)
+            buf = io.BytesIO(audio_bytes)
+            buf.name = filename
+            resp = client.audio.transcriptions.create(model="whisper-1", file=buf)
+            text = str(getattr(resp, "text", "") or "").strip()
+            if text:
+                return ("openai_whisper", text)
+        except Exception as exc:
+            logger.warning("OpenAI Whisper transcription failed (%s)", exc)
+
+    try:
+        import tempfile
+
+        from faster_whisper import WhisperModel  # type: ignore[import-not-found]
+
+        suffix = os.path.splitext(filename)[1] or ".webm"
+        tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
+        tmp_path = tmp.name
+        try:
+            tmp.write(audio_bytes)
+            tmp.flush()
+            tmp.close()
+            model = WhisperModel("tiny", device="cpu")
+            segments, _ = model.transcribe(tmp_path)
+            text = " ".join(seg.text.strip() for seg in segments).strip()
+            if text:
+                return ("faster_whisper", text)
+        finally:
+            try:
+                tmp.close()
+            except Exception:
+                pass
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+    except ImportError:
+        pass
+    except Exception as exc:
+        logger.warning("Local faster_whisper failed (%s)", exc)
+
+    return None
+
+
 @router.post("/api/speech/transcribe")
 async def speech_transcribe(
     request: Request,
@@ -743,51 +831,17 @@ async def speech_transcribe(
             transcript_hint = str(body.get("transcript_hint") or "").strip()
             duration_seconds = body.get("duration_seconds")
 
-    from app.config import settings
-    if audio_bytes and settings.llm_provider == "openai" and settings.openai_api_key:
-        try:
-            import io
-
-            from openai import OpenAI
-            client = OpenAI(api_key=settings.openai_api_key)
-            buf = io.BytesIO(audio_bytes)
-            buf.name = filename
-            resp = client.audio.transcriptions.create(model="whisper-1", file=buf)
-            text = str(getattr(resp, "text", "") or "").strip()
-            if text:
-                return {
-                    "ok": True,
-                    "engine": "openai_whisper",
-                    "fallback": False,
-                    "transcript": text,
-                    "analytics": analyze_speech_delivery(text, duration_seconds),
-                }
-        except Exception as exc:
-            logger.warning("OpenAI Whisper transcription failed (%s)", exc)
-
     if audio_bytes:
-        try:
-            import tempfile
-
-            from faster_whisper import WhisperModel  # type: ignore[import-not-found]
-            with tempfile.NamedTemporaryFile(suffix=os.path.splitext(filename)[1] or ".webm") as tmp:
-                tmp.write(audio_bytes)
-                tmp.flush()
-                model = WhisperModel("tiny", device="cpu")
-                segments, _ = model.transcribe(tmp.name)
-                text = " ".join(seg.text.strip() for seg in segments).strip()
-            if text:
-                return {
-                    "ok": True,
-                    "engine": "faster_whisper",
-                    "fallback": False,
-                    "transcript": text,
-                    "analytics": analyze_speech_delivery(text, duration_seconds),
-                }
-        except ImportError:
-            pass
-        except Exception as exc:
-            logger.warning("Local faster_whisper failed (%s)", exc)
+        result = await run_in_threadpool(_transcribe_audio_sync, audio_bytes, filename)
+        if result is not None:
+            engine, text = result
+            return {
+                "ok": True,
+                "engine": engine,
+                "fallback": False,
+                "transcript": text,
+                "analytics": analyze_speech_delivery(text, duration_seconds),
+            }
 
     return {
         "ok": True,

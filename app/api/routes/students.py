@@ -1,4 +1,5 @@
 import logging
+import threading
 import zipfile
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -7,7 +8,7 @@ from typing import Any
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
-from sqlalchemy import delete
+from sqlalchemy import delete, update
 from sqlmodel import Session, select
 
 from app.api.deps import get_ctx, get_session
@@ -45,6 +46,7 @@ from app.scraper.ai_query import LEVEL_RANK as _LEVEL_RANK
 from app.scraper.ai_query import suggest_job_queries_for_student
 from app.security.guardrails import sanitize_untrusted_text
 from app.security.pii import scrub_for_llm
+from app.security.ratelimit import check_rate_limit
 from app.security.rbac import (
     current_role,
     enforce_student_scope,
@@ -56,6 +58,7 @@ from app.taxonomy.branches import normalize_branch
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+_REUPLOAD_REQ_LOCK = threading.Lock()
 
 SUPPORTED_SUFFIXES = {".pdf", ".docx", ".txt", ".text", ".md", ".png", ".jpg", ".jpeg"}
 MAX_RESUME_BYTES = 5 * 1024 * 1024   # 5 MB cap on resume uploads
@@ -220,7 +223,7 @@ def _rank_and_persist(session, ctx, sid, student, top: int = 10, include_scraped
     ]
 
 
-def create_student_core(session, ctx, file, name, branch, year, gpa):
+def create_student_core(session, ctx, file, name, branch, year, gpa, *, actor_role: str = "student"):
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in SUPPORTED_SUFFIXES:
         raise HTTPException(400, f"unsupported resume format: {suffix or '(none)'}")
@@ -229,7 +232,7 @@ def create_student_core(session, ctx, file, name, branch, year, gpa):
     except (ValueError, zipfile.BadZipFile, OSError, RuntimeError) as e:
         logger.exception("resume parse failed for %s", file.filename)
         raise HTTPException(400, f"could not parse resume: {e}") from e
-    sid = f"stu-{uuid4().hex[:8]}"
+    sid = f"stu-{uuid4().hex[:12]}"
     text, pii_count = scrub_for_llm(text)   # Phase 4: redact PII before store/LLM
     text, inj_flags = sanitize_untrusted_text(text, source="resume")  # M15 injection gate
     parsed = extract_resume_with_ai(text, ctx.taxonomy, getattr(ctx, "llm", None))
@@ -256,18 +259,31 @@ def create_student_core(session, ctx, file, name, branch, year, gpa):
                                  mentions=record["mentions"], level=record["level"],
                                  evidence=list(record["evidence"])))
     from app.security.audit import log_audit
+    role_val = actor_role or "student"
     log_audit(session, action="student.resume_uploaded", entity_type="student",
-              entity_id=sid, actor_role="student",
+              entity_id=sid, actor_role=role_val,
               detail={"branch": branch, "skills": len(parsed["skills"]),
                       "pii_redacted": pii_count})
     if inj_flags:
         log_audit(session, action="security.prompt_injection_blocked",
-                  entity_type="resume", entity_id=sid, actor_role="student",
+                  entity_type="resume", entity_id=sid, actor_role=role_val,
                   detail={"flags": inj_flags, "source": "resume"})
     session.commit()
     ctx.vector_store.upsert("student", sid, ctx.embedder.embed(text))
     rows = session.exec(select(StudentSkill).where(StudentSkill.student_id == sid)).all()
     return sid, [_skill_payload(r, ctx) for r in rows]
+
+
+def _delete_vector(vector_store, kind: str, ref_id: str) -> None:
+    if not vector_store:
+        return
+    try:
+        if hasattr(vector_store, "delete"):
+            vector_store.delete(kind, ref_id)
+        elif hasattr(vector_store, "_items") and isinstance(vector_store._items, dict):
+            vector_store._items.pop((kind, ref_id), None)
+    except Exception:
+        pass
 
 
 def delete_student_core(session: Session, ctx, sid: str, actor_role: str = "tpo_admin") -> bool:
@@ -276,7 +292,26 @@ def delete_student_core(session: Session, ctx, sid: str, actor_role: str = "tpo_
         return False
     student_name = student.name
     student_branch = student.branch
-    # M19: applications must go first (they FK both student and job).
+    # Cascade owned live/private jobs first so no orphaned job rows remain.
+    _cascade_delete_owned_live_jobs(session, ctx, sid)
+    for owned_job in session.exec(select(Job).where(Job.owner_student_id == sid)).all():
+        jid = owned_job.id
+        _delete_vector(getattr(ctx, "vector_store", None), "job", jid)
+        if hasattr(ctx, "job_vectors"):
+            ctx.job_vectors.pop(jid, None)
+        plan_ids = list(session.exec(select(UpskillPlan.id).where(UpskillPlan.job_id == jid)).all())
+        if plan_ids:
+            session.execute(delete(PlanItem).where(PlanItem.plan_id.in_(plan_ids)))
+        session.execute(delete(UpskillPlan).where(UpskillPlan.job_id == jid))
+        for cd in session.exec(select(CampusDrive).where(CampusDrive.job_id == jid)).all():
+            cd.job_id = None
+            session.add(cd)
+        session.execute(delete(JobApplication).where(JobApplication.job_id == jid))
+        session.execute(delete(JobMatch).where(JobMatch.job_id == jid))
+        session.execute(delete(Interview).where(Interview.job_id == jid))
+        session.delete(owned_job)
+
+    # M19: applications must go before approvals/student (they FK student, job, approval).
     session.execute(delete(JobApplication).where(JobApplication.student_id == sid))
     session.execute(delete(JobMatch).where(JobMatch.student_id == sid))
     session.execute(delete(StudentSkill).where(StudentSkill.student_id == sid))
@@ -289,7 +324,16 @@ def delete_student_core(session: Session, ctx, sid: str, actor_role: str = "tpo_
     for run in session.exec(select(AgentRun).where(AgentRun.student_id == sid)).all():
         run.student_id = None
         session.add(run)
+    for ap in session.exec(select(ApprovalRequest)).all():
+        payload_sid = (ap.payload or {}).get("student_id") if isinstance(ap.payload, dict) else None
+        if ap.target_id == sid or payload_sid == sid:
+            for cd in session.exec(select(CampusDrive).where(CampusDrive.approval_id == ap.id)).all():
+                cd.approval_id = None
+                session.add(cd)
+            session.execute(delete(JobApplication).where(JobApplication.approval_id == ap.id))
+            session.delete(ap)
     session.delete(student)
+    _delete_vector(getattr(ctx, "vector_store", None), "student", sid)
     from app.security.audit import log_audit
     log_audit(
         session,
@@ -320,7 +364,7 @@ def delete_student(
     return {"status": "success", "deleted_student_id": sid}
 
 
-def create_student_core_resume(session, ctx, sid, file):
+def create_student_core_resume(session, ctx, sid, file, *, actor_role: str = "student"):
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in SUPPORTED_SUFFIXES:
         raise HTTPException(400, f"unsupported resume format: {suffix or '(none)'}")
@@ -358,14 +402,15 @@ def create_student_core_resume(session, ctx, sid, file):
                 pass
         session.add(student)
     from app.security.audit import log_audit
+    role_val = actor_role or "student"
     log_audit(session, action="student.resume_uploaded", entity_type="student",
-              entity_id=sid, actor_role="student",
+              entity_id=sid, actor_role=role_val,
               detail={"branch": (student.branch if student is not None else ""),
                       "skills": len(parsed["skills"]), "pii_redacted": pii_count,
                       "reupload": True})
     if inj_flags:
         log_audit(session, action="security.prompt_injection_blocked",
-                  entity_type="resume", entity_id=sid, actor_role="student",
+                  entity_type="resume", entity_id=sid, actor_role=role_val,
                   detail={"flags": inj_flags, "source": "resume"})
     session.commit()
     ctx.vector_store.upsert("student", sid, ctx.embedder.embed(text))
@@ -441,11 +486,18 @@ def consume_resume_reupload_unlock(
     sid: str,
     actor_role: str,
 ) -> None:
-    """Consume the single-use resume re-upload unlock and record an AuditLog row."""
+    """Atomically consume the single-use resume re-upload unlock and record an AuditLog row."""
     if student is None:
         return
+    res = session.exec(
+        update(Student)
+        .where(Student.id == sid, Student.resume_reupload_unlocked == True)  # noqa: E712
+        .values(resume_reupload_unlocked=False)
+    )
+    if getattr(res, "rowcount", 0) != 1:
+        session.rollback()
+        raise HTTPException(403, "Resume re-upload unlock has already been consumed.")
     student.resume_reupload_unlocked = False
-    session.add(student)
     from app.security.audit import log_audit
     log_audit(
         session,
@@ -471,10 +523,34 @@ def resume_reupload_json(
     student = session.get(Student, sid)
     if student is None:
         raise HTTPException(404, "student not found")
+    actor = current_role(request)
     consume_unlock = enforce_resume_reupload_gate(request, student)
-    _sid, skills = create_student_core_resume(session, ctx, sid, file)
     if consume_unlock:
-        consume_resume_reupload_unlock(session, session.get(Student, sid), sid, current_role(request))
+        res = session.exec(
+            update(Student)
+            .where(Student.id == sid, Student.resume_reupload_unlocked == True)  # noqa: E712
+            .values(resume_reupload_unlocked=False)
+        )
+        if getattr(res, "rowcount", 0) != 1:
+            session.rollback()
+            raise HTTPException(403, "Resume re-upload unlock has already been consumed.")
+        session.expire(student)
+    try:
+        _sid, skills = create_student_core_resume(session, ctx, sid, file, actor_role=actor)
+    except Exception:
+        session.rollback()
+        raise
+    if consume_unlock:
+        from app.security.audit import log_audit
+        log_audit(
+            session,
+            action="student.resume_reupload_consumed",
+            entity_type="student",
+            entity_id=sid,
+            actor_role=actor,
+            detail={"student_id": sid, "unlock_consumed": True},
+            commit=True,
+        )
     return {"id": sid, "skills": skills, "skill_count": len(skills)}
 
 
@@ -494,40 +570,41 @@ def request_resume_reupload(
     if student is None:
         raise HTTPException(404, "student not found")
 
-    existing = session.exec(
-        select(ApprovalRequest).where(
-            ApprovalRequest.kind == "resume_reupload_request",
-            ApprovalRequest.target_id == sid,
-            ApprovalRequest.status == "pending_review",
-        )
-    ).first()
-    if existing is not None:
-        raise HTTPException(409, "A resume re-upload approval request is already pending review.")
-
     reason = str((payload or {}).get("reason") or "").strip()
-    aid = f"apr-{uuid4().hex[:8]}"
-    ap = ApprovalRequest(
-        id=aid,
-        kind="resume_reupload_request",
-        target_id=sid,
-        title=f"Resume Re-upload Permission: {student.name}",
-        summary=reason or "Student requested permission to re-upload and re-extract resume",
-        payload={"student_id": sid, "reason": reason},
-        status="pending_review",
-        requested_by=role,
-        created_at=datetime.now(timezone.utc),
-    )
-    session.add(ap)
-    from app.security.audit import log_audit
-    log_audit(
-        session,
-        action="student.resume_reupload_requested",
-        entity_type="student",
-        entity_id=sid,
-        actor_role=role,
-        detail={"approval_id": aid, "student_id": sid, "reason": reason},
-    )
-    session.commit()
+    aid = f"apr-{uuid4().hex[:12]}"
+    with _REUPLOAD_REQ_LOCK:
+        existing = session.exec(
+            select(ApprovalRequest).where(
+                ApprovalRequest.kind == "resume_reupload_request",
+                ApprovalRequest.target_id == sid,
+                ApprovalRequest.status == "pending_review",
+            )
+        ).first()
+        if existing is not None:
+            raise HTTPException(409, "A resume re-upload approval request is already pending review.")
+
+        ap = ApprovalRequest(
+            id=aid,
+            kind="resume_reupload_request",
+            target_id=sid,
+            title=f"Resume Re-upload Permission: {student.name}",
+            summary=reason or "Student requested permission to re-upload and re-extract resume",
+            payload={"student_id": sid, "reason": reason},
+            status="pending_review",
+            requested_by=role,
+            created_at=datetime.now(timezone.utc),
+        )
+        session.add(ap)
+        from app.security.audit import log_audit
+        log_audit(
+            session,
+            action="student.resume_reupload_requested",
+            entity_type="student",
+            entity_id=sid,
+            actor_role=role,
+            detail={"approval_id": aid, "student_id": sid, "reason": reason},
+        )
+        session.commit()
     return {
         "id": ap.id,
         "approval_id": ap.id,
@@ -545,10 +622,14 @@ def list_students(
     q: str | None = None,
     branch: str | None = None,
     min_gpa: float | None = None,
+    limit: int = 200,
+    offset: int = 0,
     session: Session = Depends(get_session),
     role: str = Depends(require_role("student", "faculty_mentor", "tpo_admin")),
 ) -> list[dict[str, Any]]:
     """List students alphabetically by name, RBAC-scoped and filterable by query/branch/GPA."""
+    limit = max(1, min(int(limit), 500))
+    offset = max(0, int(offset))
     user = get_current_user_optional(request)
     is_strict = str(getattr(_settings, "auth_mode", "demo")).strip().lower() == "strict"
     rows = session.exec(select(Student)).all()
@@ -573,6 +654,8 @@ def list_students(
                 s for s in rows
                 if (normalize_branch(s.branch or "") or (s.branch or "")).strip().lower() == dept_norm
             ]
+        elif user is not None:
+            rows = []
 
     q_norm = (q or "").strip().lower()
     b_norm = (normalize_branch(branch) or (branch or "")).strip().lower() if branch and branch.strip() else ""
@@ -589,7 +672,7 @@ def list_students(
             continue
         filtered.append(s)
 
-    filtered = sort_students_alphabetically(filtered)
+    filtered = sort_students_alphabetically(filtered)[offset : offset + limit]
     return [
         {
             "id": s.id,
@@ -611,15 +694,44 @@ async def create_student(
     ctx=Depends(get_ctx),
     _role: str = Depends(require_role("tpo_admin")),
 ):
+    import math as _math
+
     content_type = request.headers.get("content-type", "")
     if "application/json" in content_type:
-        body = await request.json()
-        name = body.get("name") or "Candidate"
-        branch = body.get("branch") or ""
-        year = int(body.get("year") or 3)
-        gpa = float(body.get("gpa") or 0.0)
+        try:
+            body = await request.json()
+        except Exception as exc:
+            raise HTTPException(400, "invalid JSON payload") from exc
+        if not isinstance(body, dict):
+            raise HTTPException(422, "JSON body must be an object")
+        name = str(body.get("name") or "Candidate").strip() or "Candidate"
+        branch = str(body.get("branch") or "").strip()
+        raw_year = body.get("year")
+        if raw_year is None or raw_year == "":
+            year = 3
+        elif isinstance(raw_year, bool):
+            raise HTTPException(422, "year must be an integer between 1 and 6")
+        else:
+            try:
+                year = int(raw_year)
+            except (TypeError, ValueError) as exc:
+                raise HTTPException(422, "year must be an integer between 1 and 6") from exc
+            if year < 1 or year > 6:
+                raise HTTPException(422, "year must be between 1 and 6")
+        raw_gpa = body.get("gpa")
+        if raw_gpa is None or raw_gpa == "":
+            gpa = 0.0
+        elif isinstance(raw_gpa, bool):
+            raise HTTPException(422, "gpa must be a finite number between 0.0 and 10.0")
+        else:
+            try:
+                gpa = float(raw_gpa)
+            except (TypeError, ValueError) as exc:
+                raise HTTPException(422, "gpa must be a finite number between 0.0 and 10.0") from exc
+            if not _math.isfinite(gpa) or gpa < 0.0 or gpa > 10.0:
+                raise HTTPException(422, "gpa must be between 0.0 and 10.0")
         norm_branch = normalize_branch(branch) or branch
-        sid = f"stu-{uuid4().hex[:8]}"
+        sid = f"stu-{uuid4().hex[:12]}"
         student = Student(id=sid, name=name, branch=norm_branch, year=year, gpa=gpa)
         session.add(student)
         session.commit()
@@ -633,15 +745,27 @@ async def create_student(
         raise HTTPException(422, "file is required for multipart uploads")
     name = str(form.get("name") or "")
     branch = str(form.get("branch") or "")
-    try:
-        year = int(form.get("year") or 3)
-    except (TypeError, ValueError):
+    raw_year = form.get("year")
+    if raw_year in (None, ""):
         year = 3
-    try:
-        gpa = float(form.get("gpa") or 0.0)
-    except (TypeError, ValueError):
+    else:
+        try:
+            year = int(raw_year)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(422, "year must be an integer between 1 and 6") from exc
+        if year < 1 or year > 6:
+            raise HTTPException(422, "year must be between 1 and 6")
+    raw_gpa = form.get("gpa")
+    if raw_gpa in (None, ""):
         gpa = 0.0
-    sid, skills = create_student_core(session, ctx, file, name, branch, year, gpa)
+    else:
+        try:
+            gpa = float(raw_gpa)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(422, "gpa must be a finite number between 0.0 and 10.0") from exc
+        if not _math.isfinite(gpa) or gpa < 0.0 or gpa > 10.0:
+            raise HTTPException(422, "gpa must be between 0.0 and 10.0")
+    sid, skills = create_student_core(session, ctx, file, name, branch, year, gpa, actor_role=_role)
     student = session.get(Student, sid)
     persisted_name = student.name if student is not None else name
     return {"id": sid, "name": persisted_name, "skills": skills, "skill_count": len(skills)}
@@ -734,6 +858,15 @@ def simulate_match(sid: str, job_id: str, request: Request,
     job = session.get(Job, job_id)
     if job is None:
         raise HTTPException(404, "job not found")
+    if not is_job_visible_to_student(job, sid):
+        raise HTTPException(403, "job is not visible in this student's workspace")
+    if payload is not None and not isinstance(payload, dict):
+        raise HTTPException(422, "payload must be an object")
+    raw_skills = (payload or {}).get("skills", [])
+    if raw_skills is None:
+        raw_skills = []
+    if not isinstance(raw_skills, list):
+        raise HTTPException(422, "skills must be a list of strings")
     sv = ctx.vector_store.get("student", sid)
     if sv is None:
         raise HTTPException(404, "student vector not found; re-upload the resume")
@@ -746,7 +879,7 @@ def simulate_match(sid: str, job_id: str, request: Request,
         ctx.vector_store.upsert("job", job.id, jv)
         ctx.job_vectors[job.id] = jv
     sim = cosine(sv, jv)
-    skills = list(dict.fromkeys((payload or {}).get("skills", [])))
+    skills = list(dict.fromkeys(str(s).strip() for s in raw_skills if str(s).strip()))
     courses = _load_courses(session)
     courses_for_skill = {s: pick_course_for_skill(s, courses) for s in skills}
     return simulate_counterfactual(student_skills, job, skills, sim, ctx.taxonomy,
@@ -926,7 +1059,7 @@ def toggle_favorite_match(
     request: Request,
     payload: dict[str, Any] | None = None,
     session: Session = Depends(get_session),
-    role: str = Depends(require_role("student", "tpo_admin")),
+    role: str = Depends(require_role("student", "tpo_admin", exact=True)),
 ) -> dict[str, Any]:
     """Toggle or set favorite status for a job match and sync linked applications."""
     enforce_student_scope(request, sid)
@@ -1005,6 +1138,24 @@ def dismiss_student_job_match(
     if student is None:
         raise HTTPException(404, "student not found")
     job = session.get(Job, job_id)
+    if job is None:
+        raise HTTPException(404, "job not found")
+    if not is_job_visible_to_student(job, sid) and not (role == "tpo_admin" and permanent):
+        has_own_record = (
+            getattr(job, "owner_student_id", None) in (None, sid)
+            and (
+                session.exec(
+                    select(JobMatch.id).where(JobMatch.student_id == sid, JobMatch.job_id == job_id)
+                ).first()
+                is not None
+                or session.exec(
+                    select(JobApplication.id).where(JobApplication.student_id == sid, JobApplication.job_id == job_id)
+                ).first()
+                is not None
+            )
+        )
+        if not has_own_record:
+            raise HTTPException(403, "job is not visible in this student's workspace")
 
     # Permanent delete is restricted strictly to TPO Admin
     if permanent:
@@ -1216,7 +1367,8 @@ def student_scrape_jobs_endpoint(
     payload: dict[str, Any] | None = None,
     session: Session = Depends(get_session),
     ctx: Any = Depends(get_ctx),
-    _role: str = Depends(require_role("student", "tpo_admin")),
+    _role: str = Depends(require_role("student", "tpo_admin", exact=True)),
+    _rl: None = Depends(check_rate_limit("jobs_scrape")),
 ) -> dict[str, Any]:
     """Skill-targeted live scrape: resolve queries, fetch, ingest, re-rank matches.
 
@@ -1234,7 +1386,11 @@ def student_scrape_jobs_endpoint(
     terms_input = payload.get("terms") or payload.get("queries") or payload.get("search_terms")
     term = payload.get("term") or payload.get("search_term")
     location = payload.get("location") or "Bengaluru"
-    limit = int(payload.get("limit") or payload.get("results_wanted") or 20)
+    raw_limit = payload.get("limit") if payload.get("limit") is not None else payload.get("results_wanted")
+    try:
+        limit = max(1, min(int(raw_limit if raw_limit is not None else 20), 100))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(422, "limit must be an integer") from exc
     sites = payload.get("sites") or ["naukri", "linkedin", "indeed", "ashby", "greenhouse", "lever"]
 
     terms: list[str] = []
@@ -1287,9 +1443,9 @@ def student_scrape_jobs_stream_endpoint(
     sid: str,
     request: Request,
     payload: dict[str, Any] | None = None,
-    session: Session = Depends(get_session),
     ctx: Any = Depends(get_ctx),
-    _role: str = Depends(require_role("student", "tpo_admin")),
+    _role: str = Depends(require_role("student", "tpo_admin", exact=True)),
+    _rl: None = Depends(check_rate_limit("jobs_scrape")),
 ):
     """Stream live scrape telemetry for a student workspace, then re-rank matches."""
     import queue
@@ -1302,14 +1458,15 @@ def student_scrape_jobs_stream_endpoint(
     from app.scraper.service import CompositeJobScraper
 
     enforce_student_scope(request, sid)
-    student = session.get(Student, sid)
-    if student is None:
-        raise HTTPException(404, "student not found")
     payload = payload or {}
     terms_input = payload.get("terms") or payload.get("queries") or payload.get("search_terms")
     term = payload.get("term") or payload.get("search_term")
     location = payload.get("location") or "Bengaluru"
-    limit = int(payload.get("limit") or payload.get("results_wanted") or 20)
+    raw_limit = payload.get("limit") if payload.get("limit") is not None else payload.get("results_wanted")
+    try:
+        limit = max(1, min(int(raw_limit if raw_limit is not None else 20), 100))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(422, "limit must be an integer") from exc
     sites = payload.get("sites") or ["naukri", "linkedin", "indeed", "ashby", "greenhouse", "lever"]
     fresher_only = payload.get("fresher_only", True)
 
@@ -1324,15 +1481,19 @@ def student_scrape_jobs_stream_endpoint(
         elif isinstance(term, str) and term.strip():
             terms = [term.strip()]
 
-    if not terms:
-        rows = session.exec(select(StudentSkill).where(StudentSkill.student_id == sid)).all()
-        skills = sorted(
-            rows,
-            key=lambda s: (_LEVEL_RANK.get(str(s.level).lower(), 0), int(s.mentions or 0)),
-            reverse=True,
-        )
-        suggested = suggest_job_queries_for_student(student, skills, getattr(ctx, "llm", None))
-        terms = suggested if suggested else ["Software Engineer"]
+    with Session(ctx.engine) as pre_session:
+        student = pre_session.get(Student, sid)
+        if student is None:
+            raise HTTPException(404, "student not found")
+        if not terms:
+            rows = pre_session.exec(select(StudentSkill).where(StudentSkill.student_id == sid)).all()
+            skills = sorted(
+                rows,
+                key=lambda s: (_LEVEL_RANK.get(str(s.level).lower(), 0), int(s.mentions or 0)),
+                reverse=True,
+            )
+            suggested = suggest_job_queries_for_student(student, skills, getattr(ctx, "llm", None))
+            terms = suggested if suggested else ["Software Engineer"]
 
     if fresher_only:
         fresher_qualifiers = ["Fresher", "Junior", "Intern", "Entry Level"]

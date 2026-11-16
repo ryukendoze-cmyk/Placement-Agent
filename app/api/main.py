@@ -1,3 +1,4 @@
+import logging
 import threading
 import time
 from dataclasses import dataclass, field
@@ -31,6 +32,21 @@ from app.security.rbac import current_role, role_explicitly_set
 from app.taxonomy.taxonomy import Taxonomy
 
 BASE_DIR = Path(__file__).resolve().parents[1]
+logger = logging.getLogger(__name__)
+_DEV_SESSION_SECRET = "ps06-jklu-careeros-dev-secret-key-change-in-prod-2026"
+
+
+def validate_strict_startup_settings() -> None:
+    """Fail closed at startup if strict mode is configured with a weak or default secret."""
+    from app.config import settings
+
+    if str(getattr(settings, "auth_mode", "demo")).strip().lower() != "strict":
+        return
+    secret = str(getattr(settings, "session_secret_key", "") or "")
+    if not secret or secret == _DEV_SESSION_SECRET or len(secret) < 32:
+        raise RuntimeError(
+            "SESSION_SECRET_KEY must be rotated (non-default, >= 32 characters) when auth_mode='strict'"
+        )
 
 _PUBLIC_EXACT = {
     "/login",
@@ -152,12 +168,13 @@ def backfill_memory_vectors(ctx: AppContext) -> int:
                         store.upsert("job", job.id, vec)
                     ctx.job_vectors.setdefault(job.id, vec)
                     warmed += 1
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("backfill_memory_vectors failed: %s", exc)
     return warmed
 
 
 def create_app(ctx: AppContext) -> FastAPI:
+    validate_strict_startup_settings()
     app = FastAPI(title="PS-06 Placement Agent", version="0.1.0")
     app.state.ctx = ctx
     # Warm in-memory vector store when booting over an existing non-Postgres database
@@ -173,8 +190,8 @@ def create_app(ctx: AppContext) -> FastAPI:
             return await call_next(request)
 
         path = request.url.path
-        is_strict = str(getattr(settings, "auth_mode", "demo")).lower() == "strict"
-        allow_demo_switch = bool(getattr(settings, "demo_role_switch", True))
+        is_strict = str(getattr(settings, "auth_mode", "demo")).strip().lower() == "strict"
+        allow_demo_switch = bool(getattr(settings, "demo_role_switch", False))
 
         if is_strict and not _is_public_path(path, demo_role_switch=allow_demo_switch):
             if not role_explicitly_set(request):
@@ -189,6 +206,9 @@ def create_app(ctx: AppContext) -> FastAPI:
                 return RedirectResponse(url="/login", status_code=303)
 
         response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         if response.status_code == 403 and path not in ("/auth/login", "/api/auth/switch-role"):
             _audit_auth_denied_rate_limited(
                 request, actor=current_role(request), status_code=403
@@ -204,8 +224,15 @@ def create_app(ctx: AppContext) -> FastAPI:
             "http://localhost",
         ],
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "X-Demo-Role",
+            "X-Demo-Department",
+            "X-Demo-Student-ID",
+            "X-Requested-With",
+        ],
     )
 
     @app.get("/manifest.webmanifest", include_in_schema=False)

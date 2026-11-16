@@ -15,6 +15,7 @@ from app.models import (
     JobMatch,
     PlanItem,
     ProgressEvent,
+    Skill,
     Student,
     StudentSkill,
     UpskillPlan,
@@ -30,12 +31,11 @@ def test_build_student_progress_report_full_contract_and_isolation():
     now = datetime.now(timezone.utc)
 
     with Session(eng) as session:
+        session.add(Skill(id="python", name="Python", category="languages"))
+        session.add(Skill(id="fastapi", name="FastAPI", category="backend"))
+        session.add(Skill(id="docker", name="Docker", category="devops_cloud"))
         session.add(Student(id="stu-v5", name="Riya Mehta", branch="CSE", year=4, gpa=8.6, backlogs=0))
         session.add(Student(id="stu-other", name="Other", branch="IT", year=4, gpa=7.5, backlogs=0))
-
-        session.add(StudentSkill(student_id="stu-v5", skill_id="python", level="advanced", verification_status="verified", confidence=0.92, mentions=4, last_verified_score=88))
-        session.add(StudentSkill(student_id="stu-v5", skill_id="fastapi", level="intermediate", verification_status="claimed", confidence=0.55, mentions=2))
-        session.add(StudentSkill(student_id="stu-v5", skill_id="docker", level="basic", verification_status="needs_reverification", confidence=0.35, mentions=1, last_verified_score=42))
 
         campus_dream = Job(
             id="job-campus-dream",
@@ -62,6 +62,31 @@ def test_build_student_progress_report_full_contract_and_isolation():
             owner_student_id="stu-other",
         )
         session.add_all([campus_dream, other_live_job])
+        session.add(
+            Course(
+                id="c-pg",
+                title="PostgreSQL Fundamentals",
+                provider="PostgreSQL Docs",
+                url="https://www.postgresql.org/docs/",
+                skill_ids=["postgresql"],
+                hours=8,
+            )
+        )
+        session.add(
+            Course(
+                id="c-dk",
+                title="Docker Getting Started",
+                provider="Docker Docs",
+                url="https://docs.docker.com/get-started/",
+                skill_ids=["docker"],
+                hours=6,
+            )
+        )
+        session.flush()
+
+        session.add(StudentSkill(student_id="stu-v5", skill_id="python", level="advanced", verification_status="verified", confidence=0.92, mentions=4, last_verified_score=88))
+        session.add(StudentSkill(student_id="stu-v5", skill_id="fastapi", level="intermediate", verification_status="claimed", confidence=0.55, mentions=2))
+        session.add(StudentSkill(student_id="stu-v5", skill_id="docker", level="basic", verification_status="needs_reverification", confidence=0.35, mentions=1, last_verified_score=42))
 
         session.add(
             JobMatch(
@@ -84,27 +109,8 @@ def test_build_student_progress_report_full_contract_and_isolation():
             )
         )
 
-        session.add(
-            Course(
-                id="c-pg",
-                title="PostgreSQL Fundamentals",
-                provider="PostgreSQL Docs",
-                url="https://www.postgresql.org/docs/",
-                skill_ids=["postgresql"],
-                hours=8,
-            )
-        )
-        session.add(
-            Course(
-                id="c-dk",
-                title="Docker Getting Started",
-                provider="Docker Docs",
-                url="https://docs.docker.com/get-started/",
-                skill_ids=["docker"],
-                hours=6,
-            )
-        )
         session.add(UpskillPlan(id="plan-v5", student_id="stu-v5", job_id="job-campus-dream", total_hours=14))
+        session.flush()
         session.add(PlanItem(id="pi-1", plan_id="plan-v5", order=1, skill_id="postgresql", course_id="c-pg", hours=8, status="done", week=1))
         session.add(PlanItem(id="pi-2", plan_id="plan-v5", order=2, skill_id="docker", course_id="c-dk", hours=6, status="pending", week=2))
 
@@ -189,10 +195,12 @@ def test_seed_progress_and_recalibrate_legacy_events():
         session.add(Student(id="stu-leg", name="Aarav", branch="CSE", year=4, gpa=8.4))
         session.add(Student(id="stu-new", name="Meera", branch="IT", year=4, gpa=8.2))
         session.add(Job(id="j1", title="SDE", company="Corp", description="Python", source="local"))
+        session.add(Course(id="c1", title="Python Docs", provider="Python", url="https://docs.python.org/", hours=10))
+        session.flush()
         session.add(JobMatch(id="jm-leg", student_id="stu-leg", job_id="j1", score=84, band="strong"))
         session.add(JobMatch(id="jm-new", student_id="stu-new", job_id="j1", score=72, band="moderate"))
         session.add(UpskillPlan(id="p-leg", student_id="stu-leg", job_id="j1", total_hours=10))
-        session.add(Course(id="c1", title="Python Docs", provider="Python", url="https://docs.python.org/", hours=10))
+        session.flush()
         session.add(PlanItem(id="i-leg-1", plan_id="p-leg", order=1, skill_id="python", course_id="c1", hours=10, status="done", week=1))
 
         # Inject legacy synthetic 30-min [20, 34, 45, 58, 67, 75] ladder
@@ -242,9 +250,11 @@ def test_recalibrate_legacy_prefix_with_later_events_and_low_readiness():
     with Session(eng) as session:
         session.add(Student(id="stu-mix", name="Kabir", branch="CSE", year=4, gpa=7.5))
         session.add(Job(id="j-low", title="Analyst", company="Beta", description="SQL", source="local"))
+        session.add(Course(id="c-mix", title="SQL Basics", provider="Docs", url="https://example.org/sql", hours=6))
+        session.flush()
         session.add(JobMatch(id="jm-low", student_id="stu-mix", job_id="j-low", score=10, band="early"))
         session.add(UpskillPlan(id="p-mix", student_id="stu-mix", job_id="j-low", total_hours=12))
-        session.add(Course(id="c-mix", title="SQL Basics", provider="Docs", url="https://example.org/sql", hours=6))
+        session.flush()
         session.add(PlanItem(id="pi-mix-1", plan_id="p-mix", order=1, skill_id="sql", course_id="c-mix", hours=6, status="todo", week=1))
         session.add(PlanItem(id="pi-mix-2", plan_id="p-mix", order=2, skill_id="python", course_id="c-mix", hours=6, status="todo", week=2))
 
@@ -311,6 +321,7 @@ def test_build_student_progress_report_handles_dict_rubric_overall():
     with Session(eng) as session:
         session.add(Student(id="stu-rub", name="Neha", branch="CSE", year=4, gpa=8.6))
         session.add(Job(id="j-rub", title="Backend", company="Acme", description="Python", source="local"))
+        session.flush()
         session.add(JobMatch(id="jm-rub", student_id="stu-rub", job_id="j-rub", score=74, band="strong"))
         session.add(
             Interview(

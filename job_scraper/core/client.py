@@ -261,22 +261,26 @@ class BrowserStealthContext:
         from playwright.async_api import async_playwright
         from playwright_stealth import Stealth
 
-        self._playwright_cm = Stealth().use_async(async_playwright())
-        self._playwright = await self._playwright_cm.__aenter__()
-        self._browser = await self._playwright.chromium.launch(
-            headless=self.headless,
-            args=[*self.build_launch_args(), *self.extra_launch_args],
-        )
-        self._context = await self._browser.new_context(
-            **self.build_context_options(
-                user_agent=self.user_agent,
-                locale=self.locale,
-                timezone_id=self.timezone_id,
-                viewport=self.viewport,
+        try:
+            self._playwright_cm = Stealth().use_async(async_playwright())
+            self._playwright = await self._playwright_cm.__aenter__()
+            self._browser = await self._playwright.chromium.launch(
+                headless=self.headless,
+                args=[*self.build_launch_args(), *self.extra_launch_args],
             )
-        )
-        self._page = await self._context.new_page()
-        return self._page
+            self._context = await self._browser.new_context(
+                **self.build_context_options(
+                    user_agent=self.user_agent,
+                    locale=self.locale,
+                    timezone_id=self.timezone_id,
+                    viewport=self.viewport,
+                )
+            )
+            self._page = await self._context.new_page()
+            return self._page
+        except Exception:
+            await self.__aexit__(None, None, None)
+            raise
 
     async def __aexit__(self, exc_type, exc, tb) -> None:
         for closer in (

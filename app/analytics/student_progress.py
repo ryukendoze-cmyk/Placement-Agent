@@ -244,8 +244,11 @@ def build_student_progress_report(
     student = session.get(Student, sid)
     skill_names = _skill_name_lookup(session, taxonomy)
 
+    sop03 = load_sop_params("SOP-03")
     sop04 = load_sop_params("SOP-04")
     sop05 = load_sop_params("SOP-05")
+    sop03_sd_backlogs = int(sop03.get("super_dream_max_backlogs", 0) or 0)
+    sop03_dream_backlogs = int(sop03.get("dream_max_backlogs", 1) or 1)
     sop04_min_mock = int(sop04.get("min_mock_score", 65) or 65)
     sop04_super_dream_min = int(sop04.get("super_dream_min_score", max(75, sop04_min_mock + 10)) or 75)
     sop04_tiers = {str(t).strip().lower() for t in (sop04.get("applicable_tiers") or ["dream", "super_dream"])}
@@ -257,10 +260,12 @@ def build_student_progress_report(
     by_level = {"advanced": 0, "intermediate": 0, "basic": 0}
     skill_items: list[dict[str, Any]] = []
     student_skill_ids: set[str] = set()
+    skill_verif_status: dict[str, str] = {}
 
     for ss in sorted(skill_rows, key=lambda r: (str(r.verification_status), str(r.skill_id))):
         student_skill_ids.add(ss.skill_id)
         vstat = str(getattr(ss, "verification_status", "claimed") or "claimed")
+        skill_verif_status[ss.skill_id] = vstat
         by_verification[vstat] = by_verification.get(vstat, 0) + 1
         lvl = str(getattr(ss, "level", "basic") or "basic").lower()
         by_level[lvl] = by_level.get(lvl, 0) + 1
@@ -341,6 +346,7 @@ def build_student_progress_report(
         plan_modules_by_item[it.id] = mod_dict
 
     plan_completion_pct = round(100 * plan_done_items / plan_total_items) if plan_total_items else 0
+    plan_hours_completion_pct = round(100 * plan_done_hours / plan_total_hours) if plan_total_hours else 0
 
     # 3. Mock Interviews & Speech Telemetry
     raw_interviews = list(session.exec(
@@ -476,17 +482,21 @@ def build_student_progress_report(
         min_gpa = float(getattr(job, "min_gpa", 0.0) or 0.0)
         stu_gpa = float(getattr(student, "gpa", 0.0) or 0.0) if student else 0.0
         max_bl = getattr(job, "max_backlogs", None)
+        if max_bl is None:
+            max_bl = sop03_sd_backlogs if tier == "super_dream" else sop03_dream_backlogs
         stu_bl = int(getattr(student, "backlogs", 0) or 0) if student else 0
         gpa_passed = not (min_gpa > 0 and stu_gpa < min_gpa)
-        if max_bl is not None and stu_bl > int(max_bl):
+        if stu_bl > int(max_bl):
             gpa_passed = False
 
         allowed = [str(b).strip() for b in (getattr(job, "allowed_branches", None) or []) if str(b).strip()]
         branch_passed = is_branch_eligible(getattr(student, "branch", "") or "", allowed) if allowed else True
         needs_mock = tier in sop04_tiers
-        sop04_passed = (not needs_mock) or (best_interview_score >= sop04_min_mock)
+        sop04_passed = (not needs_mock) or (bool(interview_history) and latest_interview_score >= sop04_min_mock)
         sop05_passed = cov_pct >= sop05_min_cov
-        eligible_now = gpa_passed and branch_passed and sop04_passed and sop05_passed
+        unverified_req = [s for s in matched_req if skill_verif_status.get(s, "claimed") == "unverified"]
+        sop08_passed = not bool(unverified_req)
+        eligible_now = gpa_passed and branch_passed and sop04_passed and sop05_passed and sop08_passed
         if eligible_now:
             eligible_drives_count += 1
 
@@ -500,6 +510,8 @@ def build_student_progress_report(
                 blockers.append(f"SOP-04 Mock >= {sop04_min_mock}%")
             if not sop05_passed:
                 blockers.append(f"SOP-05 Coverage >= {sop05_min_cov}%")
+            if not sop08_passed:
+                blockers.append("SOP-08 Unverified Skills")
             covered_by_plan = sum(1 for sk in missing_req if sk in plan_skill_ids)
             uplift = round(14 * (covered_by_plan / max(1, len(missing_req)))) if missing_req else 6
             projected_role_score = min(98, int(m.score) + max(4, uplift))
@@ -518,6 +530,8 @@ def build_student_progress_report(
                 "gpa_passed": gpa_passed,
                 "branch_passed": branch_passed,
                 "sop04_passed": sop04_passed,
+                "sop05_passed": sop05_passed,
+                "sop08_passed": sop08_passed,
                 "eligible_now": eligible_now,
                 "blocker_summary": ", ".join(blockers) if blockers else "All SOP gates satisfied",
             })
@@ -620,6 +634,7 @@ def build_student_progress_report(
         "plan_done_hours": int(plan_done_hours),
         "plan_total_hours": int(plan_total_hours),
         "plan_completion_pct": int(plan_completion_pct),
+        "plan_hours_completion_pct": int(plan_hours_completion_pct),
         "total_skills": len(skill_items),
         "verified_skills_count": int(by_verification.get("verified", 0)),
         "claimed_skills_count": int(by_verification.get("claimed", 0)),
@@ -630,8 +645,8 @@ def build_student_progress_report(
         "interviews_completed": len(interview_history),
         "best_interview_score": int(best_interview_score),
         "latest_interview_score": int(latest_interview_score),
-        "sop04_dream_ready": best_interview_score >= sop04_min_mock,
-        "sop04_super_dream_ready": best_interview_score >= sop04_super_dream_min,
+        "sop04_dream_ready": bool(interview_history) and latest_interview_score >= sop04_min_mock,
+        "sop04_super_dream_ready": bool(interview_history) and latest_interview_score >= sop04_super_dream_min,
         "avg_wpm": int(avg_wpm),
         "avg_star_completeness": int(avg_star_completeness),
         "eligible_drives_count": int(eligible_drives_count),

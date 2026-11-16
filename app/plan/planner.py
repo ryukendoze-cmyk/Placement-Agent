@@ -211,11 +211,37 @@ def apply_plan_item_completion(
         verification_statuses=v_statuses, session=session,
     )
     from dataclasses import asdict as _asdict
-    session.execute(delete(JobMatch).where(JobMatch.student_id == plan.student_id))
+    existing_matches = {
+        m.job_id: m
+        for m in session.exec(select(JobMatch).where(JobMatch.student_id == plan.student_id)).all()
+    }
+    seen_job_ids: set[str] = set()
     for job, js in ranked:
-        session.add(JobMatch(id=f"m-{uuid4().hex[:8]}", student_id=plan.student_id,
-                             job_id=job.id, score=js.score, band=js.band,
-                             breakdown=_asdict(js)))
+        seen_job_ids.add(job.id)
+        bd = _asdict(js)
+        existing = existing_matches.get(job.id)
+        if existing is not None:
+            prior_bd = existing.breakdown if isinstance(existing.breakdown, dict) else {}
+            was_dismissed = (existing.band == "dismissed") or bool(prior_bd.get("dismissed"))
+            if was_dismissed:
+                bd["dismissed"] = True
+            else:
+                existing.band = js.band
+            existing.score = js.score
+            existing.breakdown = bd
+            session.add(existing)
+        else:
+            session.add(JobMatch(id=f"m-{uuid4().hex[:8]}", student_id=plan.student_id,
+                                 job_id=job.id, score=js.score, band=js.band,
+                                 breakdown=bd))
+    stale_ids = [jid for jid in existing_matches if jid not in seen_job_ids]
+    if stale_ids:
+        session.execute(
+            delete(JobMatch).where(
+                JobMatch.student_id == plan.student_id,
+                JobMatch.job_id.in_(stale_ids),
+            )
+        )
     session.flush()
 
     # Closed-loop application sync: refresh match_score on active JobApplications
@@ -238,7 +264,7 @@ def apply_plan_item_completion(
     items = session.exec(select(PlanItem).where(PlanItem.plan_id == plan.id)).all()
     total_hours = plan.total_hours or 1
     done_hours = sum(i.hours for i in items if i.status == "done")
-    plan_pct = round(100 * done_hours / total_hours)
+    plan_pct = min(100, round(100 * done_hours / total_hours))
     matches = session.exec(select(JobMatch).where(JobMatch.student_id == plan.student_id)).all()
     best_match = max((m.score for m in matches), default=0)
     readiness = round(0.5 * plan_pct + 0.5 * best_match)

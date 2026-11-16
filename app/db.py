@@ -3,9 +3,10 @@ import json
 import logging
 import math
 import re
+from urllib.parse import urlparse
 
-from sqlalchemy import Engine, create_engine, text
-from sqlalchemy.pool import StaticPool
+from sqlalchemy import Engine, create_engine, event, text
+from sqlalchemy.pool import QueuePool, StaticPool
 from sqlmodel import SQLModel
 
 logger = logging.getLogger(__name__)
@@ -15,12 +16,34 @@ def make_engine(url: str | None = None) -> Engine:
     if url is None:
         from .config import settings
         url = settings.database_url
-    kwargs = {}
+    kwargs: dict = {}
+    is_memory_sqlite = url in ("sqlite://", "sqlite:///:memory:")
     if url.startswith("sqlite"):
-        kwargs["connect_args"] = {"check_same_thread": False}
-        if url in ("sqlite://", "sqlite:///:memory:"):
+        kwargs["connect_args"] = {"check_same_thread": False, "timeout": 30}
+        if is_memory_sqlite:
             kwargs["poolclass"] = StaticPool
-    return create_engine(url, **kwargs)
+        else:
+            kwargs["poolclass"] = QueuePool
+            kwargs["pool_size"] = 20
+            kwargs["max_overflow"] = 100
+    elif url.startswith("postgres"):
+        kwargs["pool_pre_ping"] = True
+        kwargs["pool_size"] = 10
+        kwargs["max_overflow"] = 20
+    engine = create_engine(url, **kwargs)
+    if url.startswith("sqlite"):
+        @event.listens_for(engine, "connect")
+        def _configure_sqlite_connection(dbapi_conn, _connection_record):
+            cur = dbapi_conn.cursor()
+            try:
+                cur.execute("PRAGMA foreign_keys=ON")
+                cur.execute("PRAGMA busy_timeout=5000")
+                if not is_memory_sqlite:
+                    cur.execute("PRAGMA journal_mode=WAL")
+                    cur.execute("PRAGMA synchronous=NORMAL")
+            finally:
+                cur.close()
+    return engine
 
 
 def init_db(engine: Engine) -> None:
@@ -217,6 +240,17 @@ _ENSURE_INDEX_STATEMENTS = [
     "CREATE INDEX IF NOT EXISTS ix_job_is_live ON job (is_live)",
     "CREATE INDEX IF NOT EXISTS ix_jobmatch_is_favorite ON jobmatch (is_favorite)",
     "CREATE INDEX IF NOT EXISTS ix_jobapplication_is_favorite ON jobapplication (is_favorite)",
+    "CREATE INDEX IF NOT EXISTS ix_jobmatch_student_job ON jobmatch (student_id, job_id)",
+    "CREATE INDEX IF NOT EXISTS ix_jobapplication_status ON jobapplication (status)",
+    "CREATE INDEX IF NOT EXISTS ix_approvalrequest_kind_status ON approvalrequest (kind, status)",
+]
+
+_PARTIAL_INDEX_STATEMENTS = [
+    (
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_jobapplication_active_student_job "
+        "ON jobapplication (student_id, job_id) "
+        "WHERE status IN ('submitted', 'awaiting_mentor_endorsement', 'awaiting_tpo_approval', 'nominated')"
+    ),
 ]
 
 
@@ -234,6 +268,12 @@ def _ensure_indexes(engine: Engine) -> None:
                 conn.execute(text(stmt))
     except Exception as exc:  # noqa: BLE001 - index DDL must never block boot
         logger.warning("Index assurance failed: %s", exc)
+    for stmt in _PARTIAL_INDEX_STATEMENTS:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(stmt))
+        except Exception as exc:  # noqa: BLE001 - partial index must not block boot on legacy dupes
+            logger.warning("Partial unique index assurance failed: %s", exc)
 
 
 def _purge_dummy_jobs(engine: Engine) -> int:
@@ -527,7 +567,14 @@ def _sanitize_legacy_experience(engine: Engine) -> int:
             for job in jobs:
                 # If short LinkedIn description, attempt one-time fast enrichment
                 clean_body = (job.description or "").split("Apply URL:")[0].strip()
-                if len(clean_body) < 60 and job.job_url and "linkedin.com/jobs/view/" in job.job_url:
+                parsed_url = urlparse(job.job_url or "")
+                url_host = (parsed_url.hostname or "").lower()
+                is_linkedin_job = (
+                    parsed_url.scheme in ("http", "https")
+                    and (url_host == "linkedin.com" or url_host.endswith(".linkedin.com"))
+                    and parsed_url.path.startswith("/jobs/view/")
+                )
+                if len(clean_body) < 60 and is_linkedin_job:
                     fetched = fetch_external_job_description(job.job_url, timeout=3.0)
                     if fetched:
                         source_tag = getattr(job, "source", "linkedin") or "linkedin"
@@ -741,48 +788,73 @@ def _scrub_audit_obj(value):
     return value
 
 
+def _ensure_postgres_audit_trigger(conn) -> None:
+    """Install/recreate the PostgreSQL BEFORE UPDATE OR DELETE trigger on auditlog."""
+    conn.execute(
+        text(
+            "CREATE OR REPLACE FUNCTION _auditlog_reject_mutation() "
+            "RETURNS trigger LANGUAGE plpgsql AS $$ "
+            "BEGIN RAISE EXCEPTION 'AuditLog rows are immutable'; END; $$;"
+        )
+    )
+    conn.execute(text("DROP TRIGGER IF EXISTS auditlog_no_update ON auditlog;"))
+    conn.execute(
+        text(
+            "CREATE TRIGGER auditlog_no_update "
+            "BEFORE UPDATE OR DELETE ON auditlog "
+            "FOR EACH ROW EXECUTE FUNCTION _auditlog_reject_mutation();"
+        )
+    )
+
+
 def _scrub_legacy_audit_emails(engine: Engine) -> int:
     """Idempotently replace legacy raw email addresses in auditlog with pseudonymous id-XXXXXXXX tokens."""
     try:
         scrubbed = 0
         with engine.begin() as conn:
-            if engine.dialect.name == "postgresql":
-                conn.execute(text("DROP TRIGGER IF EXISTS auditlog_no_update ON auditlog;"))
             rows = conn.execute(
                 text(
                     "SELECT id, entity_id, detail FROM auditlog "
                     "WHERE entity_id LIKE '%@%' OR CAST(detail AS TEXT) LIKE '%@%'"
                 )
             ).fetchall()
-            for row_id, raw_eid, raw_detail in rows:
-                new_eid = _scrub_audit_string(str(raw_eid or ""))
-                if isinstance(raw_detail, (dict, list)):
-                    new_detail_str = json.dumps(_scrub_audit_obj(raw_detail))
-                elif isinstance(raw_detail, str):
-                    try:
-                        parsed = json.loads(raw_detail)
-                        new_detail_str = json.dumps(_scrub_audit_obj(parsed))
-                    except (ValueError, TypeError):
-                        new_detail_str = _scrub_audit_string(raw_detail)
-                elif raw_detail is None:
-                    new_detail_str = "{}"
-                else:
-                    new_detail_str = _scrub_audit_string(str(raw_detail))
+            if not rows:
+                return 0
+            if engine.dialect.name == "postgresql":
+                conn.execute(text("DROP TRIGGER IF EXISTS auditlog_no_update ON auditlog;"))
+            try:
+                for row_id, raw_eid, raw_detail in rows:
+                    new_eid = _scrub_audit_string(str(raw_eid or ""))
+                    if isinstance(raw_detail, (dict, list)):
+                        new_detail_str = json.dumps(_scrub_audit_obj(raw_detail))
+                    elif isinstance(raw_detail, str):
+                        try:
+                            parsed = json.loads(raw_detail)
+                            new_detail_str = json.dumps(_scrub_audit_obj(parsed))
+                        except (ValueError, TypeError):
+                            new_detail_str = _scrub_audit_string(raw_detail)
+                    elif raw_detail is None:
+                        new_detail_str = "{}"
+                    else:
+                        new_detail_str = _scrub_audit_string(str(raw_detail))
 
-                orig_detail_cmp = (
-                    json.dumps(raw_detail) if isinstance(raw_detail, (dict, list)) else str(raw_detail or "")
-                )
-                if new_eid != str(raw_eid or "") or new_detail_str != orig_detail_cmp:
-                    update_sql = (
-                        "UPDATE auditlog SET entity_id = :eid, detail = CAST(:det AS JSON) WHERE id = :id"
-                        if engine.dialect.name == "postgresql"
-                        else "UPDATE auditlog SET entity_id = :eid, detail = :det WHERE id = :id"
+                    orig_detail_cmp = (
+                        json.dumps(raw_detail) if isinstance(raw_detail, (dict, list)) else str(raw_detail or "")
                     )
-                    conn.execute(
-                        text(update_sql),
-                        {"eid": new_eid, "det": new_detail_str, "id": row_id},
-                    )
-                    scrubbed += 1
+                    if new_eid != str(raw_eid or "") or new_detail_str != orig_detail_cmp:
+                        update_sql = (
+                            "UPDATE auditlog SET entity_id = :eid, detail = CAST(:det AS JSON) WHERE id = :id"
+                            if engine.dialect.name == "postgresql"
+                            else "UPDATE auditlog SET entity_id = :eid, detail = :det WHERE id = :id"
+                        )
+                        conn.execute(
+                            text(update_sql),
+                            {"eid": new_eid, "det": new_detail_str, "id": row_id},
+                        )
+                        scrubbed += 1
+            finally:
+                if engine.dialect.name == "postgresql":
+                    _ensure_postgres_audit_trigger(conn)
         if scrubbed > 0:
             logger.info("Scrubbed legacy email literals from %d auditlog rows", scrubbed)
         return scrubbed
@@ -853,6 +925,13 @@ def install_audit_guard(engine: Engine) -> None:
     @event.listens_for(AuditLog, "before_delete", retval=True)
     def _block_delete(mapper, connection, target):  # pragma: no cover - guard
         raise RuntimeError("AuditLog rows are immutable; append a new row instead")
+
+    if engine.dialect.name == "postgresql":
+        try:
+            with engine.begin() as conn:
+                _ensure_postgres_audit_trigger(conn)
+        except Exception as exc:  # noqa: BLE001 - trigger DDL must never block boot
+            logger.warning("PostgreSQL auditlog trigger assurance failed: %s", exc)
 
     engine._audit_guard_installed = True
 

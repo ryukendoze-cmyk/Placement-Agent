@@ -217,7 +217,8 @@ def verify_sop_numeric_claims(text: str, *, sop_facts: dict | None = None) -> li
             continue
         try:
             val = float(m.group(1))
-            if val not in (d_min_lpa, d_max_lpa, sd_min_lpa) and abs(val - d_min_lpa) > 0.01:
+            allowed_vals = (d_min_lpa, d_max_lpa, sd_min_lpa) if "up to" in span else (d_min_lpa, d_max_lpa)
+            if val not in allowed_vals and abs(val - d_min_lpa) > 0.01:
                 _add(f"SOP-01:dream_lpa={val:g}!={d_min_lpa:g}")
         except ValueError:
             pass
@@ -348,7 +349,11 @@ def verify_text(
                     unverified.append(url)
                 marker = f"[UNVERIFIED: {url}]"
                 if marker not in annotated:
-                    annotated = annotated.replace(url, f"{url} {marker}")
+                    annotated = re.sub(
+                        rf"{re.escape(url)}(?=$|[\s\)\],;!?<>\"'])",
+                        f"{url} {marker}",
+                        annotated,
+                    )
 
     for num_err in verify_sop_numeric_claims(text, sop_facts=sop_facts):
         if num_err not in unverified:

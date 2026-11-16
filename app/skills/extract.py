@@ -372,6 +372,16 @@ def _line_sections_map(text: str) -> dict[str, str]:
     return out
 
 
+_STRONG_VERBS_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(v) for v in sorted(_STRONG_VERBS)) + r")\b",
+    re.I,
+)
+_APPLIED_VERBS_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(v) for v in sorted(_APPLIED_VERBS)) + r")\b",
+    re.I,
+)
+
+
 def _contextual_level(lines: list[str], *, sections: dict[str, str] | None = None) -> str:
     """Deterministic proficiency assessment from a skill's evidence lines.
 
@@ -388,12 +398,12 @@ def _contextual_level(lines: list[str], *, sections: dict[str, str] | None = Non
     strong_verb_hits = sum(
         1 for ln in lines
         if _leading_verb(ln) in _STRONG_VERBS
-        or any(v in ln.lower() for v in _STRONG_VERBS)
+        or _STRONG_VERBS_RE.search(ln)
     )
     applied_hits = sum(
         1 for ln in lines
         if _leading_verb(ln) in _APPLIED_VERBS
-        or any(v in ln.lower() for v in _APPLIED_VERBS)
+        or _APPLIED_VERBS_RE.search(ln)
     )
     experience_ctx = bool(_EXPERIENCE_HINT.search(joined)) or ("experience" in line_secs)
     project_ctx = bool(_PROJECT_HINT.search(joined)) or ("projects" in line_secs)
@@ -440,7 +450,7 @@ def _reconcile_level(
         return llm_norm
 
     flat_list_only = all(_SKILLS_SECTION_HINT.search(ln) for ln in lines) and not any(
-        _line_has_metric(ln) or any(v in ln.lower() for v in (_STRONG_VERBS | _APPLIED_VERBS))
+        _line_has_metric(ln) or _STRONG_VERBS_RE.search(ln) or _APPLIED_VERBS_RE.search(ln)
         for ln in lines
     )
     if flat_list_only and len(lines) <= 1 and mentions <= 1:
@@ -683,11 +693,15 @@ def _cache_parts(clean_text: str, taxonomy: Taxonomy, llm: object) -> tuple[bool
     mod = getattr(type(llm), "__module__", "")
     is_real_provider = mod.startswith("app.llm.") and type(llm).__name__ != "MockLLM"
     if is_real_provider:
+        primary = getattr(llm, "primary", None)
         llm_sig = (
             mod,
             type(llm).__name__,
             getattr(llm, "model", ""),
             getattr(llm, "model_id", ""),
+            getattr(llm, "_m", ""),
+            getattr(llm, "provider", ""),
+            getattr(primary, "_m", "") if primary is not None else "",
         )
         return True, (text_hash, tax_sig, llm_sig)
     return False, (text_hash, tax_sig)
@@ -792,15 +806,18 @@ def extract_resume_with_ai(text: str, taxonomy: Taxonomy, llm: object | None = N
     contextual extraction - resume uploads never fail because of the LLM.
     """
     if not isinstance(text, str) or not text.strip():
-        return {"profile": _empty_profile(), "skills": {}, "ai_parsed": False}
+        return {"profile": _empty_profile(), "skills": {}, "ai_parsed": False, "injection_flags": []}
 
-    clean_text, _ = sanitize_untrusted_text(text, source="resume")
+    clean_text, inj_flags = sanitize_untrusted_text(text, source="resume")
     if llm is None:
         logger.warning("extract_resume_with_ai: no LLM configured; using contextual fallback")
-        return _contextual_extract_resume(clean_text, taxonomy)
+        res = _contextual_extract_resume(clean_text, taxonomy)
+        res["injection_flags"] = list(inj_flags)
+        return res
 
     cached = _cache_get(clean_text, taxonomy, llm)
     if cached is not None:
+        cached.setdefault("injection_flags", list(inj_flags))
         return cached
 
     payload = json.dumps({"resume_text": clean_text, "taxonomy": _taxonomy_payload(taxonomy)})
@@ -808,14 +825,18 @@ def extract_resume_with_ai(text: str, taxonomy: Taxonomy, llm: object | None = N
         raw = _call_llm_deterministic(llm, system=EXTRACT_RESUME_SYSTEM, user=payload)
     except Exception as exc:  # noqa: BLE001 - resilience contract: never fail the upload
         logger.warning("extract_resume_with_ai: LLM call failed (%s); falling back", exc)
-        return _contextual_extract_resume(text, taxonomy)
+        res = _contextual_extract_resume(clean_text, taxonomy)
+        res["injection_flags"] = list(inj_flags)
+        return res
 
     parsed = _safe_json(raw)
     if parsed is None:
         logger.warning("extract_resume_with_ai: LLM returned invalid JSON; falling back")
-        return _contextual_extract_resume(text, taxonomy)
+        res = _contextual_extract_resume(clean_text, taxonomy)
+        res["injection_flags"] = list(inj_flags)
+        return res
 
-    sec_map = _line_sections_map(text)
+    sec_map = _line_sections_map(clean_text)
     profile = _normalize_profile(parsed.get("profile"))
     skills: dict[str, dict] = {}
     raw_skills = parsed.get("skills")
@@ -828,10 +849,10 @@ def extract_resume_with_ai(text: str, taxonomy: Taxonomy, llm: object | None = N
         skill = _resolve_skill(entry.get("skill_id"), taxonomy)
         if skill is None:
             continue  # not in taxonomy -> reject (FK-safe)
-        evidence = _normalize_evidence(entry.get("evidence"), text)
-        if not _grounded(skill, text, evidence, taxonomy):
+        evidence = _normalize_evidence(entry.get("evidence"), clean_text)
+        if not _grounded(skill, clean_text, evidence, taxonomy):
             continue  # ungrounded -> reject (hallucination guard)
-        lines = _skill_lines(skill, text, taxonomy)
+        lines = _skill_lines(skill, clean_text, taxonomy)
         evidence = evidence or lines
         if not evidence:
             continue
@@ -850,7 +871,7 @@ def extract_resume_with_ai(text: str, taxonomy: Taxonomy, llm: object | None = N
     for skill in sorted(taxonomy.all(), key=lambda s: s.id):
         if skill.id in skills:
             continue
-        lines = _skill_lines(skill, text, taxonomy)
+        lines = _skill_lines(skill, clean_text, taxonomy)
         if not lines:
             continue
         skills[skill.id] = {
@@ -864,13 +885,18 @@ def extract_resume_with_ai(text: str, taxonomy: Taxonomy, llm: object | None = N
     # per-field check makes this a no-op for keys the LLM already set, so no
     # outer gate is needed - any non-trivial condition would miss some
     # filled/empty field combination (regression-pinned by Test-Workhorse).
-    ctx_profile = _contextual_profile(text)
+    ctx_profile = _contextual_profile(clean_text)
     for key in ("name", "branch", "year", "gpa", "summary"):
         if not profile[key] and ctx_profile[key]:
             profile[key] = ctx_profile[key]
 
     ordered_skills = {sid: skills[sid] for sid in sorted(skills)}
-    result = {"profile": profile, "skills": ordered_skills, "ai_parsed": True}
+    result = {
+        "profile": profile,
+        "skills": ordered_skills,
+        "ai_parsed": True,
+        "injection_flags": list(inj_flags),
+    }
     _cache_put(clean_text, taxonomy, llm, result)
     return result
 

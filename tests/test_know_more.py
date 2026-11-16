@@ -242,6 +242,7 @@ def test_know_more_visual_plain_english_no_code_dumps_and_shell_guards(client: T
         "Agent Brain",
         "Upload & Run AI Extraction",
         "Fetch Live Jobs",
+        "Automation Scraper (Anandanair Tech Board)",
         "Remove All Live Jobs",
         "Re-Solve Plan",
         "Start interview (top match)",
@@ -252,6 +253,15 @@ def test_know_more_visual_plain_english_no_code_dumps_and_shell_guards(client: T
         "Reset Core Defaults",
     ):
         assert label in visible_text, f"missing plain-English button label {label!r}"
+    assert "RemoteOK" not in visible_text, "stale RemoteOK label should be replaced with Anandanair Tech Board"
+    for sync_phrase in (
+        "only a TPO Admin can withdraw it",
+        "Faculty Mentors cannot toggle favorites",
+        "Applies strictly to On-Campus drives",
+        "Faculty Mentors cannot dismiss on-campus institutional drives",
+        "invalidates the active session token on the server",
+    ):
+        assert sync_phrase in visible_text, f"missing /know-more sync phrase: {sync_phrase!r}"
 
     # Zero raw code dumps (endpoints, .py files, HTTP verbs, CSS IDs) in visible <main> guide text
     for forbidden_pat, desc in (

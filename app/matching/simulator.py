@@ -19,6 +19,8 @@ def simulate_counterfactual(
     *,
     levels: dict[str, str] | None = None,
     courses_for_skill: dict[str, dict] | None = None,
+    verification_statuses: dict[str, str] | None = None,
+    student=None,
 ) -> dict:
     """Project the (student, job) match if the student acquires `added_skill_ids`,
     assumed to reach at least the 'intermediate' level (never downgrading an
@@ -27,15 +29,34 @@ def simulate_counterfactual(
     levels = levels or {}
     added = list(dict.fromkeys(added_skill_ids or []))  # dedupe, keep order
 
-    current = score_job(student_skills, job, sim, taxonomy, levels=levels)
+    current = score_job(
+        student_skills,
+        job,
+        sim,
+        taxonomy,
+        levels=levels,
+        verification_statuses=verification_statuses,
+        student=student,
+    )
 
     proj_skills = dict(student_skills)
     proj_levels = dict(levels)
+    proj_verif = dict(verification_statuses) if verification_statuses is not None else None
     for s in added:
         proj_skills.setdefault(s, ["(simulated acquisition)"])
         proj_levels[s] = higher_level(levels.get(s), "intermediate")
+        if proj_verif is not None:
+            proj_verif[s] = "verified"
 
-    projected = score_job(proj_skills, job, sim, taxonomy, levels=proj_levels)
+    projected = score_job(
+        proj_skills,
+        job,
+        sim,
+        taxonomy,
+        levels=proj_levels,
+        verification_statuses=proj_verif,
+        student=student,
+    )
     delta = projected.score - current.score
 
     job_relevant = set(job.required_skills) | set(job.preferred_skills)

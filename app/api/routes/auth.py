@@ -29,12 +29,14 @@ from app.db import sort_students_alphabetically
 from app.models import Student, StudentSkill
 from app.security.audit import log_audit
 from app.security.pii import audit_actor_ref, mask_email
+from app.security.ratelimit import check_rate_limit
 from app.security.rbac import (
     ROLES,
     current_role,
     encode_session,
     get_current_user_optional,
     normalize_role,
+    revoke_session_token,
 )
 
 router = APIRouter()
@@ -123,7 +125,13 @@ def _ensure_rohit_shetty(session: Session, request: Request | None = None) -> St
     return s
 
 
-def _build_session_response(role: str, claims: dict[str, Any], *, redirect_to: str | None = None):
+def _build_session_response(
+    role: str,
+    claims: dict[str, Any],
+    *,
+    redirect_to: str | None = None,
+    request: Request | None = None,
+):
     """Set ps06_session (+ legacy ps06_role) on a JSON or redirect response."""
     from app.config import settings as _settings
     if redirect_to is not None:
@@ -132,9 +140,25 @@ def _build_session_response(role: str, claims: dict[str, Any], *, redirect_to: s
         resp = JSONResponse(content={"role": role, "ok": True, "claims": claims})
     # strict mode hardens the session cookie (M15): HttpOnly blocks JS reads;
     # demo mode keeps it readable so demo tooling can inspect the claims.
-    httponly = str(getattr(_settings, "auth_mode", "demo")).lower() == "strict"
-    resp.set_cookie("ps06_session", encode_session(claims), httponly=httponly, samesite="lax")
-    resp.set_cookie("ps06_role", role, httponly=httponly, samesite="lax")
+    httponly = str(getattr(_settings, "auth_mode", "demo")).strip().lower() == "strict"
+    max_age = max(60, int(getattr(_settings, "session_ttl_seconds", 86400 * 7)))
+    is_https = bool(request is not None and request.url.scheme == "https")
+    resp.set_cookie(
+        "ps06_session",
+        encode_session(claims),
+        httponly=httponly,
+        samesite="lax",
+        max_age=max_age,
+        secure=is_https,
+    )
+    resp.set_cookie(
+        "ps06_role",
+        role,
+        httponly=httponly,
+        samesite="lax",
+        max_age=max_age,
+        secure=is_https,
+    )
     return resp
 
 
@@ -262,7 +286,7 @@ async def switch_role(request: Request, session: Session = Depends(get_session))
         },
         commit=True,
     )
-    return _build_session_response(claims["role"], claims)
+    return _build_session_response(claims["role"], claims, request=request)
 
 
 @router.get("/api/auth/role")
@@ -311,7 +335,11 @@ def login_page(request: Request, session: Session = Depends(get_session)) -> HTM
 
 
 @router.post("/auth/login")
-async def auth_login(request: Request, session: Session = Depends(get_session)) -> Any:
+async def auth_login(
+    request: Request,
+    session: Session = Depends(get_session),
+    _rl: None = Depends(check_rate_limit("auth_login", 15, 60)),
+) -> Any:
     """Validate an institutional account (+ PIN), set ps06_session, redirect to / (§17.2.D.2).
 
     Non-``@jklu.edu.in`` emails are rejected with 403 and receive no session.
@@ -349,8 +377,24 @@ async def auth_login(request: Request, session: Session = Depends(get_session)) 
         fast_login_raw is True
         or str(fast_login_raw or "").strip().lower() in ("true", "1", "yes")
     )
-    is_strict = str(getattr(_settings, "auth_mode", "demo")).lower() == "strict"
-    allow_fast = bool(getattr(_settings, "demo_role_switch", True))
+    is_strict = str(getattr(_settings, "auth_mode", "demo")).strip().lower() == "strict"
+    if fast_login and is_strict:
+        log_audit(
+            session,
+            action="auth.denied",
+            entity_type="auth",
+            entity_id=audit_actor_ref(email),
+            actor_role="anonymous",
+            detail={
+                "trace_id": trace_id,
+                "path": "/auth/login",
+                "actor_ref": mask_email(email),
+                "domain_valid": True,
+                "reason": "fast_login_disabled_in_strict",
+            },
+            commit=True,
+        )
+        raise HTTPException(401, "Fast login is disabled in strict mode; institutional PIN is required")
 
     if is_strict and persona is None:
         log_audit(
@@ -389,7 +433,7 @@ async def auth_login(request: Request, session: Session = Depends(get_session)) 
                 commit=True,
             )
             raise HTTPException(401, "Invalid institutional PIN")
-    elif is_strict and not (fast_login and allow_fast):
+    elif is_strict:
         log_audit(
             session,
             action="auth.denied",
@@ -410,8 +454,8 @@ async def auth_login(request: Request, session: Session = Depends(get_session)) 
     local = email[: -len(_JKLU_DOMAIN)]
     if persona is not None:
         role = normalize_role(persona.get("role")) or "student"
-        name = str(body.get("name") or "").strip() or str(persona.get("name") or local)
-        department = str(body.get("department") or "").strip() or persona.get("department")
+        name = str(persona.get("name") or local)
+        department = persona.get("department")
         user_id = str(persona.get("user_id") or local)
     else:
         # Non-persona accounts must never self-assert faculty_mentor or tpo_admin roles.
@@ -465,15 +509,16 @@ async def auth_login(request: Request, session: Session = Depends(get_session)) 
         or "application/json" in request.headers.get("accept", "")
     )
     redirect_to = None if is_json else "/"
-    return _build_session_response(role, claims, redirect_to=redirect_to)
+    return _build_session_response(role, claims, redirect_to=redirect_to, request=request)
 
 
 @router.post("/auth/logout")
 def auth_logout(request: Request, session: Session = Depends(get_session)) -> RedirectResponse:
-    """Clear the session cookies and redirect to /login (§17.2.D.2)."""
+    """Clear the session cookies, revoke token jti, and redirect to /login (§17.2.D.2)."""
     trace_id = f"tr-{uuid4().hex[:8]}"
     actor = current_role(request)
     user = get_current_user_optional(request)
+    revoke_session_token(request.cookies.get("ps06_session"))
     log_audit(
         session,
         action="auth.logout",

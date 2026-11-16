@@ -12,7 +12,8 @@ def cosine(a: list[float], b: list[float]) -> float:
     dot = sum(x * y for x, y in zip(a, b))
     na = math.sqrt(sum(x * x for x in a)) or 1.0
     nb = math.sqrt(sum(y * y for y in b)) or 1.0
-    return dot / (na * nb)
+    res = dot / (na * nb)
+    return res if math.isfinite(res) else 0.0
 
 
 class VectorStore(Protocol):
@@ -37,6 +38,8 @@ class MemoryVectorStore:
         return len(items)
 
     def search(self, kind: str, vector: list[float], k: int) -> list[tuple[str, float]]:
+        if k <= 0:
+            return []
         scored = [(rid, cosine(vector, v)) for (knd, rid), v in self._items.items() if knd == kind]
         scored.sort(key=lambda kv: -kv[1])
         return scored[:k]

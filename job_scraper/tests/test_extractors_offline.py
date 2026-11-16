@@ -49,10 +49,15 @@ class TestBaseHelpers:
         assert not BaseExtractor.location_match("Chennai", "Bengaluru")
 
     def test_is_fresh(self):
+        from datetime import datetime, timedelta, timezone
+
         from job_scraper.extractors.base import BaseExtractor
 
-        assert BaseExtractor.is_fresh("2026-11-01T00:00:00Z", 7)
-        assert not BaseExtractor.is_fresh("2026-09-01T00:00:00Z", 7)
+        now = datetime.now(timezone.utc)
+        recent = (now - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        stale = (now - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        assert BaseExtractor.is_fresh(recent, 7)
+        assert not BaseExtractor.is_fresh(stale, 7)
         assert BaseExtractor.is_fresh(None, 7)  # unknown date kept
 
 

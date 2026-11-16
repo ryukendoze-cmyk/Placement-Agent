@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import threading
 import time
-from collections import defaultdict, deque
+from collections import deque
 
 from fastapi import HTTPException, Request
 
@@ -24,15 +24,17 @@ DEFAULT_LIMITS: dict[str, tuple[int, int]] = {
     "jobs_scrape": (10, 60),
     "agent_run": (30, 60),
     "copilot_ask": (60, 60),
+    "auth_login": (15, 60),
 }
 
 
 class RateLimiter:
     """Thread-safe sliding-window counter keyed by ``(identity, bucket)``."""
 
-    def __init__(self) -> None:
-        self._hits: dict[tuple[str, str], deque[float]] = defaultdict(deque)
+    def __init__(self, max_keys: int = 10_000) -> None:
+        self._hits: dict[tuple[str, str], deque[float]] = {}
         self._lock = threading.Lock()
+        self._max_keys = max(1, int(max_keys))
 
     def allow(self, identity: str, bucket: str, max_requests: int,
               window_seconds: int, now: float | None = None) -> tuple[bool, int]:
@@ -40,23 +42,36 @@ class RateLimiter:
 
         Returns ``(allowed, retry_after_seconds)``. ``retry_after`` is 0 when
         allowed, otherwise the seconds until the oldest hit leaves the window.
-        Prunes expired hits under the lock so memory stays bounded.
+        Prunes expired hits and empty keys under the lock so memory stays bounded.
         """
         if max_requests <= 0:
             return True, 0
         ts = time.time() if now is None else now
         window = max(1, int(window_seconds))
+        cutoff = ts - window
         key = (str(identity), str(bucket))
         with self._lock:
-            hits = self._hits[key]
-            cutoff = ts - window
-            while hits and hits[0] <= cutoff:
-                hits.popleft()
-            if len(hits) < int(max_requests):
-                hits.append(ts)
-                return True, 0
-            retry_after = max(1, int(hits[0] + window - ts) + 1)
-            return False, retry_after
+            hits = self._hits.get(key)
+            if hits is not None:
+                while hits and hits[0] <= cutoff:
+                    hits.popleft()
+                if not hits:
+                    self._hits.pop(key, None)
+                    hits = None
+            if hits is not None and len(hits) >= int(max_requests):
+                retry_after = max(1, int(hits[0] + window - ts) + 1)
+                return False, retry_after
+            if hits is None:
+                if len(self._hits) >= self._max_keys:
+                    stale = [k for k, dq in self._hits.items() if not dq or dq[-1] <= cutoff]
+                    for sk in stale:
+                        self._hits.pop(sk, None)
+                    while len(self._hits) >= self._max_keys:
+                        self._hits.pop(next(iter(self._hits)), None)
+                hits = deque()
+                self._hits[key] = hits
+            hits.append(ts)
+            return True, 0
 
     def reset(self) -> None:
         """Clear all counters (test hygiene)."""
@@ -87,10 +102,21 @@ def _identity(request: Request) -> str:
         hdr = str(request.headers.get("x-demo-student-id", "") or "").strip()
         if hdr:
             return hdr
-    xff = str(request.headers.get("x-forwarded-for", "") or "").strip()
-    if xff:
-        return xff.split(",")[0].strip()
-    return request.client.host if request.client else "anonymous"
+    client_host = request.client.host if request.client else "anonymous"
+    try:
+        from ..config import settings as _settings
+        trusted = {
+            str(p).strip()
+            for p in (getattr(_settings, "trusted_proxies", None) or ())
+            if str(p).strip()
+        }
+    except Exception:  # pragma: no cover - defensive
+        trusted = set()
+    if client_host in trusted:
+        xff = str(request.headers.get("x-forwarded-for", "") or "").strip()
+        if xff:
+            return xff.split(",")[0].strip()
+    return client_host
 
 
 def check_rate_limit(bucket: str, max_requests: int | None = None,

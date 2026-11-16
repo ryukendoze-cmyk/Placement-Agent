@@ -6,7 +6,12 @@ from app.agent.orchestrator import run_agent, run_agent_stream
 from app.api.deps import get_ctx, get_session
 from app.models import AgentRun, AgentStep
 from app.security.ratelimit import check_rate_limit
-from app.security.rbac import enforce_student_scope, get_current_user_optional
+from app.security.rbac import (
+    ROLES,
+    enforce_student_scope,
+    get_current_user_optional,
+    require_role,
+)
 
 router = APIRouter()
 
@@ -71,7 +76,9 @@ def _resolve_run_params(payload: dict, request: Request) -> tuple[str, str | Non
     if not goal.strip():
         raise HTTPException(400, "goal is required")
     student_id = (payload or {}).get("student_id") or None
-    actor_role = (payload or {}).get("actor_role", "student")
+    actor_role = str((payload or {}).get("actor_role") or "student").strip()
+    if actor_role not in ROLES:
+        raise HTTPException(400, f"invalid actor_role: {actor_role}")
     user = get_current_user_optional(request)
     if user is not None:
         actor_role = user.role
@@ -209,7 +216,8 @@ def get_run(run_id: str, request: Request, session: Session = Depends(get_sessio
 
 @router.post("/api/agent/runs/{run_id}/reply")
 def reply_run(run_id: str, payload: dict, request: Request,
-              session: Session = Depends(get_session), ctx=Depends(get_ctx)):
+              session: Session = Depends(get_session), ctx=Depends(get_ctx),
+              role: str = Depends(require_role("student", "faculty_mentor", "tpo_admin"))):
     """Resume an ``awaiting_input`` run with the user's clarification (M16)."""
     from app.agent.orchestrator import resume_agent_run
 
@@ -218,6 +226,11 @@ def reply_run(run_id: str, payload: dict, request: Request,
         raise HTTPException(404, "agent run not found")
     if run.student_id:
         enforce_student_scope(request, run.student_id)
+    elif role not in ("faculty_mentor", "tpo_admin"):
+        raise HTTPException(
+            403,
+            "Access denied: Only faculty mentors or TPO admins may reply to non-student agent runs",
+        )
     if run.status != "awaiting_input":
         raise HTTPException(409, f"run is not awaiting input (status={run.status})")
     reply = str((payload or {}).get("reply") or "").strip()

@@ -1,18 +1,18 @@
 import logging
 import os
-import urllib.request
+import zipfile
 from io import BytesIO
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-TESSDATA_DOWNLOAD_URL = (
-    "https://github.com/tesseract-ocr/tessdata_fast/raw/main/eng.traineddata"
-)
+MAX_DOCX_UNCOMPRESSED_BYTES = 25 * 1024 * 1024  # 25 MB decompressed cap against zip bombs
+MAX_DOCX_ENTRIES = 1000
+MAX_PDF_PAGES = 40
 
 
 def _get_tessdata_dir() -> str | None:
-    """Locate or prepare directory containing Tesseract `eng.traineddata`."""
+    """Locate local directory containing Tesseract `eng.traineddata` without runtime network I/O."""
     env_dir = os.getenv("TESSDATA_PREFIX")
     if env_dir and os.path.isfile(os.path.join(env_dir, "eng.traineddata")):
         return env_dir
@@ -34,37 +34,61 @@ def _get_tessdata_dir() -> str | None:
     except Exception:
         pass
 
-    target_dir = candidate_dirs[0]
-    target_file = target_dir / "eng.traineddata"
-    try:
-        target_dir.mkdir(parents=True, exist_ok=True)
-        logger.info("Downloading eng.traineddata to %s...", target_dir)
-        req = urllib.request.Request(
-            TESSDATA_DOWNLOAD_URL,
-            headers={"User-Agent": "Mozilla/5.0"},
-        )
-        with urllib.request.urlopen(req, timeout=10) as resp, open(target_file, "wb") as f:
-            f.write(resp.read())
-        if target_file.is_file():
-            return str(target_dir)
-    except Exception as exc:
-        logger.warning("Could not auto-download eng.traineddata: %s", exc)
-
     return None
+
+
+def _validate_docx_archive(data: bytes) -> None:
+    """Validate a DOCX ZIP container against corruption and decompression bombs."""
+    try:
+        with zipfile.ZipFile(BytesIO(data)) as zf:
+            infos = zf.infolist()
+            if len(infos) > MAX_DOCX_ENTRIES:
+                raise ValueError(f"docx contains too many archive entries (>{MAX_DOCX_ENTRIES})")
+            total_uncompressed = 0
+            for info in infos:
+                if info.file_size > MAX_DOCX_UNCOMPRESSED_BYTES:
+                    raise ValueError("docx entry exceeds maximum decompressed size")
+                with zf.open(info, "r") as member:
+                    while True:
+                        chunk = member.read(65536)
+                        if not chunk:
+                            break
+                        total_uncompressed += len(chunk)
+                        if total_uncompressed > MAX_DOCX_UNCOMPRESSED_BYTES:
+                            raise ValueError("docx exceeds maximum decompressed size")
+    except ValueError:
+        raise
+    except zipfile.BadZipFile as e:
+        raise ValueError(f"invalid or corrupt docx archive: {e}") from e
+    except Exception as e:
+        raise ValueError(f"could not read docx archive: {e}") from e
 
 
 def parse_resume_bytes(data: bytes, suffix: str) -> str:
     suffix = suffix.lower()
     if suffix == ".pdf":
         import pymupdf
-        doc = pymupdf.open(stream=BytesIO(data), filetype="pdf")
         try:
+            doc = pymupdf.open(stream=BytesIO(data), filetype="pdf")
+        except Exception as e:
+            raise ValueError(f"could not open pdf: {e}") from e
+        try:
+            if len(doc) > MAX_PDF_PAGES:
+                raise ValueError(f"pdf exceeds {MAX_PDF_PAGES} page limit")
             return "\n".join(page.get_text() for page in doc)
+        except ValueError:
+            raise
+        except Exception as e:
+            raise ValueError(f"could not parse pdf: {e}") from e
         finally:
             doc.close()
     if suffix == ".docx":
+        _validate_docx_archive(data)
         from docx import Document
-        doc = Document(BytesIO(data))
+        try:
+            doc = Document(BytesIO(data))
+        except Exception as e:
+            raise ValueError(f"could not parse docx document: {e}") from e
         parts: list[str] = [p.text for p in doc.paragraphs]
         seen_cells: set[int] = set()
         for table in doc.tables:
@@ -89,6 +113,8 @@ def parse_resume_bytes(data: bytes, suffix: str) -> str:
         try:
             if len(doc) == 0:
                 return ""
+            if len(doc) > MAX_PDF_PAGES:
+                raise ValueError(f"image document exceeds {MAX_PDF_PAGES} page limit")
             try:
                 _first_page = doc[0]
             except Exception as e:

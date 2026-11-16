@@ -196,21 +196,6 @@ def parse_indeed_result(r: dict[str, Any]) -> Optional[RawScrapedJob]:
     )
 
 
-def parse_indeed_html(html: str) -> list[RawScrapedJob]:
-    payload = extract_mosaic_json(html)
-    if not payload:
-        return []
-    jobs = []
-    for r in parse_indeed_results(payload):
-        try:
-            job = parse_indeed_result(r)
-            if job:
-                jobs.append(job)
-        except Exception as exc:
-            logger.debug("indeed parse error: %s", exc)
-    return jobs
-
-
 def parse_mosaic_payload(payload: dict[str, Any]) -> list[RawScrapedJob]:
     jobs = []
     for r in parse_indeed_results(payload):

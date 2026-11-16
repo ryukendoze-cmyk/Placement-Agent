@@ -5,6 +5,7 @@ session is fully reconstructed from an Interview row on each request.
 """
 import json
 import logging
+import math
 import re
 from dataclasses import dataclass, field
 
@@ -75,10 +76,12 @@ def _coerce_score(val) -> int:
     if isinstance(val, bool) or val is None:
         return 0
     if isinstance(val, (int, float)):
-        return round(val)
+        fval = float(val)
+        return round(fval) if math.isfinite(fval) else 0
     if isinstance(val, str):
         try:
-            return round(float(val.strip()))
+            fval = float(val.strip())
+            return round(fval) if math.isfinite(fval) else 0
         except ValueError:
             return 0
     return 0
@@ -133,11 +136,30 @@ def _content_tokens(text: str) -> set[str]:
     }
 
 
+_NEGATED_KW_PREFIX_RE = re.compile(
+    r"(?:\b(?:no|not|never|without|lack(?:s|ing)?|haven'?t|hasn'?t|hadn'?t|"
+    r"didn'?t|don'?t|doesn'?t|cannot|can'?t|couldn'?t|wouldn'?t|isn'?t|aren'?t|"
+    r"forget|forgot|unsure|unclear|unfamiliar)\s+"
+    r"(?:any\s+|used\s+|using\s+|use\s+|know(?:n|ledge\s+(?:of|about))?\s+|"
+    r"understand(?:ing)?\s+|remember\s+|recall\s+|experience\s+(?:with|in)\s+|"
+    r"familiar(?:ity)?\s+(?:with|in)\s+|sure\s+(?:of|about)\s+|about\s+|with\s+|of\s+|the\s+|a\s+|an\s+){0,3})$"
+)
+
+
+def _keyword_matched_positively(kw_lower: str, low_answer: str) -> bool:
+    pat = rf"\b{re.escape(kw_lower)}" + (r"\b" if (kw_lower[-1].isalnum() or kw_lower[-1] == "_") else r"(?!\w)")
+    for m in re.finditer(pat, low_answer):
+        prefix = low_answer[max(0, m.start() - 48) : m.start()]
+        if not _NEGATED_KW_PREFIX_RE.search(prefix):
+            return True
+    return False
+
+
 def _answer_grounding_stats(q: Question, answer_text: str) -> dict:
     """Measure keyword hits, non-question-parroted hits, and outline concept overlap."""
     low = (answer_text or "").lower()
     keywords = [str(k).strip() for k in (q.keywords or ()) if str(k).strip()]
-    matched = [k for k in keywords if re.search(rf"\b{re.escape(k.lower())}", low)]
+    matched = [k for k in keywords if _keyword_matched_positively(k.lower(), low)]
     missed = [k for k in keywords if k not in matched]
 
     q_tokens = _content_tokens(q.question)
@@ -636,38 +658,41 @@ class InterviewSession:
                               "outline": list(q.outline)})
         from app.interview.generation import complete_live, is_live
         evaluate = self.llm.complete if self.llm is not None else None
-        if self.interview_plan is not None and is_live(self.llm):
+        if evaluate is not None and self.interview_plan is not None and is_live(self.llm):
             evaluate = lambda **kw: complete_live(self.llm, **kw)
         parsed = None
         error_recovered = ""
-        try:
-            raw_complete = evaluate(system=EVALUATE_ANSWER_SYSTEM, user=payload, json_mode=True)
-            parsed = _safe_json(raw_complete)
-            if self.interview_plan is not None and (not isinstance(parsed, dict)
-                    or not isinstance(parsed.get("rubric"), dict) or "score" not in parsed):
-                parsed = None
-        except Exception as exc:
-            logger.warning("Interview answer evaluation failed (%s); trying recovery", exc)
-            error_recovered = f"llm_error:{type(exc).__name__}"
-
-        if not isinstance(parsed, dict) and not error_recovered:
-            # 1 concise JSON-repair retry on malformed string output
+        if evaluate is None:
+            error_recovered = "no_llm_fallback"
+        else:
             try:
-                repair_prompt = (
-                    "Your previous output was not valid JSON. Return ONLY valid JSON with keys: "
-                    "score, feedback, rubric, matched_keywords, missed_keywords, ideal_answer_hint.\n"
-                    + payload
-                )
-                raw_retry = evaluate(system=EVALUATE_ANSWER_SYSTEM, user=repair_prompt, json_mode=True)
-                parsed = _safe_json(raw_retry)
+                raw_complete = evaluate(system=EVALUATE_ANSWER_SYSTEM, user=payload, json_mode=True)
+                parsed = _safe_json(raw_complete)
                 if self.interview_plan is not None and (not isinstance(parsed, dict)
                         or not isinstance(parsed.get("rubric"), dict) or "score" not in parsed):
                     parsed = None
-                if not isinstance(parsed, dict):
-                    error_recovered = "invalid_json_fallback"
             except Exception as exc:
-                logger.warning("Interview answer JSON-repair retry failed (%s)", exc)
-                error_recovered = f"llm_retry_error:{type(exc).__name__}"
+                logger.warning("Interview answer evaluation failed (%s); trying recovery", exc)
+                error_recovered = f"llm_error:{type(exc).__name__}"
+
+            if not isinstance(parsed, dict) and not error_recovered:
+                # 1 concise JSON-repair retry on malformed string output
+                try:
+                    repair_prompt = (
+                        "Your previous output was not valid JSON. Return ONLY valid JSON with keys: "
+                        "score, feedback, rubric, matched_keywords, missed_keywords, ideal_answer_hint.\n"
+                        + payload
+                    )
+                    raw_retry = evaluate(system=EVALUATE_ANSWER_SYSTEM, user=repair_prompt, json_mode=True)
+                    parsed = _safe_json(raw_retry)
+                    if self.interview_plan is not None and (not isinstance(parsed, dict)
+                            or not isinstance(parsed.get("rubric"), dict) or "score" not in parsed):
+                        parsed = None
+                    if not isinstance(parsed, dict):
+                        error_recovered = "invalid_json_fallback"
+                except Exception as exc:
+                    logger.warning("Interview answer JSON-repair retry failed (%s)", exc)
+                    error_recovered = f"llm_retry_error:{type(exc).__name__}"
 
         if not isinstance(parsed, dict):
             parsed = _deterministic_evaluate(q, text)
@@ -712,7 +737,7 @@ class InterviewSession:
                 and (score < 75 or rubric.get("depth_and_examples", 100) < 60)):
             if self.interview_plan is not None:
                 from app.interview.generation import author_question
-                target = next((t for t in self.interview_plan["targets"] if t["skill_id"] == q.skill_id),
+                target = next((t for t in self.interview_plan.get("targets", []) if t["skill_id"] == q.skill_id),
                               {"skill_id": q.skill_id, "verification_status": "verified"})
                 probe, provenance = author_question(llm=self.llm, bank=self.bank, role=self.role,
                     target=target, difficulty=nd, qid=f"{q.id}-followup",
@@ -767,13 +792,14 @@ class InterviewSession:
                 vals = [max(0, min(100, _coerce_score(t["rubric"].get(k, 0)))) for t in scored]
                 rubric_overall[k] = round(sum(vals) / len(vals))
         parsed = None
-        try:
-            raw_complete = self.llm.complete(
-                system=INTERVIEW_FEEDBACK_SYSTEM,
-                user=json.dumps({"score": overall, "per_skill": per_skill}), json_mode=True)
-            parsed = _safe_json(raw_complete)
-        except Exception as exc:
-            logger.warning("Interview finish summary generation failed (%s); using fallback", exc)
+        if self.llm is not None:
+            try:
+                raw_complete = self.llm.complete(
+                    system=INTERVIEW_FEEDBACK_SYSTEM,
+                    user=json.dumps({"score": overall, "per_skill": per_skill}), json_mode=True)
+                parsed = _safe_json(raw_complete)
+            except Exception as exc:
+                logger.warning("Interview finish summary generation failed (%s); using fallback", exc)
         feedback = str(parsed.get("feedback") or "").strip() if isinstance(parsed, dict) else ""
         if not feedback:
             strengths = [k for k, v in per_skill.items() if v >= 70]

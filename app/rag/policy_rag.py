@@ -12,6 +12,7 @@ import json
 import os
 import re
 import tempfile
+import threading
 from pathlib import Path
 
 from ..taxonomy.branches import is_branch_eligible
@@ -24,9 +25,14 @@ OVERRIDES_FILE = _DEFAULT_OVERRIDES_FILE
 
 _SOP_ID = re.compile(r"\bSOP-(\d{2,3})\b", re.IGNORECASE)
 _SOP_TOKEN = re.compile(r"\bSOP-\d{2,3}\b", re.IGNORECASE)
+_SOP_VERIFY_RE = re.compile(
+    r"\[UNVERIFIED:\s*SOP-\d{2,3}\]|(?<!\w)(?:\[)?(SOP-\d{2,3})(?:\])?(?!\w)",
+    re.IGNORECASE,
+)
 
+_sop_lock = threading.RLock()
 _cache: dict[str, list[dict]] = {}
-_index_cache: dict[str, list[dict]] = {}
+_index_cache: dict[tuple, list[dict]] = {}
 _cache_source: tuple[Path, Path] | None = None
 
 _DEFAULT_SOPS_SNAPSHOT: list[dict] = (
@@ -79,34 +85,35 @@ def _read_overrides(ov_file: Path) -> list[dict]:
 def load_sops() -> list[dict]:
     """Load the institutional SOP records merged with overrides (cached)."""
     global _cache_source
-    ov_file = _active_overrides_file()
-    src = (SOP_FILE, ov_file)
-    if _cache_source != src:
-        _invalidate_cache()
-        _cache_source = src
-    if "sops" not in _cache:
-        base = json.loads(SOP_FILE.read_text(encoding="utf-8")) if SOP_FILE.exists() else []
-        overrides = _read_overrides(ov_file)
-        if overrides:
-            by_id: dict[str, dict] = {}
-            order: list[str] = []
-            for row in base:
-                if isinstance(row, dict) and row.get("id"):
+    with _sop_lock:
+        ov_file = _active_overrides_file()
+        src = (SOP_FILE, ov_file)
+        if _cache_source != src:
+            _invalidate_cache()
+            _cache_source = src
+        if "sops" not in _cache:
+            base = json.loads(SOP_FILE.read_text(encoding="utf-8")) if SOP_FILE.exists() else []
+            overrides = _read_overrides(ov_file)
+            if overrides:
+                by_id: dict[str, dict] = {}
+                order: list[str] = []
+                for row in base:
+                    if isinstance(row, dict) and row.get("id"):
+                        sid = str(row["id"]).strip().upper()
+                        by_id[sid] = row
+                        order.append(sid)
+                for row in overrides:
                     sid = str(row["id"]).strip().upper()
+                    if row.get("_deleted"):
+                        by_id.pop(sid, None)
+                        continue
+                    if sid not in by_id:
+                        order.append(sid)
                     by_id[sid] = row
-                    order.append(sid)
-            for row in overrides:
-                sid = str(row["id"]).strip().upper()
-                if row.get("_deleted"):
-                    by_id.pop(sid, None)
-                    continue
-                if sid not in by_id:
-                    order.append(sid)
-                by_id[sid] = row
-            _cache["sops"] = [by_id[sid] for sid in order if sid in by_id]
-        else:
-            _cache["sops"] = base
-    return _cache["sops"]
+                _cache["sops"] = [by_id[sid] for sid in order if sid in by_id]
+            else:
+                _cache["sops"] = base
+        return _cache["sops"]
 
 
 list_sops = load_sops
@@ -115,11 +122,12 @@ list_sops = load_sops
 def reload_sops() -> list[dict]:
     """Clear in-memory SOP and RAG caches and reload from SOP_FILE and overrides."""
     global _cache_source
-    _invalidate_cache()
-    _cache_source = (SOP_FILE, _active_overrides_file())
-    loaded = load_sops()
-    index_sops()
-    return loaded
+    with _sop_lock:
+        _invalidate_cache()
+        _cache_source = (SOP_FILE, _active_overrides_file())
+        loaded = load_sops()
+        index_sops()
+        return loaded
 
 
 def get_sop(sop_id: str) -> dict | None:
@@ -139,59 +147,60 @@ def load_sop_params(sop_id: str) -> dict:
 
 def save_sops(sops: list[dict]) -> list[dict]:
     """Atomically persist core SOP definitions and rebuild RAG index caches."""
-    ov_file = _active_overrides_file()
-    existing_tombstones = {
-        str(r.get("id", "")).strip().upper(): r
-        for r in _read_overrides(ov_file)
-        if r.get("_deleted") and r.get("id")
-    }
-    active_ids = {str(row.get("id", "")).strip().upper() for row in sops if row.get("id")}
-    kept_tombstones = [row for sid, row in existing_tombstones.items() if sid not in active_ids]
+    with _sop_lock:
+        ov_file = _active_overrides_file()
+        existing_tombstones = {
+            str(r.get("id", "")).strip().upper(): r
+            for r in _read_overrides(ov_file)
+            if r.get("_deleted") and r.get("id")
+        }
+        active_ids = {str(row.get("id", "")).strip().upper() for row in sops if row.get("id")}
+        kept_tombstones = [row for sid, row in existing_tombstones.items() if sid not in active_ids]
 
-    core_only = []
-    custom_only = []
-    for row in sops:
-        sid = str(row.get("id", "")).strip().upper()
-        m = _SOP_ID.fullmatch(sid)
-        if m and int(m.group(1)) > 18:
-            custom_only.append(row)
-        else:
-            core_only.append(row)
+        core_only = []
+        custom_only = []
+        for row in sops:
+            sid = str(row.get("id", "")).strip().upper()
+            m = _SOP_ID.fullmatch(sid)
+            if m and int(m.group(1)) > 18:
+                custom_only.append(row)
+            else:
+                core_only.append(row)
 
-    # Keep deleted core records intact on disk in SOP_FILE so tombstones stay reversible
-    tombstoned_core_ids = {
-        str(r.get("id", "")).strip().upper()
-        for r in kept_tombstones
-        if (m := _SOP_ID.fullmatch(str(r.get("id", "")).strip().upper())) and int(m.group(1)) <= 18
-    }
-    if tombstoned_core_ids:
-        disk_base = json.loads(SOP_FILE.read_text(encoding="utf-8")) if SOP_FILE.exists() else copy.deepcopy(_DEFAULT_SOPS_SNAPSHOT)
-        core_by_id = {str(r.get("id", "")).strip().upper(): r for r in core_only if r.get("id")}
-        for row in disk_base:
-            rsid = str(row.get("id", "")).strip().upper()
-            if rsid in tombstoned_core_ids and rsid not in core_by_id:
-                core_by_id[rsid] = row
-        ordered_core = []
-        seen_core = set()
-        for row in disk_base:
-            rsid = str(row.get("id", "")).strip().upper()
-            if rsid in core_by_id and rsid not in seen_core:
-                ordered_core.append(core_by_id[rsid])
-                seen_core.add(rsid)
-        for row in core_only:
-            rsid = str(row.get("id", "")).strip().upper()
-            if rsid not in seen_core:
-                ordered_core.append(row)
-                seen_core.add(rsid)
-        core_only = ordered_core
+        # Keep deleted core records intact on disk in SOP_FILE so tombstones stay reversible
+        tombstoned_core_ids = {
+            str(r.get("id", "")).strip().upper()
+            for r in kept_tombstones
+            if (m := _SOP_ID.fullmatch(str(r.get("id", "")).strip().upper())) and int(m.group(1)) <= 18
+        }
+        if tombstoned_core_ids:
+            disk_base = json.loads(SOP_FILE.read_text(encoding="utf-8")) if SOP_FILE.exists() else copy.deepcopy(_DEFAULT_SOPS_SNAPSHOT)
+            core_by_id = {str(r.get("id", "")).strip().upper(): r for r in core_only if r.get("id")}
+            for row in disk_base:
+                rsid = str(row.get("id", "")).strip().upper()
+                if rsid in tombstoned_core_ids and rsid not in core_by_id:
+                    core_by_id[rsid] = row
+            ordered_core = []
+            seen_core = set()
+            for row in disk_base:
+                rsid = str(row.get("id", "")).strip().upper()
+                if rsid in core_by_id and rsid not in seen_core:
+                    ordered_core.append(core_by_id[rsid])
+                    seen_core.add(rsid)
+            for row in core_only:
+                rsid = str(row.get("id", "")).strip().upper()
+                if rsid not in seen_core:
+                    ordered_core.append(row)
+                    seen_core.add(rsid)
+            core_only = ordered_core
 
-    _write_json_atomic(SOP_FILE, core_only)
-    overrides_out = custom_only + kept_tombstones
-    if overrides_out:
-        _write_json_atomic(ov_file, overrides_out)
-    elif ov_file.exists():
-        ov_file.unlink()
-    return reload_sops()
+        _write_json_atomic(SOP_FILE, core_only)
+        overrides_out = custom_only + kept_tombstones
+        if overrides_out:
+            _write_json_atomic(ov_file, overrides_out)
+        elif ov_file.exists():
+            ov_file.unlink()
+        return reload_sops()
 
 
 def update_sop(
@@ -204,44 +213,45 @@ def update_sop(
     parameters: dict | None = None,
 ) -> dict:
     """Update an SOP's metadata, rule_text, and/or parameters, persist atomically, and re-index."""
-    sid = (sop_id or "").strip().upper()
-    current = copy.deepcopy(load_sops())
-    target: dict | None = None
-    for row in current:
-        if str(row.get("id", "")).strip().upper() == sid:
-            target = row
-            break
-    if target is None:
-        raise KeyError(f"Unknown SOP: {sop_id}")
-    if title is not None:
-        t_clean = str(title).strip()
-        if not t_clean:
-            raise ValueError("title must not be empty")
-        target["title"] = t_clean
-    if category is not None:
-        c_clean = str(category).strip()
-        if not c_clean:
-            raise ValueError("category must not be empty")
-        target["category"] = c_clean
-    if section is not None:
-        s_clean = str(section).strip()
-        if not s_clean:
-            raise ValueError("section must not be empty")
-        target["section"] = s_clean
-    if rule_text is not None:
-        cleaned = str(rule_text).strip()
-        if not cleaned:
-            raise ValueError("rule_text must not be empty")
-        target["rule_text"] = cleaned
-    if parameters is not None:
-        if not isinstance(parameters, dict):
-            raise ValueError("parameters must be an object")
-        merged = dict(target.get("parameters") or {})
-        merged.update(parameters)
-        target["parameters"] = merged
-    save_sops(current)
-    updated = get_sop(sid)
-    return copy.deepcopy(updated or target)
+    with _sop_lock:
+        sid = (sop_id or "").strip().upper()
+        current = copy.deepcopy(load_sops())
+        target: dict | None = None
+        for row in current:
+            if str(row.get("id", "")).strip().upper() == sid:
+                target = row
+                break
+        if target is None:
+            raise KeyError(f"Unknown SOP: {sop_id}")
+        if title is not None:
+            t_clean = str(title).strip()
+            if not t_clean:
+                raise ValueError("title must not be empty")
+            target["title"] = t_clean
+        if category is not None:
+            c_clean = str(category).strip()
+            if not c_clean:
+                raise ValueError("category must not be empty")
+            target["category"] = c_clean
+        if section is not None:
+            s_clean = str(section).strip()
+            if not s_clean:
+                raise ValueError("section must not be empty")
+            target["section"] = s_clean
+        if rule_text is not None:
+            cleaned = str(rule_text).strip()
+            if not cleaned:
+                raise ValueError("rule_text must not be empty")
+            target["rule_text"] = cleaned
+        if parameters is not None:
+            if not isinstance(parameters, dict):
+                raise ValueError("parameters must be an object")
+            merged = dict(target.get("parameters") or {})
+            merged.update(parameters)
+            target["parameters"] = merged
+        save_sops(current)
+        updated = get_sop(sid)
+        return copy.deepcopy(updated or target)
 
 
 def create_sop(payload: dict) -> dict:
@@ -249,124 +259,127 @@ def create_sop(payload: dict) -> dict:
     if not isinstance(payload, dict):
         raise ValueError("Policy payload must be a JSON object")
 
-    current = copy.deepcopy(load_sops())
-    existing_ids = {str(s.get("id", "")).strip().upper() for s in current if s.get("id")}
+    with _sop_lock:
+        current = copy.deepcopy(load_sops())
+        existing_ids = {str(s.get("id", "")).strip().upper() for s in current if s.get("id")}
 
-    raw_id = str(payload.get("id") or "").strip().upper()
-    if raw_id:
-        m = _SOP_ID.fullmatch(raw_id)
-        if not m:
-            raise ValueError("SOP id must match SOP-XX (e.g. SOP-19)")
-        sid = f"SOP-{int(m.group(1)):02d}"
-        if sid in existing_ids:
-            raise ValueError(f"SOP id '{sid}' already exists")
-    else:
-        nums = [18]
-        for eid in existing_ids:
-            m = _SOP_ID.fullmatch(eid)
-            if m:
-                nums.append(int(m.group(1)))
-        sid = f"SOP-{max(nums) + 1:02d}"
+        raw_id = str(payload.get("id") or "").strip().upper()
+        if raw_id:
+            m = _SOP_ID.fullmatch(raw_id)
+            if not m:
+                raise ValueError("SOP id must match SOP-XX (e.g. SOP-19)")
+            sid = f"SOP-{int(m.group(1)):02d}"
+            if sid in existing_ids:
+                raise ValueError(f"SOP id '{sid}' already exists")
+        else:
+            nums = [18]
+            for eid in existing_ids:
+                m = _SOP_ID.fullmatch(eid)
+                if m:
+                    nums.append(int(m.group(1)))
+            sid = f"SOP-{max(nums) + 1:02d}"
 
-    title = str(payload.get("title") or "").strip()
-    if not title:
-        raise ValueError("Policy title is required")
+        title = str(payload.get("title") or "").strip()
+        if not title:
+            raise ValueError("Policy title is required")
 
-    category = str(payload.get("category") or "General Governance").strip() or "General Governance"
-    section = str(payload.get("section") or "Section 5.0: Institutional Rule").strip() or "Section 5.0: Institutional Rule"
+        category = str(payload.get("category") or "General Governance").strip() or "General Governance"
+        section = str(payload.get("section") or "Section 5.0: Institutional Rule").strip() or "Section 5.0: Institutional Rule"
 
-    raw_text = payload.get("text") if payload.get("text") is not None else payload.get("rule_text")
-    rule_text = str(raw_text or "").strip()
-    if len(rule_text) < 15:
-        raise ValueError("Policy text must be at least 15 characters")
+        raw_text = payload.get("text") if payload.get("text") is not None else payload.get("rule_text")
+        rule_text = str(raw_text or "").strip()
+        if len(rule_text) < 15:
+            raise ValueError("Policy text must be at least 15 characters")
 
-    raw_params = payload.get("params") if payload.get("params") is not None else payload.get("parameters")
-    if raw_params is None:
-        raw_params = {}
-    if not isinstance(raw_params, dict):
-        raise ValueError("Policy params must be an object")
+        raw_params = payload.get("params") if payload.get("params") is not None else payload.get("parameters")
+        if raw_params is None:
+            raw_params = {}
+        if not isinstance(raw_params, dict):
+            raise ValueError("Policy params must be an object")
 
-    clean_params: dict[str, str | int | float | bool] = {}
-    for pk, pv in raw_params.items():
-        key = str(pk or "").strip()
-        if not key:
-            raise ValueError("Parameter key cannot be empty")
-        if not isinstance(pv, (str, int, float, bool)):
-            raise ValueError(f"Parameter '{key}' must be a string, number, or boolean")
-        clean_params[key] = pv
+        clean_params: dict[str, str | int | float | bool] = {}
+        for pk, pv in raw_params.items():
+            key = str(pk or "").strip()
+            if not key:
+                raise ValueError("Parameter key cannot be empty")
+            if not isinstance(pv, (str, int, float, bool)):
+                raise ValueError(f"Parameter '{key}' must be a string, number, or boolean")
+            clean_params[key] = pv
 
-    raw_kw = payload.get("keywords")
-    if isinstance(raw_kw, list) and raw_kw:
-        keywords = [str(k).strip().lower() for k in raw_kw if str(k).strip()]
-    else:
-        keywords = list(dict.fromkeys(re.findall(r"[a-z0-9]{3,}", f"{title} {category}".lower())))[:10]
+        raw_kw = payload.get("keywords")
+        if isinstance(raw_kw, list) and raw_kw:
+            keywords = [str(k).strip().lower() for k in raw_kw if str(k).strip()]
+        else:
+            keywords = list(dict.fromkeys(re.findall(r"[a-z0-9]{3,}", f"{title} {category}".lower())))[:10]
 
-    raw_applies = payload.get("applies_to")
-    applies_to = (
-        [str(a).strip() for a in raw_applies if str(a).strip()]
-        if isinstance(raw_applies, list) and raw_applies
-        else ["student", "tpo_admin"]
-    )
+        raw_applies = payload.get("applies_to")
+        applies_to = (
+            [str(a).strip() for a in raw_applies if str(a).strip()]
+            if isinstance(raw_applies, list) and raw_applies
+            else ["student", "tpo_admin"]
+        )
 
-    new_sop = {
-        "id": sid,
-        "title": title,
-        "category": category,
-        "section": section,
-        "rule_text": rule_text,
-        "keywords": keywords,
-        "parameters": clean_params,
-        "applies_to": applies_to,
-        "is_custom": True,
-    }
+        new_sop = {
+            "id": sid,
+            "title": title,
+            "category": category,
+            "section": section,
+            "rule_text": rule_text,
+            "keywords": keywords,
+            "parameters": clean_params,
+            "applies_to": applies_to,
+            "is_custom": True,
+        }
 
-    ov_file = _active_overrides_file()
-    overrides = [r for r in _read_overrides(ov_file) if str(r.get("id", "")).strip().upper() != sid]
-    overrides.append(new_sop)
-    _write_json_atomic(ov_file, overrides)
-    reload_sops()
-    return copy.deepcopy(get_sop(sid) or new_sop)
+        ov_file = _active_overrides_file()
+        overrides = [r for r in _read_overrides(ov_file) if str(r.get("id", "")).strip().upper() != sid]
+        overrides.append(new_sop)
+        _write_json_atomic(ov_file, overrides)
+        reload_sops()
+        return copy.deepcopy(get_sop(sid) or new_sop)
 
 
 def delete_sop(sop_id: str) -> dict:
     """Delete any active SOP (core SOP-01..SOP-18 via tombstone, or custom SOP-19+) and reload caches."""
-    sid = (sop_id or "").strip().upper()
-    m = _SOP_ID.fullmatch(sid)
-    if not m:
-        raise ValueError(f"Unknown SOP id: {sop_id}")
+    with _sop_lock:
+        sid = (sop_id or "").strip().upper()
+        m = _SOP_ID.fullmatch(sid)
+        if not m:
+            raise ValueError(f"Unknown SOP id: {sop_id}")
 
-    existing = get_sop(sid)
-    if existing is None:
-        raise ValueError(f"Unknown SOP id: {sop_id}")
+        existing = get_sop(sid)
+        if existing is None:
+            raise ValueError(f"Unknown SOP id: {sop_id}")
 
-    ov_file = _active_overrides_file()
-    remaining = [r for r in _read_overrides(ov_file) if str(r.get("id", "")).strip().upper() != sid]
-    if int(m.group(1)) <= 18:
-        remaining.append({"id": sid, "_deleted": True})
-    if remaining:
-        _write_json_atomic(ov_file, remaining)
-    elif ov_file.exists():
-        ov_file.unlink()
-    reload_sops()
-    return copy.deepcopy(existing)
+        ov_file = _active_overrides_file()
+        remaining = [r for r in _read_overrides(ov_file) if str(r.get("id", "")).strip().upper() != sid]
+        if int(m.group(1)) <= 18:
+            remaining.append({"id": sid, "_deleted": True})
+        if remaining:
+            _write_json_atomic(ov_file, remaining)
+        elif ov_file.exists():
+            ov_file.unlink()
+        reload_sops()
+        return copy.deepcopy(existing)
 
 
 def reset_sops() -> list[dict]:
     """Restore core SOP-01..SOP-18 definitions to baseline defaults while preserving custom SOPs."""
-    baseline = copy.deepcopy(_DEFAULT_SOPS_SNAPSHOT)
-    ov_file = _active_overrides_file()
-    custom_only = [
-        r for r in _read_overrides(ov_file)
-        if not r.get("_deleted")
-        and (m := _SOP_ID.fullmatch(str(r.get("id", "")).strip().upper()))
-        and int(m.group(1)) > 18
-    ]
-    _write_json_atomic(SOP_FILE, baseline)
-    if custom_only:
-        _write_json_atomic(ov_file, custom_only)
-    elif ov_file.exists():
-        ov_file.unlink()
-    return reload_sops()
+    with _sop_lock:
+        baseline = copy.deepcopy(_DEFAULT_SOPS_SNAPSHOT)
+        ov_file = _active_overrides_file()
+        custom_only = [
+            r for r in _read_overrides(ov_file)
+            if not r.get("_deleted")
+            and (m := _SOP_ID.fullmatch(str(r.get("id", "")).strip().upper()))
+            and int(m.group(1)) > 18
+        ]
+        _write_json_atomic(SOP_FILE, baseline)
+        if custom_only:
+            _write_json_atomic(ov_file, custom_only)
+        elif ov_file.exists():
+            ov_file.unlink()
+        return reload_sops()
 
 
 def sop_ids() -> set[str]:
@@ -381,23 +394,28 @@ def _default_embedder():
 def index_sops(embedder=None) -> list[dict]:
     """Build (and cache) an in-memory hybrid index: dense vectors + keyword sets."""
     embedder = embedder or _default_embedder()
-    key = type(embedder).__name__
-    if key in _index_cache:
-        return _index_cache[key]
-    sops = load_sops()
-    index = []
-    for sop in sops:
-        text = f"{sop.get('title','')} {sop.get('rule_text','')}"
-        emb = embedder.embed(text)
-        index.append({
-            "sop": sop,
-            "embedding": emb,
-            "keywords": {k.lower() for k in sop.get("keywords", [])},
-            "title_tokens": set(re.findall(r"[a-z0-9]+", sop.get("title", "").lower())),
-            "rule_tokens": set(re.findall(r"[a-z0-9]+", sop.get("rule_text", "").lower())),
-        })
-    _index_cache[key] = index
-    return index
+    key = (
+        type(embedder).__name__,
+        getattr(embedder, "dim", None),
+        getattr(embedder, "model_name", getattr(embedder, "model", None)),
+    )
+    with _sop_lock:
+        if key in _index_cache:
+            return _index_cache[key]
+        sops = load_sops()
+        index = []
+        for sop in sops:
+            text = f"{sop.get('title','')} {sop.get('rule_text','')}"
+            emb = embedder.embed(text)
+            index.append({
+                "sop": sop,
+                "embedding": emb,
+                "keywords": {k.lower() for k in sop.get("keywords", [])},
+                "title_tokens": set(re.findall(r"[a-z0-9]+", sop.get("title", "").lower())),
+                "rule_tokens": set(re.findall(r"[a-z0-9]+", sop.get("rule_text", "").lower())),
+            })
+        _index_cache[key] = index
+        return index
 
 
 def _cosine(a, b) -> float:
@@ -480,7 +498,6 @@ def verify_policy_citations(text: str, known: set[str] | None = None) -> dict:
     seen: set[str] = set()
     verified: list[str] = []
     unverified: list[str] = []
-    annotated = text
     for m in _SOP_TOKEN.finditer(text):
         tok = m.group(0).upper()
         if tok in seen:
@@ -490,16 +507,26 @@ def verify_policy_citations(text: str, known: set[str] | None = None) -> dict:
             verified.append(tok)
         else:
             unverified.append(tok)
+
+    if unverified:
+        unverified_set = set(unverified)
+
+        def _annotate(mm: re.Match[str]) -> str:
+            raw_id = mm.group(1)
+            if not raw_id:
+                return mm.group(0)
+            tok = raw_id.upper()
+            if tok not in unverified_set:
+                return mm.group(0)
             marker = f"[UNVERIFIED: {tok}]"
-            if marker in annotated:
-                continue
-            raw = m.group(0)
-            # 1) bracketed citations [SOP-99] -> flag every occurrence
-            if f"[{raw}]" in annotated:
-                annotated = annotated.replace(f"[{raw}]", f"[{raw}] {marker}")
-            # 2) any remaining bare occurrences -> flag each one
-            annotated = re.sub(rf"(?<![\[\w]){re.escape(raw)}(?![\]\w])",
-                               f"{raw} {marker}", annotated, flags=re.IGNORECASE)
+            tail = text[mm.end():mm.end() + len(marker) + 2]
+            if marker in tail:
+                return mm.group(0)
+            return f"{mm.group(0)} {marker}"
+
+        annotated = _SOP_VERIFY_RE.sub(_annotate, text)
+    else:
+        annotated = text
     total = len(verified) + len(unverified)
     score = round(100 * len(verified) / total) if total else 100
     return {"verified": verified, "unverified": unverified,
@@ -601,7 +628,7 @@ def evaluate_student_eligibility(session, ctx, student_id: str,
         else {"dream", "super_dream"}
     )
     needs_mock = tier in applicable_tiers
-    mock_score = _latest_mock_score(session, student_id, job_id)
+    mock_score = _latest_mock_score(session, student_id, job.id)
     min_mock = int(sop04.get("min_mock_score", 65))
     if needs_mock:
         mock_ok = mock_score is not None and mock_score >= min_mock
@@ -620,11 +647,13 @@ def evaluate_student_eligibility(session, ctx, student_id: str,
     from ..matching.engine import score_job
     from ..models import StudentSkill
     sv = ctx.vector_store.get("student", student_id)
-    jv = ctx.job_vectors.get(job.id) or ctx.vector_store.get("job", job.id)
+    is_ephemeral_job = isinstance(job_id, Job) or str(getattr(job, "id", "") or "").startswith("sim-")
+    jv = None if is_ephemeral_job else (ctx.job_vectors.get(job.id) or ctx.vector_store.get("job", job.id))
     if jv is None:
         jv = ctx.embedder.embed(job.description)
-        ctx.vector_store.upsert("job", job.id, jv)
-        ctx.job_vectors[job.id] = jv
+        if not is_ephemeral_job:
+            ctx.vector_store.upsert("job", job.id, jv)
+            ctx.job_vectors[job.id] = jv
     sim = cosine(sv, jv) if sv else 0.0
     ss_rows = session.exec(select(StudentSkill).where(StudentSkill.student_id == student_id)).all()
     student_skills = {r.skill_id: list(r.evidence) for r in ss_rows}

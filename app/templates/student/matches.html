@@ -95,6 +95,7 @@
   <script>
   (function () {
     var sid = "{{ sid }}";
+    var currentRole = {{ role|tojson }};
     if (!sid) return;
     var panel = document.getElementById("student-applications-panel");
     var listEl = document.getElementById("student-applications-list");
@@ -133,7 +134,7 @@
             var card = document.createElement("div");
             card.className = "rounded-xl border border-[#E5E3DC] bg-[#FAF9F5] p-3.5 text-xs flex flex-col justify-between gap-2";
             var sops = (a.cited_sops || []).join(", ");
-            var canWithdraw = (st !== "withdrawn" && st !== "rejected");
+            var canWithdraw = (st !== "withdrawn" && st !== "rejected") && (st !== "nominated" || currentRole === "tpo_admin");
             card.innerHTML =
               '<div class="flex items-start justify-between gap-2">' +
                 '<div>' +
@@ -205,8 +206,10 @@
             {% endif %}
           </div>
           <div class="flex items-center gap-2">
-            <button type="button" onclick="selectMasterCard('{{ fc.job_id }}')" class="text-[#1D5C42] hover:underline font-semibold cursor-pointer">Open</button>
-            <button type="button" onclick="toggleFavoriteJob('{{ sid }}', '{{ fc.job_id }}', this)" class="text-[#9E2A20] hover:underline font-semibold cursor-pointer">Unfavorite</button>
+            <button type="button" data-action="open-favorite" data-job-id="{{ fc.job_id }}" class="text-[#1D5C42] hover:underline font-semibold cursor-pointer">Open</button>
+            {% if role != 'faculty_mentor' %}
+            <button type="button" data-action="unfavorite" data-sid="{{ sid }}" data-job-id="{{ fc.job_id }}" class="text-[#9E2A20] hover:underline font-semibold cursor-pointer">Unfavorite</button>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -278,11 +281,11 @@
           </button>
         </div>
 
-        <button id="filter-fresher-pill" type="button" class="px-3.5 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] transition-all inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold whitespace-nowrap" data-active="false">
-          <input id="filter-fresher-checkbox" type="checkbox" class="rounded border-[#C7C4B8] text-[#1D5C42] focus:ring-[#1D5C42] cursor-pointer pointer-events-none" />
+        <label id="filter-fresher-pill" for="filter-fresher-checkbox" class="px-3.5 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] transition-all inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold whitespace-nowrap select-none" data-active="false">
+          <input id="filter-fresher-checkbox" type="checkbox" class="rounded border-[#C7C4B8] text-[#1D5C42] focus:ring-[#1D5C42] cursor-pointer" />
           <span>Fresher Roles Only</span>
           <span id="count-fresher" class="px-1.5 py-0.5 rounded-full font-mono text-[11px] bg-[#EFECE4] text-[#1C1E1B] font-bold">0</span>
-        </button>
+        </label>
       </div>
     </div>
 
@@ -435,14 +438,14 @@
     <!-- Left Column: Numbered Master Selector List -->
     <div id="master-list-column" class="w-full lg:w-[340px] xl:w-[370px] shrink-0 space-y-3 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1">
       {% for c in cards %}
-      {% set is_live = (c.job and c.job.source in ("linkedin", "naukri", "indeed", "live", "foundit", "internshala", "unstop", "instahyre", "hirist")) or (c.source in ("linkedin", "naukri", "indeed", "live", "foundit", "internshala", "unstop", "instahyre", "hirist")) or (c.job and c.job.id and c.job.id.startswith("job-ext-")) or (c.job_id and c.job_id.startswith("job-ext-")) %}
+      {% set job_src_nav = ((c.job.source if c.job else c.source)|default('local'))|lower %}
+      {% set is_live = (c.job and c.job.is_live) or (c.is_live if c.is_live is defined and c.is_live else false) or (job_src_nav not in ('', 'local', 'campus', 'campus_drive', 'jnf')) or (c.job and c.job.id and c.job.id.startswith("job-ext-")) or (c.job_id and c.job_id.startswith("job-ext-")) %}
       {% set src_label = (c.job.source if c.job else c.source)|default('Live')|capitalize %}
       {% set score_clamped = 100 if c.score > 100 else (0 if c.score < 0 else c.score) %}
       <div class="master-nav-item {% if loop.first %}active-master{% endif %}"
            data-master-for="{{ c.job_id }}"
            data-master-index="{{ loop.index0 }}"
-           data-favorite="{{ 'true' if c.is_favorite else 'false' }}"
-           onclick="selectMasterCard('{{ c.job_id }}')">
+           data-favorite="{{ 'true' if c.is_favorite else 'false' }}">
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-start gap-3 min-w-0 flex-1">
             <span class="master-idx-num mono text-xs text-[#6E6C64] font-medium pt-1 shrink-0 w-5">{% if loop.index < 10 %}0{{ loop.index }}{% else %}{{ loop.index }}{% endif %}</span>
@@ -473,15 +476,17 @@
           </div>
           <!-- Favorite + Mini SVG Circular Score Ring -->
           <div class="flex items-center gap-2 shrink-0">
+            {% if role != 'faculty_mentor' %}
             <button type="button"
                     class="btn-favorite-job p-1.5 rounded-full border transition-colors cursor-pointer shrink-0 {% if c.is_favorite %}bg-[#FEF3C7] border-[#F59E0B] text-[#B45309]{% else %}bg-white border-[#E5E3DC] text-[#7A776E] hover:text-[#B45309] hover:border-[#F59E0B]{% endif %}"
+                    data-sid="{{ sid }}"
                     data-job-id="{{ c.job_id }}"
                     data-favorited="{{ 'true' if c.is_favorite else 'false' }}"
-                    onclick="event.stopPropagation(); toggleFavoriteJob('{{ sid }}', '{{ c.job_id }}', this)"
                     title="{{ 'Remove from Favorites' if c.is_favorite else 'Save to Favorites' }}"
                     aria-label="Toggle favorite">
               <svg class="w-4 h-4 fav-star-svg" fill="{{ 'currentColor' if c.is_favorite else 'none' }}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/></svg>
             </button>
+            {% endif %}
             <div class="relative w-11 h-11 shrink-0 flex items-center justify-center">
               <svg class="w-11 h-11 -rotate-90" viewBox="0 0 44 44" aria-hidden="true">
                 <circle cx="22" cy="22" r="18" fill="none" stroke="#E5E3DC" stroke-width="3.5" />
@@ -499,8 +504,8 @@
     <!-- Right Column: Match Cards Stream Container (Detail Pane) -->
     <div id="cards-container" class="flex-1 min-w-0 w-full space-y-6">
       {% for c in cards %}
-      {% set is_live = (c.job and c.job.source in ("linkedin", "naukri", "indeed", "live", "foundit", "internshala", "unstop", "instahyre", "hirist")) or (c.source in ("linkedin", "naukri", "indeed", "live", "foundit", "internshala", "unstop", "instahyre", "hirist")) or (c.job and c.job.id and c.job.id.startswith("job-ext-")) or (c.job_id and c.job_id.startswith("job-ext-")) %}
       {% set job_src = ((c.job.source if c.job else c.source)|default('local'))|lower %}
+      {% set is_live = (c.job and c.job.is_live) or (c.is_live if c.is_live is defined and c.is_live else false) or (job_src not in ('', 'local', 'campus', 'campus_drive', 'jnf')) or (c.job and c.job.id and c.job.id.startswith("job-ext-")) or (c.job_id and c.job_id.startswith("job-ext-")) %}
       {% set card_sal_min = c.salary_lpa[0] if (c.salary_lpa and c.salary_lpa|length >= 1) else 0 %}
       {% set card_sal_max = c.salary_lpa[1] if (c.salary_lpa and c.salary_lpa|length >= 2) else (c.salary_lpa[0] if (c.salary_lpa and c.salary_lpa|length == 1) else 0) %}
       {% set is_disclosed = (c.job.salary_disclosed if c.job else c.salary_disclosed) and c.salary_lpa and c.salary_lpa|length >= 2 and c.salary_lpa[0] > 0 %}
@@ -610,7 +615,8 @@
         <!-- Pill Action Buttons Row (Strictly Contained Inside Button Boxes) -->
         <div class="mt-5 flex flex-wrap items-center gap-3">
           <button type="button"
-                  onclick="genPlan('{{ sid }}','{{ c.job_id }}', this)"
+                  data-action="gen-plan"
+                  data-sid="{{ sid }}"
                   data-job="{{ c.job_id }}"
                   class="btn-primary-pill px-5 py-2.5 text-xs">
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.25"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
@@ -625,27 +631,35 @@
           </a>
           {% endif %}
 
+          {% if not is_live %}
           <button type="button"
-                  onclick="applyJob('{{ sid }}','{{ c.job_id }}', '{{ c.eligible|lower }}', this)"
+                  data-action="apply-job"
+                  data-sid="{{ sid }}"
                   data-job="{{ c.job_id }}"
+                  data-eligible="{{ c.eligible|lower }}"
                   class="btn-secondary-pill px-5 py-2.5 text-xs">
             <svg class="w-3.5 h-3.5 text-[#1D5C42] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
             <span>{% if c.eligible %}Apply / Nominate{% else %}Request Waiver (HITL){% endif %}</span>
           </button>
+          {% endif %}
 
+          {% if role != 'faculty_mentor' %}
           <button type="button"
                   class="btn-favorite-job btn-secondary-pill px-4 py-2.5 text-xs transition-colors inline-flex items-center gap-1.5 cursor-pointer {% if c.is_favorite %}bg-[#FEF3C7] border-[#F59E0B] text-[#92400E]{% endif %}"
+                  data-sid="{{ sid }}"
                   data-job-id="{{ c.job_id }}"
-                  data-favorited="{{ 'true' if c.is_favorite else 'false' }}"
-                  onclick="toggleFavoriteJob('{{ sid }}', '{{ c.job_id }}', this)">
+                  data-favorited="{{ 'true' if c.is_favorite else 'false' }}">
             <svg class="w-3.5 h-3.5 fav-star-svg text-[#D97706] shrink-0" fill="{{ 'currentColor' if c.is_favorite else 'none' }}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/></svg>
             <span class="fav-btn-label">{% if c.is_favorite %}Favorited{% else %}Favorite{% endif %}</span>
           </button>
+          {% endif %}
 
           {% if is_live or role != 'student' %}
           <button type="button"
-                  onclick="removeJobOpportunity('{{ sid }}', '{{ c.job_id }}', {{ c.title|tojson }}, this)"
+                  data-action="remove-job"
+                  data-sid="{{ sid }}"
                   data-job-remove="{{ c.job_id }}"
+                  data-job-title="{{ c.title }}"
                   class="btn-secondary-pill px-4 py-2.5 text-xs text-[#9E2A20] hover:bg-[#FDF0ED] border-[#F5D0C8] hover:border-[#9E2A20] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
                   title="{% if role == 'student' %}Dismiss this role from your active matches{% else %}Remove or dismiss this opportunity{% endif %}">
             <svg class="w-3.5 h-3.5 text-[#9E2A20] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -836,7 +850,7 @@
       btn.textContent = "Generating plan...";
       btn.classList.add("opacity-60", "cursor-wait");
     }
-    fetch("/api/students/" + sid + "/plans", {
+    fetch("/api/students/" + encodeURIComponent(sid) + "/plans", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({job_id: job_id})
@@ -844,7 +858,7 @@
       .then(function (r) { return r.json().then(function (j) { return {ok: r.ok, j: j}; }); })
       .then(function (x) {
         if (x.ok) {
-          location.href = "/students/" + sid + "/plan";
+          location.href = "/students/" + encodeURIComponent(sid) + "/plan";
         } else {
           if (btn) {
             btn.disabled = false;
@@ -873,7 +887,7 @@
       btn.disabled = true;
       btn.classList.add("opacity-60", "cursor-wait");
     }
-    fetch("/api/students/" + sid + "/applications", {
+    fetch("/api/students/" + encodeURIComponent(sid) + "/applications", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({job_id: job_id, request_waiver: eligible !== "true"})
@@ -1487,16 +1501,17 @@
       });
     }
 
-    // Fresher Roles Only Quick Filter Pill Listener
-    if (fresherPill) {
-      fresherPill.addEventListener("click", function () {
-        state.fresherOnly = !state.fresherOnly;
-        if (fresherCheckbox) fresherCheckbox.checked = state.fresherOnly;
-        fresherPill.setAttribute("data-active", state.fresherOnly ? "true" : "false");
-        if (state.fresherOnly) {
-          fresherPill.className = "px-3.5 py-1.5 rounded-full border border-[#1D5C42] bg-[#E3F2EA] text-[#1B5E43] font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer text-xs whitespace-nowrap";
-        } else {
-          fresherPill.className = "px-3.5 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] transition-all inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold whitespace-nowrap";
+    // Fresher Roles Only Quick Filter Pill Listener (uses checkbox change to avoid double-toggle with <label for=...>)
+    if (fresherCheckbox) {
+      fresherCheckbox.addEventListener("change", function () {
+        state.fresherOnly = !!fresherCheckbox.checked;
+        if (fresherPill) {
+          fresherPill.setAttribute("data-active", state.fresherOnly ? "true" : "false");
+          if (state.fresherOnly) {
+            fresherPill.className = "px-3.5 py-1.5 rounded-full border border-[#1D5C42] bg-[#E3F2EA] text-[#1B5E43] font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer text-xs whitespace-nowrap select-none";
+          } else {
+            fresherPill.className = "px-3.5 py-1.5 rounded-full border border-[#D5D2C6] bg-white hover:bg-[#F4F3EC] text-[#1C1E1B] transition-all inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold whitespace-nowrap select-none";
+          }
         }
         applyFilters();
       });
@@ -1580,7 +1595,7 @@
           btn.disabled = true;
           btn.classList.add("opacity-60", "cursor-wait");
         }
-        var url = "/api/students/" + sid + "/matches/" + jobId + (permanent ? "?permanent=true" : "");
+        var url = "/api/students/" + encodeURIComponent(sid) + "/matches/" + encodeURIComponent(jobId) + (permanent ? "?permanent=true" : "");
         fetch(url, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" }
@@ -1593,8 +1608,9 @@
             if (window.toast) {
               window.toast((permanent ? "Permanently removed " : "Removed ") + (title || "opportunity") + " (Closed / Not Wanted)", "info");
             }
-            var detailCard = document.querySelector('.match-card[data-job-id="' + jobId + '"]');
-            var masterCard = document.querySelector('.master-nav-item[data-master-for="' + jobId + '"]');
+            var escJobId = (window.CSS && CSS.escape) ? CSS.escape(jobId) : jobId;
+            var detailCard = document.querySelector('.match-card[data-job-id="' + escJobId + '"]');
+            var masterCard = document.querySelector('.master-nav-item[data-master-for="' + escJobId + '"]');
 
             var jType = detailCard ? detailCard.getAttribute("data-job-type") : "live";
             var jSource = detailCard ? (detailCard.getAttribute("data-source") || "local").toLowerCase() : "local";
@@ -1672,15 +1688,18 @@
 
       if (isTpo) {
         var modal = document.createElement("div");
+        modal.setAttribute("role", "dialog");
+        modal.setAttribute("aria-modal", "true");
+        modal.setAttribute("aria-labelledby", "remove-job-modal-title");
         modal.className = "fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fadeIn";
         modal.innerHTML = 
           '<div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[#D5D2C6] space-y-4">' +
             '<div class="flex items-start justify-between">' +
               '<div>' +
-                '<h3 class="text-base font-bold text-[#1C1E1B] font-serif">Remove Job Opportunity</h3>' +
+                '<h3 id="remove-job-modal-title" class="text-base font-bold text-[#1C1E1B] font-serif">Remove Job Opportunity</h3>' +
                 '<p class="js-remove-role-subtitle text-xs text-[#5C5A52] mt-0.5"></p>' +
               '</div>' +
-              '<button type="button" class="modal-close text-[#7A776E] hover:text-[#1C1E1B] text-lg font-bold cursor-pointer">&times;</button>' +
+              '<button type="button" class="modal-close text-[#7A776E] hover:text-[#1C1E1B] text-lg font-bold cursor-pointer" aria-label="Close">&times;</button>' +
             '</div>' +
             '<p class="text-xs text-[#5C5A52] leading-relaxed">This role seems closed, expired, or unwanted. How would you like to remove it?</p>' +
             '<div class="space-y-2 pt-1">' +
@@ -1707,9 +1726,14 @@
         if (subEl) subEl.textContent = title ? ("Role: " + title) : "Select removal scope";
         document.body.appendChild(modal);
 
+        function onEscRemoveModal(e) {
+          if (e.key === "Escape") closeModal();
+        }
         function closeModal() {
+          document.removeEventListener("keydown", onEscRemoveModal);
           modal.remove();
         }
+        document.addEventListener("keydown", onEscRemoveModal);
         modal.querySelector(".modal-close").onclick = closeModal;
         modal.querySelector(".modal-cancel").onclick = closeModal;
         modal.querySelector(".btn-dismiss-student").onclick = function () {
@@ -1785,8 +1809,8 @@
             '<div class="flex items-center justify-between gap-2 pt-2 border-t border-[#ECEAE2]">' +
               '<div class="flex items-center gap-1.5">' + statusHtml + '</div>' +
               '<div class="flex items-center gap-2">' +
-                '<button type="button" onclick="selectMasterCard(\'' + _escFav(jid) + '\')" class="text-[#1D5C42] hover:underline font-semibold cursor-pointer">Open</button>' +
-                '<button type="button" onclick="toggleFavoriteJob(\'{{ sid }}\', \'' + _escFav(jid) + '\', this)" class="text-[#9E2A20] hover:underline font-semibold cursor-pointer">Unfavorite</button>' +
+                '<button type="button" data-action="open-favorite" data-job-id="' + _escFav(jid) + '" class="text-[#1D5C42] hover:underline font-semibold cursor-pointer">Open</button>' +
+                ({{ role|tojson }} !== "faculty_mentor" ? '<button type="button" data-action="unfavorite" data-sid="' + _escFav({{ sid|tojson }}) + '" data-job-id="' + _escFav(jid) + '" class="text-[#9E2A20] hover:underline font-semibold cursor-pointer">Unfavorite</button>' : '') +
               '</div>' +
             '</div>' +
           '</div>'
@@ -1812,12 +1836,13 @@
           return;
         }
         var isFav = !!res.j.is_favorite;
-        var detailCard = document.querySelector('.match-card[data-job-id="' + jobId + '"]');
-        var masterCard = document.querySelector('.master-nav-item[data-master-for="' + jobId + '"]');
+        var escJobId = (window.CSS && CSS.escape) ? CSS.escape(jobId) : jobId;
+        var detailCard = document.querySelector('.match-card[data-job-id="' + escJobId + '"]');
+        var masterCard = document.querySelector('.master-nav-item[data-master-for="' + escJobId + '"]');
         if (detailCard) detailCard.setAttribute("data-favorite", isFav ? "true" : "false");
         if (masterCard) masterCard.setAttribute("data-favorite", isFav ? "true" : "false");
 
-        document.querySelectorAll('.btn-favorite-job[data-job-id="' + jobId + '"]').forEach(function (b) {
+        document.querySelectorAll('.btn-favorite-job[data-job-id="' + escJobId + '"]').forEach(function (b) {
           b.setAttribute("data-favorited", isFav ? "true" : "false");
           b.title = isFav ? "Remove from Favorites" : "Save to Favorites";
           var svg = b.querySelector(".fav-star-svg");
@@ -1851,6 +1876,45 @@
     }
     window.toggleFavoriteJob = toggleFavoriteJob;
 
+    // Delegated click handlers for card actions, master list, and favorites panel (replaces inline onclick interpolations)
+    document.addEventListener("click", function (evt) {
+      var favBtn = evt.target.closest ? evt.target.closest(".btn-favorite-job") : null;
+      if (favBtn) {
+        evt.stopPropagation();
+        toggleFavoriteJob(favBtn.getAttribute("data-sid") || {{ sid|tojson }}, favBtn.getAttribute("data-job-id") || "", favBtn);
+        return;
+      }
+      var actionBtn = evt.target.closest ? evt.target.closest("[data-action]") : null;
+      if (actionBtn) {
+        var action = actionBtn.getAttribute("data-action");
+        var actSid = actionBtn.getAttribute("data-sid") || {{ sid|tojson }};
+        if (action === "gen-plan") {
+          genPlan(actSid, actionBtn.getAttribute("data-job") || "", actionBtn);
+          return;
+        }
+        if (action === "apply-job") {
+          applyJob(actSid, actionBtn.getAttribute("data-job") || "", actionBtn.getAttribute("data-eligible") || "false", actionBtn);
+          return;
+        }
+        if (action === "remove-job") {
+          removeJobOpportunity(actSid, actionBtn.getAttribute("data-job-remove") || "", actionBtn.getAttribute("data-job-title") || "", actionBtn);
+          return;
+        }
+        if (action === "open-favorite") {
+          selectMasterCard(actionBtn.getAttribute("data-job-id") || "");
+          return;
+        }
+        if (action === "unfavorite") {
+          toggleFavoriteJob(actSid, actionBtn.getAttribute("data-job-id") || "", actionBtn);
+          return;
+        }
+      }
+      var masterItem = evt.target.closest ? evt.target.closest(".master-nav-item") : null;
+      if (masterItem && typeof selectMasterCard === "function") {
+        selectMasterCard(masterItem.getAttribute("data-master-for") || "");
+      }
+    });
+
     applyFilters();
   })();
   </script>
@@ -1858,7 +1922,7 @@
 
   {% if role in ('student', 'tpo_admin') %}
   <!-- Live Scraper Modal Dialog with Telemetry Dashboard (ARCHITECTURE §16.2.B) -->
-  <div id="scrape-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-[#122019]/60 backdrop-blur-xs flex items-center justify-center p-4">
+  <div id="scrape-modal" role="dialog" aria-modal="true" aria-labelledby="scrape-modal-title" class="hidden fixed inset-0 z-50 overflow-y-auto bg-[#122019]/60 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white rounded-[24px] border border-[#E5E3DC] shadow-2xl max-w-xl w-full p-6 md:p-7 relative">
       <!-- Modal Header -->
       <div class="flex items-center justify-between pb-4 border-b border-[#ECEAE2]">
@@ -1869,7 +1933,7 @@
             </svg>
           </div>
           <div>
-            <h3 class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Fetch Live Indian Tech Jobs</h3>
+            <h3 id="scrape-modal-title" class="font-serif-display text-lg font-semibold text-[#1C1E1B]">Fetch Live Indian Tech Jobs</h3>
             <p class="text-xs text-[#5C5A52]">Query live hiring boards (Naukri, LinkedIn, Indeed) via JobSpy</p>
           </div>
         </div>
@@ -2191,7 +2255,7 @@
       if (chipsWrapper) chipsWrapper.classList.add("hidden");
       if (diversityBadge) diversityBadge.classList.add("hidden");
 
-      fetch("/api/students/{{ sid }}/suggest-job-queries")
+      fetch("/api/students/" + encodeURIComponent({{ sid|tojson }}) + "/suggest-job-queries")
         .then(function (r) { if (r.ok) return r.json(); return null; })
         .then(function (data) {
           if (loadingEl) loadingEl.classList.add("hidden");
@@ -2256,6 +2320,11 @@
     if (openBtn) openBtn.addEventListener("click", openModal);
     if (closeBtn) closeBtn.addEventListener("click", closeModal);
     if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && modal && !modal.classList.contains("hidden")) {
+        closeModal();
+      }
+    });
 
     if (window.location.hash === "#scrape" && openBtn) {
       openModal();
@@ -2269,8 +2338,8 @@
         b.disabled = true;
         b.classList.add("opacity-60", "cursor-wait");
       });
-      var sid = "{{ sid }}";
-      var url = sid ? ("/api/students/" + sid + "/matches/live") : "/api/jobs/live";
+      var sid = {{ sid|tojson }};
+      var url = sid ? ("/api/students/" + encodeURIComponent(sid) + "/matches/live") : "/api/jobs/live";
       fetch(url, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" }
@@ -2378,6 +2447,15 @@
         clock: '<svg class="w-3.5 h-3.5 text-[#7A776E]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>'
       };
 
+      function _escHtml(v) {
+        return String(v == null ? "" : v)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
       function updatePortalCard(portal, status, metaHtml, iconKey, borderClass) {
         var pKey = (portal || "").toLowerCase();
         if (pKey === "ashby_ats" || pKey === "ashbyhq") pKey = "ashby";
@@ -2388,7 +2466,7 @@
             card = document.createElement("div");
             card.id = "telemetry-portal-" + pKey;
             card.className = "p-2.5 rounded-xl border border-[#E5E3DC] bg-white space-y-1";
-            card.innerHTML = '<div class="flex items-center justify-between"><span class="font-bold text-[#1C1E1B] capitalize">' + portal + '</span><span class="portal-status-icon text-[#7A776E]"></span></div><div class="portal-status-meta text-[11px] font-mono text-[#7A776E]">Queued</div>';
+            card.innerHTML = '<div class="flex items-center justify-between"><span class="font-bold text-[#1C1E1B] capitalize">' + _escHtml(portal) + '</span><span class="portal-status-icon text-[#7A776E]"></span></div><div class="portal-status-meta text-[11px] font-mono text-[#7A776E]">Queued</div>';
             grid.appendChild(card);
           }
         }
@@ -2425,7 +2503,7 @@
           var pErr = (data && data.portal) || "";
           var pMsg = (data && data.message) || "Notice";
           completedPortals++;
-          updatePortalCard(pErr, "warning", '<span class="text-amber-700 truncate" title="' + pMsg + '">' + pMsg + '</span>', "warning", "border-amber-200 bg-amber-50/40");
+          updatePortalCard(pErr, "warning", '<span class="text-amber-700 truncate" title="' + _escHtml(pMsg) + '">' + _escHtml(pMsg) + '</span>', "warning", "border-amber-200 bg-amber-50/40");
           updateProgress();
         } else if (name === "ingest_start" || name === "ranking_start") {
           // §20.2.5 — post-harvest ingestion/ranking replaces the stuck
@@ -2459,7 +2537,7 @@
           var ing = (data && data.new_ingested !== undefined) ? data.new_ingested : 0;
           var elp = (data && data.elapsed_total_s !== undefined) ? data.elapsed_total_s : "";
           if (summaryMsg) {
-            summaryMsg.innerHTML = '<span class="text-[#1B5E43] font-semibold">Completed in ' + elp + 's:</span> ' + tot + ' jobs discovered across active boards (' + ing + ' newly indexed).';
+            summaryMsg.innerHTML = '<span class="text-[#1B5E43] font-semibold">Completed in ' + _escHtml(elp) + 's:</span> ' + _escHtml(tot) + ' jobs discovered across active boards (' + _escHtml(ing) + ' newly indexed).';
           }
           if (doneBtn) doneBtn.classList.remove("hidden");
           if (window.toast) {
@@ -2478,9 +2556,9 @@
         if (jobsDiscoveredEl) jobsDiscoveredEl.textContent = totalJobsFound + " Jobs Discovered";
       }
 
-      var sid = "{{ sid }}";
-      var streamUrl = sid ? ("/api/students/" + sid + "/scrape-jobs/stream") : "/api/jobs/scrape/stream";
-      var syncUrl = sid ? ("/api/students/" + sid + "/scrape-jobs") : "/api/jobs/scrape";
+      var sid = {{ sid|tojson }};
+      var streamUrl = sid ? ("/api/students/" + encodeURIComponent(sid) + "/scrape-jobs/stream") : "/api/jobs/scrape/stream";
+      var syncUrl = sid ? ("/api/students/" + encodeURIComponent(sid) + "/scrape-jobs") : "/api/jobs/scrape";
 
       // Execute streamUrl via Fetch ReadableStream
       fetch(streamUrl, {
@@ -2541,7 +2619,7 @@
       .catch(function (err) {
         clearInterval(stopwatchInterval);
         if (summaryMsg) {
-          summaryMsg.innerHTML = '<span class="text-[#9E2A20] font-semibold">Stream Notice:</span> Falling back to synchronous ingestion (' + err.message + ')';
+          summaryMsg.innerHTML = '<span class="text-[#9E2A20] font-semibold">Stream Notice:</span> Falling back to synchronous ingestion (' + _escHtml(err && err.message ? err.message : err) + ')';
         }
         // Fallback to synchronous scrape
         fetch(syncUrl, {
@@ -2558,7 +2636,14 @@
             live: true
           })
         })
-        .then(function (r) { return r.json(); })
+        .then(function (r) {
+          if (!r.ok) {
+            return r.json().catch(function () { return {}; }).then(function (j) {
+              throw new Error((j && j.detail) || ("HTTP " + r.status));
+            });
+          }
+          return r.json();
+        })
         .then(function () {
           location.reload();
         })

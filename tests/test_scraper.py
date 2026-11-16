@@ -2368,8 +2368,10 @@ class TestStealthHarvesterIntegration:
         assert resp.status_code == 404
         assert "not found" in resp.json()["detail"].lower()
 
-    def test_api_ingest_output_endpoint(self, client, tmp_path):
+    def test_api_ingest_output_endpoint(self, client, tmp_path, monkeypatch):
         import json
+
+        monkeypatch.setattr("app.api.routes.jobs.INGEST_OUTPUT_DIR", tmp_path.resolve())
 
         test_jobs = [
             {
@@ -3856,6 +3858,7 @@ class TestRealtimeTelemetryFix:
             "Software Engineer",
             results_wanted=2,
             sites=["naukri", "linkedin", "indeed"],  # Caller's multi-site filter
+            live=False,
             on_event=lambda name, data: None,
         )
 
@@ -3870,7 +3873,7 @@ class TestRealtimeTelemetryFix:
         """TestClient streaming response yields chunks immediately via SSE wire protocol."""
         resp = client.post(
             "/api/jobs/scrape/stream",
-            json={"search_term": "Python", "results_wanted": 2, "providers": ["jobspy"]},
+            json={"search_term": "Python", "results_wanted": 2, "providers": ["jobspy"], "live": False},
         )
         assert resp.status_code == 200
         assert "event: init\n" in resp.text

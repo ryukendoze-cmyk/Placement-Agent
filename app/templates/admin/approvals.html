@@ -337,7 +337,7 @@
 
   function decide(id, verb, note, btn, card) {
     btn.disabled = true;
-    fetch("/api/approvals/" + id + "/" + verb, {
+    fetch("/api/approvals/" + encodeURIComponent(id) + "/" + encodeURIComponent(verb), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ note: note || "" })

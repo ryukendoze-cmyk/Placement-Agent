@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import delete
@@ -97,6 +99,18 @@ def _serialize_plan(plan: UpskillPlan, db: Session, ctx=None) -> dict:
     }
 
 
+def _parse_bounded_int(raw: Any, *, name: str, default: int, lo: int, hi: int) -> int:
+    if raw is None or raw == "":
+        return default
+    if isinstance(raw, bool):
+        raise HTTPException(400, f"{name} must be an integer")
+    try:
+        val = int(raw)
+    except (TypeError, ValueError):
+        raise HTTPException(400, f"{name} must be an integer")
+    return max(lo, min(hi, val))
+
+
 @router.post("/api/students/{sid}/plans")
 def create_plan(sid: str, request: Request, payload: dict | None = None,
                 session: Session = Depends(get_session), ctx=Depends(get_ctx)):
@@ -110,11 +124,15 @@ def create_plan(sid: str, request: Request, payload: dict | None = None,
     job_id = (payload or {}).get("job_id")
     body = payload or {}
     include_upgrades = bool(body.get("include_upgrades", False))
-    weekly_cap = max(5, min(25, int(body.get("weekly_cap") or 10)))
+    weekly_cap = _parse_bounded_int(
+        body.get("weekly_cap"), name="weekly_cap", default=10, lo=5, hi=25
+    )
     target_mode = str(body.get("target_mode") or "single")
     if target_mode not in ("single", "portfolio", "crunch"):
         target_mode = "single"
-    horizon_weeks = max(2, min(12, int(body.get("horizon_weeks") or 4)))
+    horizon_weeks = _parse_bounded_int(
+        body.get("horizon_weeks"), name="horizon_weeks", default=4, lo=2, hi=12
+    )
     cost_filter = str(body.get("cost_filter") or "all")
     if cost_filter not in ("all", "free"):
         cost_filter = "all"
@@ -158,21 +176,25 @@ def create_plan(sid: str, request: Request, payload: dict | None = None,
         raise HTTPException(500, "failed to score target job")
     job_score = ranked[0][1]
 
-    # replace any prior plan for this job (deterministic plan id overwrites)
+    # Replace any prior plan in the same transaction; rollback restores it if build_plan fails.
     prior = session.get(UpskillPlan, f"plan-{sid}-{job.id}")
     if prior is not None:
         session.execute(delete(PlanItem).where(PlanItem.plan_id == prior.id))
         session.delete(prior)
-        session.commit()
+        session.flush()
 
-    plan, _items = build_plan(
-        session, sid, job, job_score, llm=ctx.llm,
-        levels=levels, include_upgrades=include_upgrades,
-        weekly_cap=weekly_cap, target_mode=target_mode,
-        horizon_weeks=horizon_weeks, cost_filter=cost_filter,
-        strategy_mode=strategy_mode, exclude_unreachable=exclude_unreachable,
-        ctx=ctx,
-    )
+    try:
+        plan, _items = build_plan(
+            session, sid, job, job_score, llm=ctx.llm,
+            levels=levels, include_upgrades=include_upgrades,
+            weekly_cap=weekly_cap, target_mode=target_mode,
+            horizon_weeks=horizon_weeks, cost_filter=cost_filter,
+            strategy_mode=strategy_mode, exclude_unreachable=exclude_unreachable,
+            ctx=ctx,
+        )
+    except Exception:
+        session.rollback()
+        raise
     log_audit(session, action="plan.generated", entity_type="plan", entity_id=plan.id,
               actor_role=current_role(request),
               detail={"student_id": sid, "job_id": job.id,
@@ -267,11 +289,11 @@ def verify_quiz(plan_id: str, item_id: str, request: Request, payload: dict | No
     try:
         from app.interview.feedback_loop import QuestionTelemetryManager
         QuestionTelemetryManager().record_answer_turn(
-            question_id=f"plan_quiz:{item.skill_id}",
+            q_id=f"plan_quiz:{item.skill_id}",
             score=float(score),
             matched_kw=[item.skill_id] if passed else [],
             expected_kw=[item.skill_id],
-            difficulty="intermediate",
+            difficulty=2,
         )
     except Exception:
         pass
@@ -522,7 +544,9 @@ def simulate_plan_endpoint(
     added_skills = body.get("added_skills")
     if added_skills is not None and not isinstance(added_skills, list):
         raise HTTPException(400, "added_skills must be a list of skill IDs")
-    weekly_cap = int(body.get("weekly_cap") or 10)
+    weekly_cap = _parse_bounded_int(
+        body.get("weekly_cap"), name="weekly_cap", default=10, lo=5, hi=25
+    )
     assume_mock = bool(body.get("assume_mock_passed", False))
 
     return simulate_plan_scenario(

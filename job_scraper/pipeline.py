@@ -120,6 +120,7 @@ async def run_pipeline(
             t0 = time.monotonic()
             try:
                 extractor = factory(session)
+                search_timeout = max(30.0, min(180.0, 20.0 + 7.0 * max(1, int(limit or 1))))
                 for kw in keywords:
                     try:
                         jobs = await asyncio.wait_for(
@@ -129,7 +130,7 @@ async def run_pipeline(
                                 freshness_days=days_old,
                                 limit=limit,
                             ),
-                            timeout=10.0,
+                            timeout=search_timeout,
                         )
                         result.jobs.extend(jobs)
                     except Exception as exc:

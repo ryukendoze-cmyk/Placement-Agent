@@ -158,13 +158,20 @@ def pick_weak_bullets(text: str, taxonomy=None, k: int = 3) -> list[str]:
 def improve_weak_bullets(text: str, present_skills: list[str], llm, *, taxonomy=None) -> list[dict]:
     """Grounded STAR rewrites of the top-3 weakest bullets using ONLY present skills."""
     weak = pick_weak_bullets(text, taxonomy)
-    if not weak:
+    if not weak or llm is None:
         return []
     payload = json.dumps({"bullets": weak, "available_skills": list(present_skills or [])})
-    parsed = _safe_json(llm.complete(system=IMPROVE_BULLETS_SYSTEM, user=payload, json_mode=True))
+    try:
+        raw = llm.complete(system=IMPROVE_BULLETS_SYSTEM, user=payload, json_mode=True)
+    except Exception:
+        return []
+    parsed = _safe_json(raw)
     improvements: list[dict] = []
     if isinstance(parsed, dict):
-        for i, item in enumerate(parsed.get("improvements", [])):
+        raw_items = parsed.get("improvements")
+        if not isinstance(raw_items, list):
+            raw_items = []
+        for i, item in enumerate(raw_items):
             if i >= len(weak) or not isinstance(item, dict):
                 continue
             improvements.append({

@@ -45,8 +45,9 @@ def simulate_placement_drive(
     required_skills: list[str] | None = None,
     preferred_skills: list[str] | None = None,
     max_backlogs: int | None = None,
+    student_ids: set[str] | list[str] | tuple[str, ...] | None = None,
 ) -> dict:
-    """Evaluate every cohort student against a hypothetical drive.
+    """Evaluate every cohort student (or ``student_ids`` subset) against a hypothetical drive.
 
     Returns a JSON-safe dict: tier, total/eligible counts, eligible_students,
     per-check bottleneck_breakdown, top_missing_skills, and a deterministic
@@ -73,82 +74,94 @@ def simulate_placement_drive(
         source="local",
         scraper_engine="",
     )
-    # Pre-embed the synthetic job so evaluate_student_eligibility hits the
-    # in-memory cache and never writes to the vector store.
+    # Pre-embed the synthetic job temporarily so evaluate_student_eligibility hits the
+    # in-memory cache without mutating ctx.job_vectors permanently.
+    added_vec = False
     try:
-        ctx.job_vectors[job.id] = ctx.embedder.embed(job.description)
+        if job.id not in ctx.job_vectors:
+            ctx.job_vectors[job.id] = ctx.embedder.embed(job.description)
+            added_vec = True
     except Exception:  # pragma: no cover - defensive
         pass
 
-    all_students = sort_students_alphabetically(session.exec(select(Student)).all())
-    total = len(all_students)
-    if total == 0:
+    try:
+        all_students = sort_students_alphabetically(session.exec(select(Student)).all())
+        if student_ids is not None:
+            allowed_ids = set(student_ids)
+            all_students = [s for s in all_students if s.id in allowed_ids]
+        total = len(all_students)
+        if total == 0:
+            return {
+                "title": title, "company": company, "salary_lpa": salary,
+                "min_gpa": float(min_gpa or 0.0), "allowed_branches": branches,
+                "required_skills": req_skills, "preferred_skills": pref_skills,
+                "tier": job_tier(job),
+                "total_students": 0, "eligible_now_count": 0, "eligible_now_pct": 0.0,
+                "eligible_students": [],
+                "bottleneck_breakdown": {n: 0 for n in _CHECK_NAMES},
+                "top_missing_skills": [],
+                "bootcamp_intervention_roi": {
+                    "projected_eligible_count": 0, "unlocked_students_count": 0,
+                    "total_bootcamp_hours": 0},
+            }
+
+        # Load courses + skill names once (no N+1).
+        courses = _load_courses(session)
+        names = _skill_names(session)
+
+        bottleneck = {n: 0 for n in _CHECK_NAMES}
+        missing_counts: dict[str, int] = {}
+        eligible_students: list[dict] = []
+        per_student: list[dict] = []
+
+        for s in all_students:
+            elig = evaluate_student_eligibility(session, ctx, s.id, job)
+            # Per-check non-exclusive counts: a student failing multiple SOPs
+            # increments each counter (no evaluation-order masking).
+            for c in elig["checks"]:
+                if not c["passed"]:
+                    bottleneck[c["name"]] = bottleneck.get(c["name"], 0) + 1
+            for miss in elig.get("missing_required", []):
+                if miss:
+                    missing_counts[miss] = missing_counts.get(miss, 0) + 1
+            per_student.append({"student": s, "elig": elig})
+            if elig["eligible"]:
+                eligible_students.append({
+                    "id": s.id, "name": s.name, "branch": s.branch,
+                    "gpa": float(s.gpa or 0.0), "match_score": elig["match_score"],
+                })
+
+        eligible_now = len(eligible_students)
+
+        # top missing skills ranked by students_missing desc, skill_id asc tiebreak
+        top_missing = [
+            {"skill_id": sid, "name": names.get(sid, sid), "students_missing": cnt,
+             "recommended_course": _course_payload(pick_course_for_skill(sid, courses))}
+            for sid, cnt in missing_counts.items()
+        ]
+        top_missing.sort(key=lambda x: (-x["students_missing"], x["skill_id"]))
+        top_missing = top_missing[:5]
+
+        # ---- deterministic bootcamp ROI projection -------------------------------
+        roi = _project_bootcamp_roi(per_student, top_missing, courses, eligible_now,
+                                    max_backlogs)
+
         return {
             "title": title, "company": company, "salary_lpa": salary,
-            "min_gpa": float(min_gpa or 0.0), "tier": job_tier(job),
-            "total_students": 0, "eligible_now_count": 0, "eligible_now_pct": 0.0,
-            "eligible_students": [],
-            "bottleneck_breakdown": {n: 0 for n in _CHECK_NAMES},
-            "top_missing_skills": [],
-            "bootcamp_intervention_roi": {
-                "projected_eligible_count": 0, "unlocked_students_count": 0,
-                "total_bootcamp_hours": 0},
+            "min_gpa": float(min_gpa or 0.0), "allowed_branches": branches,
+            "required_skills": req_skills, "preferred_skills": pref_skills,
+            "tier": job_tier(job),
+            "total_students": total,
+            "eligible_now_count": eligible_now,
+            "eligible_now_pct": round(100 * eligible_now / total, 1) if total else 0.0,
+            "eligible_students": eligible_students,
+            "bottleneck_breakdown": bottleneck,
+            "top_missing_skills": top_missing,
+            "bootcamp_intervention_roi": roi,
         }
-
-    # Load courses + skill names once (no N+1).
-    courses = _load_courses(session)
-    names = _skill_names(session)
-
-    bottleneck = {n: 0 for n in _CHECK_NAMES}
-    missing_counts: dict[str, int] = {}
-    eligible_students: list[dict] = []
-    per_student: list[dict] = []
-
-    for s in all_students:
-        elig = evaluate_student_eligibility(session, ctx, s.id, job)
-        # Per-check non-exclusive counts: a student failing multiple SOPs
-        # increments each counter (no evaluation-order masking).
-        for c in elig["checks"]:
-            if not c["passed"]:
-                bottleneck[c["name"]] = bottleneck.get(c["name"], 0) + 1
-        for miss in elig.get("missing_required", []):
-            if miss:
-                missing_counts[miss] = missing_counts.get(miss, 0) + 1
-        per_student.append({"student": s, "elig": elig})
-        if elig["eligible"]:
-            eligible_students.append({
-                "id": s.id, "name": s.name, "branch": s.branch,
-                "gpa": float(s.gpa or 0.0), "match_score": elig["match_score"],
-            })
-
-    eligible_now = len(eligible_students)
-
-    # top missing skills ranked by students_missing desc, skill_id asc tiebreak
-    top_missing = [
-        {"skill_id": sid, "name": names.get(sid, sid), "students_missing": cnt,
-         "recommended_course": _course_payload(pick_course_for_skill(sid, courses))}
-        for sid, cnt in missing_counts.items()
-    ]
-    top_missing.sort(key=lambda x: (-x["students_missing"], x["skill_id"]))
-    top_missing = top_missing[:5]
-
-    # ---- deterministic bootcamp ROI projection -------------------------------
-    roi = _project_bootcamp_roi(per_student, top_missing, courses, eligible_now,
-                                max_backlogs)
-
-    return {
-        "title": title, "company": company, "salary_lpa": salary,
-        "min_gpa": float(min_gpa or 0.0), "allowed_branches": branches,
-        "required_skills": req_skills, "preferred_skills": pref_skills,
-        "tier": job_tier(job),
-        "total_students": total,
-        "eligible_now_count": eligible_now,
-        "eligible_now_pct": round(100 * eligible_now / total, 1) if total else 0.0,
-        "eligible_students": eligible_students,
-        "bottleneck_breakdown": bottleneck,
-        "top_missing_skills": top_missing,
-        "bootcamp_intervention_roi": roi,
-    }
+    finally:
+        if added_vec:
+            ctx.job_vectors.pop(job.id, None)
 
 
 def _course_payload(course: dict | None) -> dict | None:

@@ -1,9 +1,11 @@
-const CACHE_NAME = "jklu-careeros-v2";
+const CACHE_NAME = "jklu-careeros-v3";
 const PRECACHE_ASSETS = [
   "/static/app.js",
   "/static/responsive.css",
+  "/static/theme.css",
+  "/static/theme.js",
   "/static/campus_drive.js",
-  "/static/manifest.webmanifest",
+  "/manifest.webmanifest",
   "/static/icons/icon-192.png",
   "/static/icons/icon-512.png",
   "/static/vendor/htmx.min.js",
@@ -58,7 +60,10 @@ self.addEventListener("fetch", (event) => {
     url.pathname.startsWith("/static/vendor/") ||
     url.pathname === "/static/app.js" ||
     url.pathname === "/static/responsive.css" ||
+    url.pathname === "/static/theme.css" ||
+    url.pathname === "/static/theme.js" ||
     url.pathname === "/static/campus_drive.js" ||
+    url.pathname === "/manifest.webmanifest" ||
     url.pathname.startsWith("/static/icons/")
   ) {
     event.respondWith(

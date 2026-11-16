@@ -63,14 +63,16 @@ class OpenAILLM:
 
         max_retries = 2
         backoff_sec = 2.0
+        last_exc: Exception | None = None
         for attempt in range(max_retries):
             try:
                 resp = self._get_client().chat.completions.create(**kwargs)
                 out = resp.choices[0].message.content or ""
                 return out
             except Exception as e:
+                last_exc = e
                 err_msg = str(e).lower()
-                if json_mode and "response_format" in err_msg:
+                if json_mode and "response_format" in kwargs and "response_format" in err_msg and attempt < max_retries - 1:
                     kwargs.pop("response_format", None)
                     continue
                 is_rate_limit = any(term in err_msg for term in ["429", "rate limit", "queue is full", "too many requests"])
@@ -79,6 +81,8 @@ class OpenAILLM:
                     time.sleep(sleep_time)
                     continue
                 raise
+        if last_exc is not None:
+            raise last_exc
         return ""
 
     def complete(self, system: str, user: str, json_mode: bool = False, temperature: float = 0.0, timeout: float | None = None) -> str:

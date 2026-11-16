@@ -194,7 +194,7 @@
   var delForm = document.getElementById("delete-profile-form");
   if (delBtn && delForm) {
     delBtn.addEventListener("click", function() {
-      var msg = "Are you sure you want to remove {{ student.name }} from the cohort? This will delete all associated matches and progress data.";
+      var msg = "Are you sure you want to remove " + {{ student.name | tojson }} + " from the cohort? This will delete all associated matches and progress data.";
       if (typeof window.confirmAction === "function") {
         window.confirmAction(msg, function() { delForm.submit(); });
       } else {

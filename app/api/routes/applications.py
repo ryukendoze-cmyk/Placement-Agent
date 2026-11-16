@@ -13,10 +13,11 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.api.deps import get_ctx, get_session
-from app.matching.engine import job_tier
+from app.matching.engine import is_job_visible_to_student, is_on_campus_job, job_tier
 from app.models import (
     ApprovalRequest,
     AuditLog,
@@ -113,6 +114,10 @@ def create_application(
     job = session.get(Job, job_id)
     if job is None:
         raise HTTPException(404, "job not found")
+    if not is_job_visible_to_student(job, student_id=sid):
+        raise HTTPException(403, "job is not visible to this student")
+    if not is_on_campus_job(job):
+        raise HTTPException(400, "applications are only supported for on-campus drives")
     request_waiver = bool((body or {}).get("request_waiver") or False)
     note = str((body or {}).get("note") or "")
 
@@ -141,12 +146,19 @@ def create_application(
     ).first()
     initial_favorite = bool(getattr(match_row, "is_favorite", False)) if match_row is not None else False
     now = datetime.now(timezone.utc)
-    app_id = f"app-{uuid4().hex[:8]}"
+    app_id = f"app-{uuid4().hex[:12]}"
 
     def _add_audit(action: str, detail: dict) -> None:
-        session.add(AuditLog(id=f"aud-{uuid4().hex[:8]}", action=action,
+        session.add(AuditLog(id=f"aud-{uuid4().hex[:12]}", action=action,
                              entity_type="job_application", entity_id=app_id,
                              actor_role=role, detail=detail))
+
+    def _commit_application() -> None:
+        try:
+            session.commit()
+        except IntegrityError as exc:
+            session.rollback()
+            raise HTTPException(409, "an application for this drive already exists") from exc
 
     # ---- branch 1: eligible + standard -> auto-nominate
     if eligible and tier == "standard":
@@ -159,19 +171,19 @@ def create_application(
             is_favorite=initial_favorite, created_at=now, updated_at=now)
         session.add(app_row)
         session.add(ProgressEvent(
-            id=f"pe-{uuid4().hex[:8]}", student_id=sid, kind="nomination",
+            id=f"pe-{uuid4().hex[:12]}", student_id=sid, kind="nomination",
             ref_id=job_id, readiness=match_score, at=now))
         _add_audit("application.nominated",
                    {"student_id": sid, "job_id": job_id, "tier": tier,
                     "match_score": match_score})
-        session.commit()
+        _commit_application()
         return {"application": _app_payload(app_row, job=job, eligibility=elig),
                 "eligibility": elig, "hitl": None}
 
     # ---- branch 2: eligible + dream/super_dream -> TPO approval required
     if eligible and tier in ("dream", "super_dream"):
         ap = ApprovalRequest(
-            id=f"appr-{uuid4().hex[:8]}", kind="job_application_nomination",
+            id=f"appr-{uuid4().hex[:12]}", kind="job_application_nomination",
             target_id=sid,
             title=f"Drive nomination: {job.title} ({tier})",
             summary=(f"{student.name} is eligible for {tier} tier "
@@ -194,7 +206,7 @@ def create_application(
         _add_audit("application.submitted",
                    {"student_id": sid, "job_id": job_id, "tier": tier,
                     "approval_id": ap.id, "awaiting": "tpo_approval"})
-        session.commit()
+        _commit_application()
         return {"application": _app_payload(app_row, job=job, eligibility=elig,
                                             approval=ap),
                 "eligibility": elig,
@@ -215,7 +227,7 @@ def create_application(
 
     # ---- branch 4: ineligible + waiver -> mentor endorsement gate
     ap = ApprovalRequest(
-        id=f"appr-{uuid4().hex[:8]}", kind="job_application_nomination",
+        id=f"appr-{uuid4().hex[:12]}", kind="job_application_nomination",
         target_id=sid,
         title=f"Waiver request: {job.title}",
         summary=(f"{student.name} is blocked by SOP checks: "
@@ -240,7 +252,7 @@ def create_application(
     _add_audit("application.waiver_requested",
                {"student_id": sid, "job_id": job_id, "tier": tier,
                 "approval_id": ap.id, "blocked_reasons": elig.get("reasons", [])})
-    session.commit()
+    _commit_application()
     return {"application": _app_payload(app_row, job=job, eligibility=elig,
                                         approval=ap),
             "eligibility": elig,
@@ -251,45 +263,71 @@ def create_application(
 def list_student_applications(
     sid: str,
     request: Request,
+    limit: int = 100,
+    offset: int = 0,
     session: Session = Depends(get_session),
     role: str = Depends(_STUDENT_OR_ADMIN),
 ):
     """Application history for one student with job details + HITL status."""
     enforce_student_scope(request, sid)
+    limit = max(1, min(int(limit), 200))
+    offset = max(0, int(offset))
     rows = session.exec(select(JobApplication)
                         .where(JobApplication.student_id == sid)
-                        .order_by(JobApplication.created_at.desc())).all()
-    out = []
-    for row in rows:
-        job = session.get(Job, row.job_id)
-        ap = (session.get(ApprovalRequest, row.approval_id)
-              if row.approval_id else None)
-        out.append(_app_payload(row, job=job, approval=ap))
-    return out
+                        .order_by(JobApplication.created_at.desc())
+                        .offset(offset)
+                        .limit(limit)).all()
+    if not rows:
+        return []
+    job_ids = {r.job_id for r in rows}
+    appr_ids = {r.approval_id for r in rows if r.approval_id}
+    jobs_by_id = {j.id: j for j in session.exec(select(Job).where(Job.id.in_(job_ids))).all()} if job_ids else {}
+    apprs_by_id = (
+        {a.id: a for a in session.exec(select(ApprovalRequest).where(ApprovalRequest.id.in_(appr_ids))).all()}
+        if appr_ids else {}
+    )
+    return [
+        _app_payload(row, job=jobs_by_id.get(row.job_id), approval=apprs_by_id.get(row.approval_id))
+        for row in rows
+    ]
 
 
 @router.get("/api/admin/applications")
 def list_admin_applications(
     request: Request,
+    limit: int = 100,
+    offset: int = 0,
     session: Session = Depends(get_session),
     role: str = Depends(require_role("faculty_mentor", "tpo_admin")),
 ):
     """Cohort application ledger: faculty_mentor sees their department only,
     tpo_admin sees everything (19.2)."""
-    rows = session.exec(select(JobApplication)
-                        .order_by(JobApplication.created_at.desc())).all()
+    limit = max(1, min(int(limit), 200))
+    offset = max(0, int(offset))
+    q = select(JobApplication).order_by(JobApplication.created_at.desc())
     user: CurrentUser | None = get_current_user_optional(request)
-    if user is not None and user.role == "faculty_mentor" and user.department:
+    if user is not None and user.role == "faculty_mentor":
         from app.api.routes.admin import _faculty_mentee_ids
         mentee_ids = _faculty_mentee_ids(session, user.department)
-        rows = [r for r in rows if r.student_id in mentee_ids]
+        if not mentee_ids:
+            return []
+        q = q.where(JobApplication.student_id.in_(mentee_ids))
+    rows = session.exec(q.offset(offset).limit(limit)).all()
+    if not rows:
+        return []
+    job_ids = {r.job_id for r in rows}
+    sids = {r.student_id for r in rows}
+    appr_ids = {r.approval_id for r in rows if r.approval_id}
+    jobs_by_id = {j.id: j for j in session.exec(select(Job).where(Job.id.in_(job_ids))).all()} if job_ids else {}
+    students_by_id = {s.id: s for s in session.exec(select(Student).where(Student.id.in_(sids))).all()} if sids else {}
+    apprs_by_id = (
+        {a.id: a for a in session.exec(select(ApprovalRequest).where(ApprovalRequest.id.in_(appr_ids))).all()}
+        if appr_ids else {}
+    )
     out = []
     for row in rows:
-        job = session.get(Job, row.job_id)
-        student = session.get(Student, row.student_id)
-        ap = (session.get(ApprovalRequest, row.approval_id)
-              if row.approval_id else None)
-        payload = _app_payload(row, job=job, approval=ap)
+        student = students_by_id.get(row.student_id)
+        payload = _app_payload(row, job=jobs_by_id.get(row.job_id), approval=apprs_by_id.get(row.approval_id))
         payload["student_name"] = student.name if student else ""
         payload["student_branch"] = student.branch if student else ""
         out.append(payload)
@@ -310,6 +348,10 @@ def withdraw_student_application(
     app_row = session.get(JobApplication, app_id)
     if app_row is None or app_row.student_id != sid:
         raise HTTPException(404, "application not found")
+    if app_row.status in ("withdrawn", "rejected"):
+        raise HTTPException(409, f"application is already {app_row.status}")
+    if app_row.status == "nominated" and role != "tpo_admin":
+        raise HTTPException(403, "only TPO administrator can withdraw a finalized nomination")
 
     old_status = app_row.status
     app_row.status = "withdrawn"
@@ -328,7 +370,7 @@ def withdraw_student_application(
 
     session.add(
         AuditLog(
-            id=f"aud-{uuid4().hex[:8]}",
+            id=f"aud-{uuid4().hex[:12]}",
             action="application.withdrawn",
             entity_type="job_application",
             entity_id=app_id,
@@ -384,10 +426,20 @@ def delete_admin_application(
         raise HTTPException(404, "application not found")
 
     user = get_current_user_optional(request)
-    if user and user.role == "faculty_mentor" and user.department:
+    if user and user.role == "faculty_mentor":
+        from app.taxonomy.branches import normalize_branch
+        raw_dept = (user.department or "").strip()
+        dept_norm = (normalize_branch(raw_dept) or raw_dept).strip().lower()
         student = session.get(Student, app_row.student_id)
-        if student and student.branch and student.branch.upper() != user.department.upper():
+        raw_branch = (student.branch or "").strip() if student else ""
+        stu_norm = (normalize_branch(raw_branch) or raw_branch).strip().lower()
+        if not dept_norm or not student or not stu_norm or stu_norm != dept_norm:
             raise HTTPException(403, "not authorized for this student's department")
+
+    if app_row.status in ("withdrawn", "rejected"):
+        raise HTTPException(409, f"application is already {app_row.status}")
+    if app_row.status == "nominated" and role != "tpo_admin":
+        raise HTTPException(403, "only TPO administrator can withdraw a finalized nomination")
 
     old_status = app_row.status
     app_row.status = "withdrawn"
@@ -404,7 +456,7 @@ def delete_admin_application(
 
     session.add(
         AuditLog(
-            id=f"aud-{uuid4().hex[:8]}",
+            id=f"aud-{uuid4().hex[:12]}",
             action="application.withdrawn",
             entity_type="job_application",
             entity_id=app_id,

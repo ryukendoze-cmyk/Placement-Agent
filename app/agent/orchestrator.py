@@ -20,15 +20,26 @@ from .tools import TOOL_ALIASES, TOOL_REGISTRY, call_tool
 from .verifier import build_known_entities, verify_text
 
 
-def _inject_role_args(tool_name: str, args: dict, actor_role: str) -> dict:
-    """Force server-side actor_role for privileged tools so prompts/LLM cannot escalate roles."""
+def _inject_role_args(
+    tool_name: str,
+    args: dict,
+    actor_role: str,
+    student_id: str | None = None,
+) -> dict:
+    """Force server-side actor_role (and student_id for student callers) so prompts/LLM cannot escalate."""
     canonical = TOOL_ALIASES.get(tool_name, tool_name)
     out = dict(args or {})
     spec = TOOL_REGISTRY.get(canonical)
-    if spec and ("actor_role" in spec.input_schema or "actor_role?" in spec.input_schema):
-        out["actor_role"] = actor_role or "student"
-    elif canonical == "purge_live_market_jobs":
-        out["actor_role"] = actor_role or "student"
+    role_norm = str(actor_role or "student").strip().lower() or "student"
+    if (
+        (spec and ("actor_role" in spec.input_schema or "actor_role?" in spec.input_schema))
+        or canonical == "purge_live_market_jobs"
+        or "actor_role" in out
+    ):
+        out["actor_role"] = role_norm
+    if role_norm == "student" and student_id:
+        if (spec and ("student_id" in spec.input_schema or "student_id?" in spec.input_schema)) or "student_id" in out:
+            out["student_id"] = student_id
     return out
 
 
@@ -375,7 +386,7 @@ def _execute_step_with_recovery(
         msg = f"unknown tool: {tool_name}"
         return {"error": msg, "tool": tool_name, "fallback": True}, msg, False
 
-    call_args = _inject_role_args(tool_name, args, actor_role)
+    call_args = _inject_role_args(tool_name, args, actor_role, student_id=student_id)
     recovered = ""
     try:
         if inject_sim_failure:
@@ -392,7 +403,7 @@ def _execute_step_with_recovery(
             retry_args = _repair_failed_step(
                 getattr(ctx, "llm", None), tool_name, args, student_id, str(e), memory
             )
-            retry_args = _inject_role_args(tool_name, retry_args, actor_role)
+            retry_args = _inject_role_args(tool_name, retry_args, actor_role, student_id=student_id)
             output = call_tool(tool_name, ctx, session, **retry_args)
             run.fallback_triggered = True
             recovered = f"recovered after repair: {e}"
@@ -436,6 +447,10 @@ def _execute_loop_iter(ctx, session, *, run, goal, student_id: str | None,
     while step_idx < len(plan_steps) and executed < MAX_EXECUTED_STEPS:
         raw_step = plan_steps[step_idx]
         step_idx += 1
+        if not isinstance(raw_step, dict):
+            run.fallback_triggered = True
+            error_recovered = error_recovered or "skipped malformed non-dict plan step"
+            continue
         executed += 1
         tool_name = raw_step.get("tool") or ""
         canonical = TOOL_ALIASES.get(tool_name, tool_name)
@@ -511,7 +526,7 @@ def _execute_loop_iter(ctx, session, *, run, goal, student_id: str | None,
 
         # --- M16: observation-driven re-planning (bounded) ----------------
         if injected < MAX_INJECTED_STEPS and executed < MAX_EXECUTED_STEPS:
-            queued = {s.get("tool") for s in plan_steps[step_idx:]}
+            queued = {s.get("tool") for s in plan_steps[step_idx:] if isinstance(s, dict)}
             new_obs_steps = _replan_from_observation(
                 getattr(ctx, "llm", None), goal, student_id, tool_name, output, queued
             )
@@ -783,6 +798,10 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
             continue
         raw_step = plan_steps[step_idx]
         step_idx += 1
+        if not isinstance(raw_step, dict):
+            run.fallback_triggered = True
+            error_recovered = error_recovered or "skipped malformed non-dict plan step"
+            continue
         executed += 1
         step_order += 1
         tool_name = raw_step.get("tool") or ""
@@ -830,6 +849,7 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
             run.plan_json = plan_steps
             run.status = "awaiting_input"
             run.final_answer = str(output.get("question") or "Please clarify your request.")
+            run.citations = {"verified": [], "unverified": [], "grounding_score": 100}
             run.total_latency_ms = int((time.time() - started) * 1000)
             session.add(run)
             session.flush()
@@ -838,7 +858,7 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
             return run
 
         if isinstance(output, dict) and injected < MAX_INJECTED_STEPS and executed < MAX_EXECUTED_STEPS:
-            queued = {s.get("tool") for s in plan_steps[step_idx:]}
+            queued = {s.get("tool") for s in plan_steps[step_idx:] if isinstance(s, dict)}
             new_obs_steps = _replan_from_observation(
                 getattr(ctx, "llm", None), run.goal, run.student_id, tool_name, output, queued
             )
@@ -864,6 +884,8 @@ def resume_agent_run(ctx, session, *, run_id: str, user_reply: str) -> object:
             known.add(str(v["plan_id"]))
     verify_result = verify_text(json.dumps(memory, default=str), known)
     synthesis = _synthesize(getattr(ctx, "llm", None), run.goal, memory, refs)
+    if synthesis.pop("_fallback_used", False):
+        run.fallback_triggered = True
     final_answer = (synthesis.get("summary", "") or "") + "\n\n" + "\n".join(
         f"**{s.get('heading','')}**: {s.get('body','')}" for s in synthesis.get("sections", []))
     final_verified = verify_text(final_answer, known)

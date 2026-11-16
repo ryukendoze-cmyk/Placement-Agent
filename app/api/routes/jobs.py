@@ -33,6 +33,7 @@ from app.security.rbac import get_current_user_optional, require_role
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+INGEST_OUTPUT_DIR = Path("output").resolve()
 
 #: SSE response headers (ARCHITECTURE §16.2.B): disable caching and proxy
 #: buffering so events reach the client as they are produced.
@@ -138,9 +139,9 @@ def _sse_chunk(name: str, data: Any) -> str:
 @router.post("/api/jobs/scrape/stream")
 def scrape_jobs_stream_endpoint(
     req: ScrapeRequest | None = None,
-    session: Session = Depends(get_session),
     ctx: Any = Depends(get_ctx),
     role: str = Depends(require_role("tpo_admin")),
+    _rl: None = Depends(check_rate_limit("jobs_scrape")),
 ) -> StreamingResponse:
     """Stream live scrape telemetry as Server-Sent Events (§16.2.B).
 
@@ -300,11 +301,19 @@ def ingest_output_endpoint(
 ) -> dict[str, Any]:
     """Ingest normalized scraped jobs from output folder JSON into database and vector store."""
     file_path = req.file_path if req and req.file_path else "output/normalized_jobs.json"
-    p = Path(file_path)
-    if not p.is_file():
+    base_dir = Path(INGEST_OUTPUT_DIR).resolve()
+    try:
+        resolved = Path(file_path).resolve()
+    except OSError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid output path: {exc}")
+    if not resolved.is_relative_to(base_dir):
+        raise HTTPException(status_code=403, detail="Output file path must reside within output/")
+    if resolved.suffix.lower() != ".json":
+        raise HTTPException(status_code=400, detail="Output file must be a .json file")
+    if not resolved.is_file():
         raise HTTPException(status_code=404, detail=f"Output file not found: {file_path}")
     try:
-        data = json.loads(p.read_text(encoding="utf-8"))
+        data = json.loads(resolved.read_text(encoding="utf-8"))
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Failed to read output file: {exc}")
     if not isinstance(data, list):
@@ -352,8 +361,14 @@ def scrape_status_endpoint(
 
 
 @router.get("/api/jobs")
-def list_jobs(session: Session = Depends(get_session)):
-    jobs = session.exec(select(Job)).all()
+def list_jobs(
+    limit: int = 200,
+    offset: int = 0,
+    session: Session = Depends(get_session),
+):
+    capped_limit = max(1, min(int(limit), 500))
+    safe_offset = max(0, int(offset))
+    jobs = session.exec(select(Job).offset(safe_offset).limit(capped_limit)).all()
     return [
         {"id": j.id, "title": j.title, "company": j.company, "location": j.location,
          "remote": j.remote, "experience_years": j.experience_years,

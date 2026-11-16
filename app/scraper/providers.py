@@ -770,7 +770,8 @@ class StealthHarvesterProvider(BaseJobScraperProvider):
             jobs: list[dict[str, Any]] = []
             if self._live_enabled(kwargs):
                 jobs.extend(self._run_live(terms, location, results_wanted, kwargs))
-            jobs.extend(self._read_output_files(kwargs.get("sites") or kwargs.get("portals")))
+            else:
+                jobs.extend(self._read_output_files(kwargs.get("sites") or kwargs.get("portals")))
 
             merged = self._dedupe(jobs)
             for job in merged:
@@ -789,10 +790,7 @@ class StealthHarvesterProvider(BaseJobScraperProvider):
             return False
         if os.environ.get(self.LIVE_ENV_VAR, "").strip().lower() in ("1", "true", "yes", "on"):
             return True
-        # In unit test runs (pytest) without explicit live=True, default to offline output-file reading
-        if "pytest" in sys.modules and not kwargs.get("live"):
-            return False
-        return True
+        return False
 
     def _run_live(
         self, terms: list[str], location: str, results_wanted: int, kwargs: dict[str, Any]
@@ -835,8 +833,11 @@ class StealthHarvesterProvider(BaseJobScraperProvider):
             loop = None
         try:
             if loop is not None and loop.is_running():
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                try:
                     out = pool.submit(asyncio.run, coro).result(timeout=15.0)
+                finally:
+                    pool.shutdown(wait=False, cancel_futures=True)
             else:
                 out = asyncio.run(asyncio.wait_for(coro, timeout=15.0))
         except Exception as exc:  # noqa: BLE001 - zero-crash guarantee
@@ -1040,8 +1041,11 @@ class AshbyATSProvider(BaseJobScraperProvider):
                 loop = None
 
             if loop is not None and loop.is_running():
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                try:
                     out = pool.submit(asyncio.run, coro).result(timeout=40.0)
+                finally:
+                    pool.shutdown(wait=False, cancel_futures=True)
             else:
                 out = asyncio.run(asyncio.wait_for(coro, timeout=40.0))
 

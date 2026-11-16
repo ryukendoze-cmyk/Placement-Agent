@@ -5,10 +5,14 @@
   "server": {
     "cleartext": true,
     "allowNavigation": [
-      "*"
+      "127.0.0.1",
+      "localhost",
+      "10.*",
+      "192.168.*",
+      "*.jklu.edu.in"
     ]
   },
   "android": {
-    "allowMixedContent": true
+    "allowMixedContent": false
   }
 }

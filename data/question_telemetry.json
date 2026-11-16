@@ -52,11 +52,11 @@
   "q-bk-fa-0": {
     "q_id": "q-bk-fa-0",
     "id": "q-bk-fa-0",
-    "times_asked": 364,
-    "total_score": 9748.0,
+    "times_asked": 363,
+    "total_score": 9715.0,
     "avg_score": 26.8,
-    "total_keyword_hit_ratio": 1.0,
-    "avg_keyword_hit_ratio": 0.003,
+    "total_keyword_hit_ratio": 0.0,
+    "avg_keyword_hit_ratio": 0.0,
     "last_difficulty": 0
   },
   "q-bk-gt-0": {
@@ -92,11 +92,11 @@
   "q-bk-gt-1": {
     "q_id": "q-bk-gt-1",
     "id": "q-bk-gt-1",
-    "times_asked": 365,
-    "total_score": 9775.0,
-    "avg_score": 26.8,
-    "total_keyword_hit_ratio": 0.6666666666666666,
-    "avg_keyword_hit_ratio": 0.002,
+    "times_asked": 364,
+    "total_score": 9715.0,
+    "avg_score": 26.7,
+    "total_keyword_hit_ratio": 0.0,
+    "avg_keyword_hit_ratio": 0.0,
     "last_difficulty": 1
   },
   "q-bk-pg-1": {
@@ -207,26 +207,6 @@
     "avg_score": 95.0,
     "total_keyword_hit_ratio": 0.8,
     "avg_keyword_hit_ratio": 0.8,
-    "last_difficulty": 2
-  },
-  "q-bk-gt-2": {
-    "q_id": "q-bk-gt-2",
-    "id": "q-bk-gt-2",
-    "times_asked": 1,
-    "total_score": 50.0,
-    "avg_score": 50.0,
-    "total_keyword_hit_ratio": 0.25,
-    "avg_keyword_hit_ratio": 0.25,
-    "last_difficulty": 2
-  },
-  "q-bk-py-2": {
-    "q_id": "q-bk-py-2",
-    "id": "q-bk-py-2",
-    "times_asked": 1,
-    "total_score": 60.0,
-    "avg_score": 60.0,
-    "total_keyword_hit_ratio": 0.6666666666666666,
-    "avg_keyword_hit_ratio": 0.667,
     "last_difficulty": 2
   }
 }

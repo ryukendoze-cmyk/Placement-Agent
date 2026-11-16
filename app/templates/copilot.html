@@ -171,8 +171,17 @@
     studentSelect.addEventListener("change", function () { chatHistory = []; });
   }
 
+  function escHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   function pillify(text) {
-    var esc = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    var esc = escHtml(text);
     esc = esc.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     return esc.replace(/\[((?:SOP|JOB)-[A-Z0-9]+)\]/gi,
       '<span class="citation-pill" data-sop="$1" title="Open the policy clause">$1</span>');
@@ -206,7 +215,7 @@
 
   function ask(q) {
     if (!q) return;
-    addBubble("user", q.replace(/</g, "&lt;"));
+    addBubble("user", escHtml(q));
     input.value = "";
     var bubble = addBubble("bot", "Checking policy database...");
     var sid = document.getElementById("copilot-student").value;
@@ -252,7 +261,7 @@
                 var finalAns = data.answer || text || "(no answer)";
                 bubble.innerHTML = pillify(finalAns) +
                   (verified.length
-                    ? '<div class="mt-2.5 pt-2 border-t border-[#E5E3DC] text-xs font-mono text-[#5C5A52]">Cited: ' + verified.join(", ") + "</div>"
+                    ? '<div class="mt-2.5 pt-2 border-t border-[#E5E3DC] text-xs font-mono text-[#5C5A52]">Cited: ' + verified.map(escHtml).join(", ") + "</div>"
                     : "");
                 if (data.trace) renderTrace(data.trace);
                 chatHistory.push({ role: "user", content: q }, { role: "assistant", content: finalAns });
@@ -281,7 +290,7 @@
       var finalAns = d.answer || "(no answer)";
       bubble.innerHTML = pillify(finalAns) +
         (d.citations && d.citations.verified && d.citations.verified.length
-          ? '<div class="mt-2.5 pt-2 border-t border-[#E5E3DC] text-xs font-mono text-[#5C5A52]">Cited: ' + d.citations.verified.join(", ") + "</div>"
+          ? '<div class="mt-2.5 pt-2 border-t border-[#E5E3DC] text-xs font-mono text-[#5C5A52]">Cited: ' + d.citations.verified.map(escHtml).join(", ") + "</div>"
           : "");
       renderTrace(d.trace);
       chatHistory.push({ role: "user", content: q }, { role: "assistant", content: finalAns });

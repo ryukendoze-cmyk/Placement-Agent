@@ -292,7 +292,7 @@
             </div>
             <p class="text-xs text-[#4A483F] leading-relaxed mt-1">{{ g.detail }}</p>
             {% if g.sop_id == 'SOP-04' and g.status != 'PASS' %}
-            <a href="/students/{{ sid }}/interview"
+            <a href="/students/{{ sid }}/interviews"
                class="inline-flex items-center gap-1 mt-1.5 text-xs font-semibold text-[#1D5C42] hover:underline">
               Launch Mock Interview Sprint &rarr;
             </a>
@@ -387,7 +387,7 @@
                     {% elif card.status == 'done' %}
                     <span class="text-[#1D5C42] font-semibold whitespace-nowrap">Verified</span>
                     {% else %}
-                    <button type="button" onclick="openVerifyModal('{{ card.item_id }}')"
+                    <button type="button" data-action="open-verify" data-item-id="{{ card.item_id }}"
                             class="px-2.5 py-1 rounded-md bg-[#E3F2EA] text-[#1B5E43] font-semibold hover:bg-[#D1EAD9] transition whitespace-nowrap">
                       Verify
                     </button>
@@ -503,7 +503,7 @@
                 </div>
                 {% endif %}
 
-                <button type="button" onclick="toggleGuide('{{ it.id }}')"
+                <button type="button" data-action="toggle-guide" data-item-id="{{ it.id }}"
                         class="mt-2.5 text-xs font-medium text-[#4A483F] hover:text-[#1D5C42] inline-flex items-center gap-1.5 border border-[#E5E3DC] rounded-lg px-2.5 py-1 bg-[#FAF9F5]">
                   <span id="guide-arrow-{{ it.id }}" class="mono text-[11px]">[+]</span> Offline Study Guide (Key Topics &amp; Syllabus)
                 </button>
@@ -548,11 +548,11 @@
                   {% if it.status == 'done' %}
                   <span class="text-xs font-semibold text-[#1D5C42]">Quiz Verified</span>
                   {% else %}
-                  <button type="button" onclick="openVerifyModal('{{ it.id }}')"
+                  <button type="button" data-action="open-verify" data-item-id="{{ it.id }}"
                           class="btn-primary-pill text-xs px-3.5 py-1.5 rounded-lg">
                     Verify &amp; Complete
                   </button>
-                  <button type="button" onclick="openWaiverModal('{{ it.id }}', '{{ it.skill_id }}')"
+                  <button type="button" data-action="open-waiver" data-item-id="{{ it.id }}" data-skill-id="{{ it.skill_id }}"
                           class="text-xs font-medium text-[#4A483F] hover:text-[#1D5C42] underline">
                     Request Waiver
                   </button>
@@ -601,7 +601,7 @@
             {% endfor %}
 
             {% for n in dag.get('nodes', []) %}
-            <g class="cursor-pointer dag-node-group" onclick="inspectDagNode('{{ n.id }}')" data-node-id="{{ n.id }}">
+            <g class="cursor-pointer dag-node-group" data-node-id="{{ n.id }}">
               <rect x="{{ n.x }}" y="{{ n.y }}" width="168" height="60" rx="10"
                     fill="{% if n.kind == 'owned' %}#E3F2EA{% elif n.kind == 'gate' %}#FEF3C7{% else %}#FFFFFF{% endif %}"
                     stroke="{% if n.on_critical_path %}#1D5C42{% elif n.kind == 'owned' %}#40916C{% else %}#D8D5CB{% endif %}"
@@ -865,6 +865,15 @@ try {
   dagNodesData = JSON.parse(document.getElementById('dag-nodes-json').textContent || '[]');
 } catch (_e) { dagNodesData = []; }
 
+function escHtml(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function setTargetMode(mode) {
   document.getElementById('ctrl-target-mode').value = mode;
   document.querySelectorAll('.ctrl-mode-btn').forEach(btn => {
@@ -904,7 +913,7 @@ function showBanner(msg, ok = true) {
 
 async function hydratePlanMetadata() {
   try {
-    const res = await fetch(`/api/students/${sid}/plans`);
+    const res = await fetch(`/api/students/${encodeURIComponent(sid)}/plans`);
     if (!res.ok) return;
     const plans = await res.json();
     if (!plans.length) return;
@@ -922,7 +931,7 @@ async function hydratePlanMetadata() {
     if (plans.length > 1 && sel && wrap) {
       wrap.classList.remove('hidden');
       sel.innerHTML = plans.map(p =>
-        `<option value="${p.id}" ${p.id === current.id ? 'selected' : ''}>${p.job_title || p.job_id}${p.company ? ' @ ' + p.company : ''} (${p.total_hours}h)</option>`
+        `<option value="${escHtml(p.id)}" ${p.id === current.id ? 'selected' : ''}>${escHtml(p.job_title || p.job_id)}${p.company ? ' @ ' + escHtml(p.company) : ''} (${escHtml(p.total_hours)}h)</option>`
       ).join('');
     }
   } catch (e) { /* optional enhancement */ }
@@ -931,7 +940,7 @@ async function hydratePlanMetadata() {
 async function switchPlan(planId) {
   if (!planId || planId === activePlanId) return;
   try {
-    const res = await fetch(`/api/plans/${planId}`);
+    const res = await fetch(`/api/plans/${encodeURIComponent(planId)}`);
     if (!res.ok) return;
     const plan = await res.json();
     activePlanId = plan.id;
@@ -948,7 +957,7 @@ async function switchPlan(planId) {
 async function swapCourse(itemId, newCourseId) {
   if (!newCourseId || !activePlanId) return;
   try {
-    const res = await fetch(`/api/plans/${activePlanId}/swap-course`, {
+    const res = await fetch(`/api/plans/${encodeURIComponent(activePlanId)}/swap-course`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ item_id: itemId, course_id: newCourseId }),
@@ -975,7 +984,7 @@ async function toggleGuide(itemId) {
   if (arrow) arrow.textContent = opening ? '[-]' : '[+]';
   if (!opening || box.dataset.loaded === '1' || !activePlanId) return;
   try {
-    const res = await fetch(`/api/plans/${activePlanId}/items/${itemId}/quiz`);
+    const res = await fetch(`/api/plans/${encodeURIComponent(activePlanId)}/items/${encodeURIComponent(itemId)}/quiz`);
     if (!res.ok) {
       box.dataset.loaded = '1';
       return;
@@ -983,8 +992,8 @@ async function toggleGuide(itemId) {
     const qz = await res.json();
     const topicsArr = qz.key_topics || (qz.study_guide && qz.study_guide.key_topics) || [];
     const sylArr = (qz.study_guide && qz.study_guide.syllabus) || [];
-    const topics = topicsArr.map(t => `<li class="ml-4 list-disc">${t}</li>`).join('');
-    const syl = sylArr.map(s => `<li class="ml-4 list-decimal">${s}</li>`).join('');
+    const topics = topicsArr.map(t => `<li class="ml-4 list-disc">${escHtml(t)}</li>`).join('');
+    const syl = sylArr.map(s => `<li class="ml-4 list-decimal">${escHtml(s)}</li>`).join('');
     if (topics || syl) {
       body.innerHTML =
         (topics ? `<div class="mb-2.5"><div class="text-xs font-semibold text-[#4A483F] mb-1">Key Topics</div><ul class="space-y-1 text-xs text-[#1C1E1B]">${topics}</ul></div>` : '') +
@@ -1014,9 +1023,9 @@ async function openVerifyModal(itemId) {
   modal.classList.add('flex');
 
   try {
-    const res = await fetch(`/api/plans/${activePlanId}/items/${itemId}/quiz`);
+    const res = await fetch(`/api/plans/${encodeURIComponent(activePlanId)}/items/${encodeURIComponent(itemId)}/quiz`);
     if (!res.ok) {
-      qBox.innerHTML = `<div class="text-sm text-[#9E2A20]">Could not load quiz (HTTP ${res.status}).</div>`;
+      qBox.innerHTML = `<div class="text-sm text-[#9E2A20]">Could not load quiz (HTTP ${escHtml(res.status)}).</div>`;
       return;
     }
     const qz = await res.json();
@@ -1027,7 +1036,7 @@ async function openVerifyModal(itemId) {
     const topics = qz.key_topics || (qz.study_guide && qz.study_guide.key_topics) || [];
     if (topics.length) {
       topicsBox.classList.remove('hidden');
-      topicsBox.innerHTML = `<strong>Focus Areas:</strong> ${topics.join(', ')}`;
+      topicsBox.innerHTML = `<strong>Focus Areas:</strong> ${topics.map(escHtml).join(', ')}`;
     } else {
       topicsBox.classList.add('hidden');
     }
@@ -1036,20 +1045,20 @@ async function openVerifyModal(itemId) {
       <div class="p-4 rounded-xl border border-[#E5E3DC] bg-[#FAF9F5]">
         <div class="flex items-center justify-between gap-2 mb-1.5">
           <span class="text-xs font-semibold text-[#1C1E1B]">Question ${qi + 1}</span>
-          ${q.difficulty ? `<span class="text-[11px] font-semibold uppercase px-2 py-0.5 rounded bg-[#EFECE4] text-[#4A483F]">${q.difficulty}</span>` : ''}
+          ${q.difficulty ? `<span class="text-[11px] font-semibold uppercase px-2 py-0.5 rounded bg-[#EFECE4] text-[#4A483F]">${escHtml(q.difficulty)}</span>` : ''}
         </div>
-        <div class="text-xs sm:text-[13px] text-[#1C1E1B] mb-2.5 leading-relaxed">${q.prompt}</div>
+        <div class="text-xs sm:text-[13px] text-[#1C1E1B] mb-2.5 leading-relaxed">${escHtml(q.prompt)}</div>
         ${(q.options && q.options.length) ? `
           <div class="space-y-1.5">
             ${q.options.map((opt, oi) => `
               <label class="flex items-start gap-2 text-xs sm:text-[13px] text-[#1C1E1B] cursor-pointer p-2 rounded hover:bg-white transition">
-                <input type="radio" name="quiz-q-${q.id}" value="${oi}" class="mt-0.5 text-[#1D5C42] focus:ring-[#1D5C42]">
-                <span>${opt}</span>
+                <input type="radio" name="quiz-q-${escHtml(q.id)}" value="${oi}" class="mt-0.5 text-[#1D5C42] focus:ring-[#1D5C42]">
+                <span>${escHtml(opt)}</span>
               </label>
             `).join('')}
           </div>
         ` : `
-          <textarea id="quiz-ans-${q.id}" rows="3"
+          <textarea id="quiz-ans-${escHtml(q.id)}" rows="3"
                     placeholder="Write your technical answer covering key concepts and trade-offs..."
                     class="w-full text-xs sm:text-[13px] border border-[#E5E3DC] rounded-lg p-3 bg-white text-[#1C1E1B] focus:outline-none focus:border-[#1D5C42]"></textarea>
         `}
@@ -1072,7 +1081,8 @@ async function submitVerifyQuiz() {
   const answers = {};
   for (const q of activeQuizQuestions) {
     if (q.options && q.options.length) {
-      const sel = document.querySelector(`input[name="quiz-q-${q.id}"]:checked`);
+      const escQId = (window.CSS && CSS.escape) ? CSS.escape(String(q.id)) : String(q.id);
+      const sel = document.querySelector(`input[name="quiz-q-${escQId}"]:checked`);
       if (!sel) {
         showBanner('Please answer every question before submitting.', false);
         return;
@@ -1094,11 +1104,20 @@ async function submitVerifyQuiz() {
   btn.textContent = 'Checking...';
 
   try {
-    const res = await fetch(`/api/plans/${activePlanId}/items/${activeQuizItemId}/verify`, {
+    const res = await fetch(`/api/plans/${encodeURIComponent(activePlanId)}/items/${encodeURIComponent(activeQuizItemId)}/verify`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ answers }),
     });
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      btn.disabled = false;
+      btn.textContent = 'Submit Answers';
+      fbBox.classList.remove('hidden');
+      fbBox.className = 'p-3.5 rounded-xl border border-[#F5D0C8] bg-[#FDECE9] text-xs sm:text-[13px] text-[#9E2A20]';
+      fbBox.textContent = errBody.detail || `Could not verify answers (HTTP ${res.status}).`;
+      return;
+    }
     const body = await res.json();
     fbBox.classList.remove('hidden');
 
@@ -1106,10 +1125,10 @@ async function submitVerifyQuiz() {
       const cl = body.closed_loop || {};
       const matchScore = cl.updated_match_score ?? cl.best_match_score;
       const matchMsg = matchScore !== undefined
-        ? ` Top job match updated to ${matchScore}% (Readiness ${cl.readiness || 0}%).`
+        ? ` Top job match updated to ${escHtml(matchScore)}% (Readiness ${escHtml(cl.readiness || 0)}%).`
         : '';
       fbBox.className = 'p-3.5 rounded-xl border border-[#C8E4D5] bg-[#E3F2EA] text-xs sm:text-[13px] text-[#1B5E43]';
-      fbBox.innerHTML = `<strong>Passed (${body.score}%)!</strong> Skill verified via closed-loop assessment.${matchMsg}`;
+      fbBox.innerHTML = `<strong>Passed (${escHtml(body.score)}%)!</strong> Skill verified via closed-loop assessment.${matchMsg}`;
       showBanner(`Skill verified (${body.score}%). Updating readiness...`);
       setTimeout(() => { closeVerifyModal(); location.reload(); }, 950);
     } else {
@@ -1117,13 +1136,13 @@ async function submitVerifyQuiz() {
       btn.textContent = 'Retry Answers';
       const rem = body.remediation || {};
       const hints = (body.feedback || [])
-        .map((f, i) => `<div>Q${i + 1}: ${f.correct ? 'Correct' : 'Incorrect - ' + (f.explanation || '')}</div>`)
+        .map((f, i) => `<div>Q${i + 1}: ${f.correct ? 'Correct' : 'Incorrect - ' + escHtml(f.explanation || '')}</div>`)
         .join('');
       const topicLine = (rem.key_topics && rem.key_topics.length)
-        ? `<div class="mt-2 font-medium text-xs">Focus Concepts: ${rem.key_topics.join(' · ')}</div>`
+        ? `<div class="mt-2 font-medium text-xs">Focus Concepts: ${rem.key_topics.map(escHtml).join(' · ')}</div>`
         : '';
       fbBox.className = 'p-3.5 rounded-xl border border-[#F5D0C8] bg-[#FDECE9] text-xs sm:text-[13px] text-[#9E2A20]';
-      fbBox.innerHTML = `<strong>Score ${body.score}% (Need ${body.passing_score || 70}%).</strong> Item stays pending. Review the offline study guide and retry.<div class="mt-1.5 space-y-1">${hints}</div>${topicLine}`;
+      fbBox.innerHTML = `<strong>Score ${escHtml(body.score)}% (Need ${escHtml(body.passing_score || 70)}%).</strong> Item stays pending. Review the offline study guide and retry.<div class="mt-1.5 space-y-1">${hints}</div>${topicLine}`;
     }
   } catch (e) {
     btn.disabled = false;
@@ -1157,12 +1176,12 @@ async function submitWaiverRequest() {
   const btn = document.getElementById('waiver-submit-btn');
   btn.disabled = true;
   try {
-    const res = await fetch(`/api/plans/${activePlanId}/items/${activeWaiverItemId}/waiver`, {
+    const res = await fetch(`/api/plans/${encodeURIComponent(activePlanId)}/items/${encodeURIComponent(activeWaiverItemId)}/waiver`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ target_level: level, reason }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     statusBox.classList.remove('hidden');
     if (res.ok) {
       statusBox.className = 'p-3 rounded-xl border border-[#C8E4D5] bg-[#E3F2EA] text-[#1B5E43] text-xs';
@@ -1172,7 +1191,7 @@ async function submitWaiverRequest() {
     } else {
       btn.disabled = false;
       statusBox.className = 'p-3 rounded-xl border border-[#F5D0C8] bg-[#FDECE9] text-[#9E2A20] text-xs';
-      statusBox.textContent = data.detail || 'Could not submit waiver request.';
+      statusBox.textContent = data.detail || `Could not submit waiver request (HTTP ${res.status}).`;
     }
   } catch (e) {
     btn.disabled = false;
@@ -1192,27 +1211,32 @@ async function runWhatIfSimulation() {
   btn.disabled = true;
   btn.textContent = 'Simulating...';
   try {
-    const res = await fetch(`/api/plans/${activePlanId}/simulate`, {
+    const res = await fetch(`/api/plans/${encodeURIComponent(activePlanId)}/simulate`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ added_skills: checked, weekly_cap: cap, assume_mock_passed: assumeMock }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      pills.innerHTML = '';
+      outBox.innerHTML = `<div class="p-3.5 rounded-xl bg-[#FDECE9] text-[#9E2A20]">${escHtml(data.detail || `Simulation failed (HTTP ${res.status}).`)}</div>`;
+      return;
+    }
     pills.innerHTML =
-      `<span class="pill-sage px-3 py-1 rounded-full">${data.total_hours}h total &middot; ${data.projected_weeks} wks @ ${data.weekly_cap}h/wk</span>` +
-      `<span class="pill-stone px-3 py-1 rounded-full">Eligible drives: ${data.eligible_drives_before} &rarr; ${data.eligible_drives_after}</span>`;
+      `<span class="pill-sage px-3 py-1 rounded-full">${escHtml(data.total_hours)}h total &middot; ${escHtml(data.projected_weeks)} wks @ ${escHtml(data.weekly_cap)}h/wk</span>` +
+      `<span class="pill-stone px-3 py-1 rounded-full">Eligible drives: ${escHtml(data.eligible_drives_before)} &rarr; ${escHtml(data.eligible_drives_after)}</span>`;
 
     outBox.innerHTML = (data.drives || []).map(d => `
       <div class="p-3.5 rounded-xl bg-white border border-[#E5E3DC] flex items-center justify-between gap-3">
         <div>
-          <div class="text-sm font-semibold text-[#1C1E1B]">${d.title} <span class="text-[#4A483F] font-normal">(${d.company})</span></div>
+          <div class="text-sm font-semibold text-[#1C1E1B]">${escHtml(d.title)} <span class="text-[#4A483F] font-normal">(${escHtml(d.company)})</span></div>
           <div class="text-xs text-[#4A483F] mt-1">
-            ${d.eligible_after ? '<span class="text-[#1D5C42] font-semibold">Eligible after upskilling</span>' : 'Remaining gates: ' + (d.blocking_sops_after || []).join(', ')}
+            ${d.eligible_after ? '<span class="text-[#1D5C42] font-semibold">Eligible after upskilling</span>' : 'Remaining gates: ' + (d.blocking_sops_after || []).map(escHtml).join(', ')}
           </div>
         </div>
         <div class="text-right mono kpi-num shrink-0">
-          <div class="text-sm font-semibold text-[#1C1E1B]">${d.before_score}% &rarr; ${d.after_score}%</div>
-          <div class="text-xs font-semibold text-[#1D5C42]">+${d.delta} pts</div>
+          <div class="text-sm font-semibold text-[#1C1E1B]">${escHtml(d.before_score)}% &rarr; ${escHtml(d.after_score)}%</div>
+          <div class="text-xs font-semibold text-[#1D5C42]">+${escHtml(d.delta)} pts</div>
         </div>
       </div>
     `).join('') || '<div class="p-4 rounded-xl bg-white border border-[#E5E3DC]">No matching drives found.</div>';
@@ -1240,7 +1264,7 @@ async function regenPlan() {
   }
   const jobId = root.dataset.jobId || null;
   try {
-    const res = await fetch(`/api/students/${sid}/plans`, {
+    const res = await fetch(`/api/students/${encodeURIComponent(sid)}/plans`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -1275,6 +1299,30 @@ async function regenPlan() {
     }
   }
 }
+
+document.addEventListener('click', (evt) => {
+  const dagNode = evt.target.closest ? evt.target.closest('.dag-node-group') : null;
+  if (dagNode) {
+    inspectDagNode(dagNode.getAttribute('data-node-id') || '');
+    return;
+  }
+  const actionBtn = evt.target.closest ? evt.target.closest('[data-action]') : null;
+  if (!actionBtn) return;
+  const action = actionBtn.getAttribute('data-action');
+  const itemId = actionBtn.getAttribute('data-item-id') || '';
+  if (action === 'open-verify') openVerifyModal(itemId);
+  else if (action === 'toggle-guide') toggleGuide(itemId);
+  else if (action === 'open-waiver') openWaiverModal(itemId, actionBtn.getAttribute('data-skill-id') || '');
+});
+
+document.addEventListener('keydown', (evt) => {
+  if (evt.key === 'Escape') {
+    const qm = document.getElementById('plan-quiz-modal');
+    if (qm && !qm.classList.contains('hidden')) closeVerifyModal();
+    const wm = document.getElementById('plan-waiver-modal');
+    if (wm && !wm.classList.contains('hidden')) closeWaiverModal();
+  }
+});
 
 hydratePlanMetadata();
 </script>

@@ -1,3 +1,4 @@
+import math
 import re
 from dataclasses import dataclass
 
@@ -111,9 +112,11 @@ def is_senior_job(job) -> bool:
         exp_val = float(exp)
     except (ValueError, TypeError):
         exp_val = 0.0
+    if SENIOR_TITLE_RE.search(title) or exp_val >= 3.0:
+        return True
     if FRESHER_TITLE_RE.search(title) and exp_val < 3.0:
         return False
-    return bool(SENIOR_TITLE_RE.search(title)) or exp_val >= 3.0
+    return False
 
 
 def is_fresher_job(job) -> bool:
@@ -125,8 +128,6 @@ def is_fresher_job(job) -> bool:
     """
     if not job:
         return False
-    if (isinstance(job, dict) and "year" in job) or hasattr(job, "year"):
-        return is_campus_fresher(job)
     if is_senior_job(job):
         return False
     title = str((job.get("title") if isinstance(job, dict) else getattr(job, "title", "")) or "")
@@ -401,7 +402,7 @@ def score_job(
         pref_score = sum(pref_weights) / len(pref)
     else:
         pref_score = len(matched_pref) / len(pref) if pref else 0.0
-    sim = max(0.0, min(1.0, sim))
+    sim = 0.0 if not isinstance(sim, (int, float)) or not math.isfinite(sim) else max(0.0, min(1.0, float(sim)))
     base = round(100 * (WEIGHTS["coverage"] * coverage + WEIGHTS["preferred"] * pref_score + WEIGHTS["semantic"] * sim))
     bonus = _proficiency_bonus(matched_req, len(req), levels, verification_statuses)
 

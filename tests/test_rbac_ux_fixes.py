@@ -365,7 +365,8 @@ def test_student_ui_hides_admin_controls_and_strict_mode_locks():
                 assert ">jobspy<" not in html
 
                 # Student on-campus card hides Dismiss/Remove; unverified badges render
-                assert "data-job-remove" not in html
+                assert 'data-job-remove="' not in html
+                assert 'data-action="remove-job"' not in html
                 assert ">Dismiss<" not in html
                 assert ">Remove<" not in html
                 assert "Unverified &middot; Docker" in html
@@ -512,7 +513,7 @@ def test_security_pii_guardrails_ratelimit_and_service_worker():
     with client:
         sw = client.get("/sw.js")
         assert sw.status_code == 200
-        assert "jklu-careeros-v2" in sw.text
+        assert "jklu-careeros-v3" in sw.text
         assert 'cache: "no-store"' in sw.text
         assert 'request.mode === "navigate"' in sw.text
 

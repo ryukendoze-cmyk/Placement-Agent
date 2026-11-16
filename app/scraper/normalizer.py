@@ -10,11 +10,12 @@ import logging
 import math
 import os
 import re
+import socket
 import threading
 import time
 import uuid
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 from app.config import settings
 from app.matching.engine import (
@@ -56,6 +57,24 @@ CORE_FALLBACK_SKILLS = ["python", "sql", "git"]
 DEFAULT_BRANCHES = ["CSE", "IT", "ECE"]
 
 
+MAX_EXTERNAL_JD_BYTES = 1_000_000
+MAX_EXTERNAL_REDIRECTS = 3
+
+
+def _is_public_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    return bool(
+        ip.is_global
+        and not (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        )
+    )
+
+
 def _is_safe_public_http_url(url: str) -> bool:
     """Reject non-HTTP schemes, offline sandbox mode, and localhost/private SSRF targets."""
     if os.environ.get("PS06_OFFLINE_MODE", "").strip().lower() in ("1", "true", "yes", "on"):
@@ -73,10 +92,26 @@ def _is_safe_public_http_url(url: str) -> bool:
         return False
     try:
         ip = ipaddress.ip_address(host)
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
-            return False
+        return _is_public_ip(ip)
     except ValueError:
         pass
+    try:
+        infos = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+    except OSError:
+        return False
+    if not infos:
+        return False
+    for info in infos:
+        sockaddr = info[4]
+        if not sockaddr:
+            return False
+        addr_str = str(sockaddr[0]).split("%", 1)[0]
+        try:
+            resolved_ip = ipaddress.ip_address(addr_str)
+        except ValueError:
+            return False
+        if not _is_public_ip(resolved_ip):
+            return False
     return True
 
 
@@ -88,19 +123,45 @@ def fetch_external_job_description(url: str, timeout: float = 4.0) -> str:
         import httpx
         from bs4 import BeautifulSoup
 
-        resp = httpx.get(
-            url,
-            headers={
-                "User-Agent": (
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                )
-            },
-            follow_redirects=True,
-            timeout=timeout,
-        )
-        if resp.status_code == 200 and resp.text:
-            soup = BeautifulSoup(resp.text, "lxml")
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
+        }
+        current_url = url
+        body_text = ""
+        with httpx.Client(follow_redirects=False, timeout=timeout) as client:
+            for _ in range(MAX_EXTERNAL_REDIRECTS + 1):
+                if not _is_safe_public_http_url(current_url):
+                    return ""
+                with client.stream("GET", current_url, headers=headers) as resp:
+                    if resp.status_code in (301, 302, 303, 307, 308):
+                        loc = resp.headers.get("location")
+                        if not loc:
+                            return ""
+                        current_url = urljoin(current_url, loc)
+                        continue
+                    if resp.status_code != 200:
+                        return ""
+                    chunks: list[bytes] = []
+                    total = 0
+                    for chunk in resp.iter_bytes():
+                        if not chunk:
+                            continue
+                        remaining = MAX_EXTERNAL_JD_BYTES - total
+                        if remaining <= 0:
+                            break
+                        chunks.append(chunk[:remaining])
+                        total += min(len(chunk), remaining)
+                        if total >= MAX_EXTERNAL_JD_BYTES:
+                            break
+                    encoding = resp.encoding or "utf-8"
+                    body_text = b"".join(chunks).decode(encoding, errors="replace")
+                    break
+
+        if body_text:
+            soup = BeautifulSoup(body_text, "lxml")
             if "linkedin.com" in url:
                 desc_el = soup.select_one(".description__text, .show-more-less-html__markup")
                 if desc_el:

@@ -17,12 +17,20 @@ function getSettingsPath() {
   return path.join(app.getPath("userData"), "careeros-settings.json");
 }
 
+function validateHttpUrl(rawUrl) {
+  const parsed = new URL(String(rawUrl || "").trim());
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Only http:// and https:// URLs are permitted.");
+  }
+  return parsed.toString().replace(/\/+$/, "");
+}
+
 function loadServerUrl() {
   try {
     const raw = fs.readFileSync(getSettingsPath(), "utf8");
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed.serverUrl === "string" && parsed.serverUrl.trim()) {
-      return parsed.serverUrl.trim().replace(/\/+$/, "");
+      return validateHttpUrl(parsed.serverUrl);
     }
   } catch {
     // Use default when settings file does not exist or is invalid
@@ -31,7 +39,7 @@ function loadServerUrl() {
 }
 
 function saveServerUrl(url) {
-  const cleaned = String(url || DEFAULT_SERVER_URL).trim().replace(/\/+$/, "");
+  const cleaned = validateHttpUrl(url || DEFAULT_SERVER_URL);
   fs.mkdirSync(path.dirname(getSettingsPath()), { recursive: true });
   fs.writeFileSync(getSettingsPath(), JSON.stringify({ serverUrl: cleaned }, null, 2), "utf8");
   return cleaned;
@@ -203,7 +211,8 @@ function openServerSettingsModal() {
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      sandbox: true
     }
   });
   settingsWindow.setMenuBarVisibility(false);
@@ -249,10 +258,16 @@ function openServerSettingsModal() {
 }
 
 function buildAppMenu() {
+  const fileSubmenu = [{ role: "reload" }];
+  if (!app.isPackaged) {
+    fileSubmenu.push({ role: "toggleDevTools" });
+  }
+  fileSubmenu.push({ type: "separator" }, { role: "quit" });
+
   const template = [
     {
       label: "File",
-      submenu: [{ role: "reload" }, { role: "toggleDevTools" }, { type: "separator" }, { role: "quit" }]
+      submenu: fileSubmenu
     },
     {
       label: "Settings",
@@ -276,7 +291,23 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  mainWindow.webContents.on("will-navigate", (event, targetUrl) => {
+    try {
+      const target = new URL(targetUrl);
+      const allowedOrigin = new URL(loadServerUrl()).origin;
+      const isSplash = target.protocol === "file:" && path.resolve(decodeURIComponent(target.pathname.replace(/^\/([A-Za-z]:)/, "$1"))) === path.resolve(__dirname, "splash.html");
+      const isAllowedHttp = (target.protocol === "http:" || target.protocol === "https:") && target.origin === allowedOrigin;
+      if (!isSplash && !isAllowedHttp) {
+        event.preventDefault();
+      }
+    } catch {
+      event.preventDefault();
     }
   });
 

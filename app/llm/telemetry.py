@@ -173,16 +173,16 @@ class TelemetryLLM:
                             latency_ms=(time.perf_counter() - t0) * 1000.0)
         return out
 
-    def stream(self, system: str, user: str, json_mode: bool = False) -> Iterator[str]:
+    def stream(self, system: str, user: str, json_mode: bool = False, **kwargs) -> Iterator[str]:
         prompt_text = f"{system}\n{user}".strip()
         if self.tracker.should_use_fallback(self.provider):
             self.tracker.record_fallback(self.provider)
-            yield from self.mock.stream(system, user, json_mode=json_mode)
+            yield from self.mock.stream(system, user, json_mode=json_mode, **kwargs)
             return
         t0 = time.perf_counter()
         chunks: list[str] = []
         try:
-            for chunk in self.primary.stream(system, user, json_mode=json_mode):
+            for chunk in self.primary.stream(system, user, json_mode=json_mode, **kwargs):
                 chunks.append(chunk)
                 yield chunk
         except Exception:

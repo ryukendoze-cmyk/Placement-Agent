@@ -155,14 +155,19 @@ def simulate_drive(body: SimulateDriveRequest | None = None,
                    session: Session = Depends(get_session),
                    ctx=Depends(get_ctx),
                    role: str = Depends(require_role("faculty_mentor", "tpo_admin"))):
-    """M20: evaluate the cohort against a hypothetical drive (TPO tool)."""
+    """M20: evaluate the cohort (or department mentees for faculty_mentor) against a hypothetical drive."""
     b = body or SimulateDriveRequest()
+    user = get_current_user_optional(request) if request is not None else None
+    scoped_ids: set[str] | None = None
+    if user is not None and user.role == "faculty_mentor":
+        scoped_ids = _faculty_mentee_ids(session, user.department)
     return simulate_placement_drive(
         session, ctx,
         title=b.title, company=b.company, salary_lpa=b.salary_lpa,
         min_gpa=b.min_gpa, allowed_branches=b.allowed_branches,
         required_skills=b.required_skills, preferred_skills=b.preferred_skills,
         max_backlogs=b.max_backlogs,
+        student_ids=scoped_ids,
     )
 
 
@@ -179,6 +184,7 @@ def _task_queue(ctx):
 def list_tasks(request: Request, kind: str | None = None, limit: int = 50,
                role: str = Depends(require_role("faculty_mentor", "tpo_admin"))):
     """M22: list background task states (scrape/ranking/OCR jobs), newest first."""
+    limit = max(1, min(int(limit), 200))
     queue = _task_queue(request.app.state.ctx)
     tasks = queue.list(kind=kind, limit=limit)
     return {"tasks": [t.to_dict() for t in tasks], "count": len(tasks),
@@ -499,14 +505,16 @@ def _validate_policy_params(existing: dict, incoming: dict[str, Any]) -> dict[st
                 if t not in tiers:
                     tiers.append(t)
             cleaned[key] = tiers
-        elif key in ("min_cgpa",):
+        elif key in ("min_cgpa", "min_gpa"):
             if isinstance(val, bool) or not isinstance(val, (int, float)) or not math.isfinite(float(val)):
-                raise HTTPException(422, detail="min_cgpa must be a finite number in [0, 10]")
+                raise HTTPException(422, detail=f"{key} must be a finite number in [0, 10]")
             fval = round(float(val), 2)
             if fval < 0 or fval > 10:
-                raise HTTPException(422, detail="min_cgpa must be between 0.0 and 10.0")
+                raise HTTPException(422, detail=f"{key} must be between 0.0 and 10.0")
             cleaned[key] = fval
         else:
+            if isinstance(val, float) and not math.isfinite(val):
+                raise HTTPException(422, detail=f"{key} must be finite")
             cleaned[key] = val
 
     merged = {**base, **cleaned}
@@ -574,8 +582,16 @@ def create_policy(
     role: str = Depends(require_role("tpo_admin")),
 ):
     """Create a custom institutional SOP (SOP-19+) and persist to policies_overrides.json."""
+    raw_params = body.params if body.params is not None else body.parameters
+    if raw_params is not None and not isinstance(raw_params, dict):
+        raise HTTPException(422, detail="parameters must be an object")
+    validated_params = _validate_policy_params({}, raw_params or {}) if raw_params else {}
+    payload_dict = body.model_dump()
+    if raw_params is not None:
+        payload_dict["params"] = validated_params
+        payload_dict["parameters"] = validated_params
     try:
-        created = create_sop(body.model_dump())
+        created = create_sop(payload_dict)
     except ValueError as e:
         raise HTTPException(422, detail=str(e))
     log_audit(
@@ -691,9 +707,15 @@ def approvals_page(request: Request, session: Session = Depends(get_session),
     students = sort_students_alphabetically(session.exec(select(Student)).all())
     user = get_current_user_optional(request)
     # §17.2.C.2: a faculty mentor's switcher is scoped to their own department.
-    if user is not None and user.role == "faculty_mentor" and user.department:
-        dept = user.department.strip().lower()
-        students = [s for s in students if str(s.branch or "").strip().lower() == dept]
+    if user is not None and user.role == "faculty_mentor":
+        if user.department:
+            dept = (normalize_branch(user.department) or user.department).strip().lower()
+            students = [
+                s for s in students
+                if (normalize_branch(s.branch or "") or str(s.branch or "")).strip().lower() == dept
+            ]
+        else:
+            students = []
     return request.app.state.templates.TemplateResponse(
         request, "admin/approvals.html",
         {"students": students, "sid": "", "active": "approvals",

@@ -25,6 +25,7 @@ from app.interview.feedback_loop import QuestionTelemetryManager
 from app.matching.engine import (
     VERIFICATION_WEIGHTS,
     JobScore,
+    is_branch_eligible,
     job_tier,
     level_rank,
     score_job,
@@ -430,7 +431,14 @@ def _evaluate_sop_gates_for_job(
     cgpa = float(getattr(student, "gpa", 0.0) or 0.0)
     backlogs = int(getattr(student, "backlogs", 0) or 0)
     min_cgpa = float(getattr(job, "min_gpa", 0.0) or 0.0)
-    max_bl = int(getattr(job, "max_backlogs", 1) if getattr(job, "max_backlogs", None) is not None else 1)
+    sop03_params = sops.get("SOP-03", {}).get("parameters") or {}
+    default_bl = (
+        int(sop03_params.get("super_dream_max_backlogs", 0))
+        if tier_norm == "super_dream"
+        else int(sop03_params.get("dream_max_backlogs", 1))
+    )
+    raw_max_bl = getattr(job, "max_backlogs", None)
+    max_bl = int(raw_max_bl) if raw_max_bl is not None else default_bl
 
     # SOP-03: CGPA & Backlogs (hard academic gate)
     cgpa_ok = cgpa >= min_cgpa
@@ -497,15 +505,26 @@ def _evaluate_sop_gates_for_job(
         "action": None if verif_ok else "Upgrade claimed skills via verification micro-quiz",
     })
 
-    # SOP-09: Placement tier / application cap check
+    # SOP-09: Branch eligibility & Placement tier / application cap check
     job_lpa = _job_max_lpa(job)
     placed_lpa = float(getattr(student, "placed_package_lpa", 0.0) or 0.0)
     is_placed = bool(getattr(student, "is_placed", False)) or placed_lpa > 0
+    allowed_branches = [
+        str(b).strip() for b in (getattr(job, "allowed_branches", None) or []) if str(b).strip()
+    ]
+    stu_branch = str(getattr(student, "branch", "") or "").strip()
+    branch_ok = is_branch_eligible(stu_branch, allowed_branches) if allowed_branches else True
     tier_ok = True
     tier_detail = f"{tier_label} drive ({job_lpa:.1f} LPA)"
-    if is_placed and placed_lpa > 0 and job_lpa < 2.0 * placed_lpa:
+    tier_action = None
+    if not branch_ok:
+        tier_ok = False
+        tier_detail = f"Branch '{stu_branch or 'n/a'}' not in allowed branches {allowed_branches}"
+        tier_action = "Confirm branch eligibility with TPO or target open-branch drives"
+    elif is_placed and placed_lpa > 0 and job_lpa < 2.0 * placed_lpa:
         tier_ok = False
         tier_detail = f"Placed at {placed_lpa:.1f} LPA; SOP-09 requires >= {2.0 * placed_lpa:.1f} LPA (2x upgrade)"
+        tier_action = "Focus on >=2x Dream upgrade drives"
     elif tier_norm == "standard" and applied_count >= 5:
         tier_detail = f"{tier_label} tier ({applied_count} applications recorded)"
     gates.append({
@@ -514,7 +533,7 @@ def _evaluate_sop_gates_for_job(
         "status": "PASS" if tier_ok else "BLOCK_HARD",
         "remediable_by_upskill": False,
         "detail": tier_detail,
-        "action": None if tier_ok else "Focus on >=2x Dream upgrade drives",
+        "action": None if tier_ok else tier_action,
     })
 
     return gates
@@ -991,26 +1010,35 @@ def compute_cpm_dag(
     }
 
     visited: set[str] = set()
+    visiting: set[str] = set()
     topo_seq: list[str] = []
+    safe_deps: dict[str, list[str]] = {n: [] for n in all_skill_nodes}
+    safe_succs: dict[str, list[str]] = {n: [] for n in all_skill_nodes}
 
     def _visit(node: str) -> None:
         if node in visited:
             return
-        visited.add(node)
+        visiting.add(node)
         for p in deps[node]:
+            if p in visiting:
+                continue  # break cycle back-edge cleanly
+            safe_deps[node].append(p)
+            safe_succs[p].append(node)
             _visit(p)
+        visiting.remove(node)
+        visited.add(node)
         topo_seq.append(node)
 
     for n in all_skill_nodes:
         _visit(n)
 
     for n in topo_seq:
-        if not deps[n]:
+        if not safe_deps[n]:
             layer[n] = 0 if n in owned_anchors else (1 if owned_anchors else 0)
             es[n] = 0.0
         else:
-            layer[n] = max(layer[p] + 1 for p in deps[n])
-            es[n] = max(ef[p] for p in deps[n])
+            layer[n] = max(layer[p] + 1 for p in safe_deps[n])
+            es[n] = max(ef[p] for p in safe_deps[n])
         ef[n] = es[n] + dur[n]
 
     project_finish = max((ef[n] for n in topo_seq), default=0.0)
@@ -1018,7 +1046,7 @@ def compute_cpm_dag(
     ls: dict[str, float] = {}
     lf: dict[str, float] = {}
     for n in reversed(topo_seq):
-        lf[n] = project_finish if not succs[n] else min(ls[ch] for ch in succs[n])
+        lf[n] = project_finish if not safe_succs[n] else min(ls[ch] for ch in safe_succs[n])
         ls[n] = lf[n] - dur[n]
 
     slack: dict[str, float] = {n: round(max(0.0, ls[n] - es[n]), 2) for n in topo_seq}
@@ -1411,15 +1439,15 @@ def build_plan_strategy(
         sim = sims.get(j.id, 0.5)
         b_score = score_job(
             student_skills, j, sim, taxonomy,
-            levels=levels, verification_statuses=verif_statuses,
+            levels=levels, verification_statuses=verif_statuses, student=student,
         )
         sim_delta = simulate_counterfactual(
             student_skills, j, [s for s in proj_skills if s not in student_skills],
-            sim, taxonomy, levels=levels,
+            sim, taxonomy, levels=levels, verification_statuses=verif_statuses, student=student,
         )
         a_score = score_job(
             proj_skills, j, min(1.0, sim + 0.04 * min(4, len(items))), taxonomy,
-            levels=proj_levels, verification_statuses=proj_verif,
+            levels=proj_levels, verification_statuses=proj_verif, student=student,
         )
         after_val = max(int(a_score.score), int(sim_delta.get("projected_score", a_score.score)))
         gates_b = _evaluate_sop_gates_for_job(student, j, b_score, verif_statuses, interview_info, applied_count)
@@ -1430,7 +1458,7 @@ def build_plan_strategy(
         hard_blocked = any(g["status"] == "BLOCK_HARD" for g in gates_b)
         if elig_b:
             eligible_before += 1
-        if elig_a or (not hard_blocked and _effective_coverage_pct(a_score, proj_verif) >= 40.0):
+        if elig_a:
             eligible_after += 1
 
         if idx == 0:
